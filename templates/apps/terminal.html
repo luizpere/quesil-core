@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Terminal - ThinkinOS</title>
+<style>
+    body {
+        margin: 0; padding: 0;
+        background: #0c0c0c; color: #cccccc;
+        font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+        font-size: 14px;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+    #terminal-output {
+        flex: 1;
+        overflow-y: auto;
+        padding: 10px;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+    }
+    .input-line {
+        display: flex;
+        padding: 10px;
+        background: #0c0c0c;
+        border-top: 1px solid #333;
+    }
+    .prompt {
+        color: #4ade80; /* Verde Hacker */
+        margin-right: 8px;
+        user-select: none;
+    }
+    #command-input {
+        flex: 1;
+        background: transparent;
+        border: none;
+        color: #fff;
+        font-family: inherit;
+        font-size: inherit;
+        outline: none;
+    }
+    .error { color: #ff5555; }
+    .success { color: #4ade80; }
+    .info { color: #55aaff; }
+</style>
+</head>
+<body>
+    <div id="terminal-output">
+        <div class="info">ThinkinOS Terminal v1.0</div>
+        <div class="info">Digite 'help' para ver os comandos disponíveis.</div>
+        <br>
+    </div>
+    <div class="input-line">
+        <span class="prompt">luperesil@thinkinos:~$</span>
+        <input type="text" id="command-input" autofocus autocomplete="off" spellcheck="false">
+    </div>
+
+<script>
+    const outputDiv = document.getElementById('terminal-output');
+    const inputField = document.getElementById('command-input');
+    let commandHistory = [];
+    let historyIndex = -1;
+
+    // Focar no input ao clicar em qualquer lugar
+    document.addEventListener('click', () => inputField.focus());
+
+    inputField.addEventListener('keydown', async function(e) {
+        if (e.key === 'Enter') {
+            const command = this.value.trim();
+            if (!command) return;
+
+            // Adicionar ao histórico
+            commandHistory.push(command);
+            historyIndex = commandHistory.length;
+
+            // Mostrar o comando digitado na tela
+            appendToTerminal(`luperesil@thinkinos:~$ ${command}`, 'prompt');
+
+            // Limpar input
+            this.value = '';
+
+            // Comandos especiais do cliente
+            if (command.toLowerCase() === 'clear' || command.toLowerCase() === 'cls') {
+                outputDiv.innerHTML = '';
+                return;
+            }
+            if (command.toLowerCase() === 'help') {
+                appendToTerminal("Comandos disponíveis: ls, cd, cat, mkdir, rm, pwd, history, clear, python3, etc.", 'info');
+                return;
+            }
+            if (command.toLowerCase() === 'history') {
+                appendToTerminal(commandHistory.join('\n'), 'info');
+                return;
+            }
+
+            // Enviar para o backend
+            await executeCommand(command);
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            if (historyIndex > 0) {
+                historyIndex--;
+                this.value = commandHistory[historyIndex];
+            }
+        } else if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            if (historyIndex < commandHistory.length - 1) {
+                historyIndex++;
+                this.value = commandHistory[historyIndex];
+            } else {
+                historyIndex = commandHistory.length;
+                this.value = '';
+            }
+        }
+    });
+
+    async function executeCommand(command) {
+        try {
+            const res = await fetch('/api/terminal', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({command: command})
+            });
+            const data = await res.json();
+
+            if (data.output) appendToTerminal(data.output, 'output');
+            if (data.error) appendToTerminal(data.error, 'error');
+            
+            // Scroll para o final
+            outputDiv.scrollTop = outputDiv.scrollHeight;
+        } catch (e) {
+            appendToTerminal("Erro de conexão com o servidor.", 'error');
+        }
+    }
+
+    function appendToTerminal(text, type = 'output') {
+        const div = document.createElement('div');
+        div.textContent = text;
+        if (type === 'prompt') div.style.color = '#4ade80';
+        if (type === 'error') div.className = 'error';
+        if (type === 'info') div.className = 'info';
+        outputDiv.appendChild(div);
+    }
+</script>
+</body>
+</html>

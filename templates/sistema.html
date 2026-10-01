@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>🖥️ Status do Sistema - ThinkinOS</title>
+    <link rel="stylesheet" href="/static/css/glassmorphism.css">
+    <style>
+        body { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); color: white; padding: 20px; font-family: 'Segoe UI', sans-serif; }
+        .window { max-width: 600px; margin: 50px auto; }
+        .stat-card { display: flex; align-items: center; justify-content: space-between; padding: 20px; margin-bottom: 15px; }
+        .stat-value { font-size: 2em; font-weight: bold; }
+        .stat-label { font-size: 1.1em; opacity: 0.8; }
+        .progress-bar { width: 100%; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; margin-top: 10px; overflow: hidden; }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, #00b09b, #96c93d); transition: width 0.5s ease; }
+        .danger { background: linear-gradient(90deg, #ff416c, #ff4b2b) !important; }
+        .warning { background: linear-gradient(90deg, #f7971e, #ffd200) !important; }
+    </style>
+</head>
+<body>
+    <div class="window glass-panel">
+        <div class="titlebar">
+            <h1>🖥️ Monitor de Recursos</h1>
+            <button class="close-btn" onclick="window.close()">×</button>
+        </div>
+        <div style="padding: 20px;">
+            <div class="stat-card card-glass">
+                <div><div class="stat-label">Processador (CPU)</div><div class="progress-bar"><div id="cpu-bar" class="progress-fill" style="width: 0%"></div></div></div>
+                <div class="stat-value"><span id="cpu-val">0</span>%</div>
+            </div>
+            <div class="stat-card card-glass">
+                <div><div class="stat-label">Memória RAM</div><div class="progress-bar"><div id="ram-bar" class="progress-fill" style="width: 0%"></div></div></div>
+                <div class="stat-value"><span id="ram-val">0</span>%</div>
+            </div>
+            <div class="stat-card card-glass">
+                <div><div class="stat-label">Armazenamento (Disco)</div><div class="progress-bar"><div id="disk-bar" class="progress-fill" style="width: 0%"></div></div></div>
+                <div class="stat-value"><span id="disk-val">0</span>%</div>
+            </div>
+            <div class="stat-card card-glass">
+                <div><div class="stat-label">Bateria</div></div>
+                <div class="stat-value"><span id="bat-val">--</span>%</div>
+            </div>
+            <div style="text-align: center; margin-top: 20px;">
+                <button class="btn-glass btn-primary-glass" onclick="updateStats()">🔄 Atualizar Agora</button>
+                <button class="btn-glass" onclick="pedirAjudaIA()">🤖 Pedir análise ao ThinkinIA</button>
+            </div>
+        </div>
+    </div>
+    <script>
+        async function updateStats() {
+            const res = await fetch('/api/system/status');
+            const data = await res.json();
+            if(data.sucesso) {
+                updateBar('cpu', data.cpu);
+                updateBar('ram', data.ram);
+                updateBar('disk', data.disk);
+                document.getElementById('bat-val').innerText = data.bateria !== 'N/A' ? data.bateria : 'N/A';
+            }
+        }
+        function updateBar(id, val) {
+            document.getElementById(id + '-val').innerText = val;
+            const bar = document.getElementById(id + '-bar');
+            bar.style.width = val + '%';
+            bar.className = 'progress-fill ' + (val > 85 ? 'danger' : val > 70 ? 'warning' : '');
+        }
+        function pedirAjudaIA() {
+            window.open('/chat-window?assistant=ThinkinIA', '_blank');
+        }
+        updateStats();
+        setInterval(updateStats, 5000); // Atualiza a cada 5 segundos
+    </script>
+</body>
+</html>

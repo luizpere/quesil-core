@@ -1,0 +1,3180 @@
+import sys
+import psutil
+from werkzeug.security import generate_password_hash, check_password_hash
+# === DECORATOR DE AUTENTICAÇÃO ===
+from functools import wraps
+
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            return redirect('/login')
+        return f(*args, **kwargs)
+    return decorated_function
+print("🟢 [INÍCIO] app.py começou a carregar...")
+import re
+from dotenv import load_dotenv, set_key, find_dotenv
+from flask_socketio import SocketIO, emit
+from flask import redirect,  session, request, jsonify,  session, Flask, session, request, jsonify, render_template, send_from_directory
+from dotenv import load_dotenv
+from groq import Groq
+import json
+import random
+import os
+from datetime import datetime
+import sqlite3
+import docker
+import sqlite3
+# === CONFIGURAÇÃO DE ARQUIVOS ===
+UPLOAD_FOLDER = '/home/lps/thinkinos-platform/uploads'
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+# ================================
+
+# === CONEXÃO COM BANCO DE DADOS ===
+DB_PATH = '/home/lps/thinkinos-platform/thinkinos.db'
+DB_PATH = '/home/lps/thinkinos-platform/thinkinos.db'
+
+def get_db():
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+def get_cursor():
+    conn = get_db()
+    return conn.cursor()
+
+# ================================
+
+
+load_dotenv()
+
+app = Flask(__name__)
+socketio = SocketIO(app, cors_allowed_origins='*', ping_timeout=60, ping_interval=25)
+socketio = SocketIO(app, cors_allowed_origins='*', ping_timeout=60, ping_interval=25)
+# === INICIALIZAÇÃO DO DOCKER ===
+try:
+    docker_client = docker.from_env()
+    print("🐳 Docker conectado com sucesso!")
+except Exception as e:
+    print(f"⚠️ Erro ao conectar ao Docker: {e}")
+    docker_client = None
+
+
+# Inicializar cliente Docker
+@app.after_request
+def add_no_cache_headers(response):
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '-1'
+    return response
+
+app.secret_key = '81b1e840f53b20492a2890d3a51805bdb56ad9d331c6fb4845ac1904d91a9080'  # Chave secreta para sessões seguras
+
+api_key = os.environ.get("GROQ_API_KEY")
+if not api_key:
+    print("ERRO: GROQ_API_KEY não encontrada!", file=sys.stderr)
+    sys.exit(1)
+
+client = Groq(api_key=api_key)
+print(f"Groq OK: {api_key[:8]}...")
+
+CHAT_DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "chat_history.db")
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+CURRENT_PROFILE = 'personal'
+AGENTS_CONFIG = {}
+
+def load_agents_config(profile_filter=None):
+    """Carrega assistentes do arquivo JSON (fonte única de verdade)"""
+    try:
+        import json
+        json_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'assistants.json')
+        
+        with open(json_path, 'r', encoding='utf-8') as f:
+            assistentes = json.load(f)
+        
+        config = {}
+        for agent in assistentes:
+            if not agent.get('active', True):
+                continue
+            if profile_filter and agent.get('profile') != profile_filter:
+                continue
+            
+            # Usa o display_name como chave para bater exatamente com o que o frontend envia
+            key = agent.get('display_name', agent.get('name', '')).strip()
+            config[key] = {
+                'prompt': agent.get('prompt', ''),
+                'display_name': agent.get('display_name', key),
+                'color': agent.get('color', '#1CC54B'),
+                'category': agent.get('specialty', agent.get('category', ''))
+            }
+        
+        print(f"✅ {len(config)} assistentes carregados do JSON (chaves: {list(config.keys())})")
+        return config
+    except Exception as e:
+        print(f"❌ ERRO ao carregar assistentes do JSON: {e}")
+        return {}
+# Inicializa config
+AGENTS_CONFIG = load_agents_config(CURRENT_PROFILE)
+
+
+
+
+def force_portuguese_response(text):
+    """Filtra respostas - permite LaTeX/código, só bloqueia se for majoritariamente inglês"""
+    if not text:
+        return "Desculpe, não entendi. Pode reformular?"
+    
+    # Contar palavras em inglês vs português
+    text_lower = text.lower()
+    en_words = ['the ', 'and ', 'is ', 'are ', 'was ', 'were ', 'have ', 'has ', 'will ', 'would ']
+    pt_words = ['o ', 'a ', 'os ', 'as ', 'um ', 'uma ', 'é ', 'são ', 'foi ', 'foram ', 'tem ', 'vão ']
+    
+    en_count = sum(1 for word in en_words if word in text_lower)
+    pt_count = sum(1 for word in pt_words if word in text_lower)
+    
+    # Só bloqueia se tiver MUITO mais inglês que português (resposta em inglês)
+    if en_count > pt_count and en_count >= 3:
+        return "Por favor, reformule sua pergunta em português para que eu possa ajudar melhor."
+    
+    # Permitir LaTeX e código (são úteis para explicações técnicas)
+    return text.strip()
+
+
+@app.route('/portal')
+def portal():
+    """Portal público do ThinkinOS - Landing page."""
+    return render_template('portal.html')
+
+@app.route('/')
+def root_redirect():
+    return render_template('onboarding.html')
+
+
+# === ROTAS DE AUTENTICAÇÃO ===
+@app.route('/login')
+def login_page():
+    if 'user_id' in session:
+        return redirect('/desktop')
+    return render_template('login.html')
+
+@app.route('/api/login', methods=['POST'])
+def api_login():
+    data = request.get_json()
+    username = data.get('username', '').strip()
+    password = data.get('password', '').strip()
+    
+    if not username or not password:
+        return jsonify({"error": "Usuário e senha são obrigatórios"}), 400
+    
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, username, password_hash, display_name FROM users WHERE username=?", (username,))
+    user = cursor.fetchone()
+    conn.close()
+    
+    if user and check_password_hash(user[2], password):
+        session['user_id'] = user[0]
+        session['username'] = user[1]
+        session['display_name'] = user[3]
+        return jsonify({"success": True, "message": "Login realizado!"}), 200
+    else:
+        return jsonify({"error": "Usuário ou senha incorretos"}), 401
+
+
+@app.route('/api/register', methods=['POST'])
+def api_register():
+    data = request.get_json()
+    username = data.get('username', '').strip()
+    password = data.get('password', '').strip()
+    display_name = data.get('display_name', '').strip()
+    
+    if not username or not password:
+        return jsonify({"error": "Usuário e senha são obrigatórios"}), 400
+    
+    if len(password) < 6:
+        return jsonify({"error": "A senha deve ter pelo menos 6 caracteres"}), 400
+    
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    # Verificar se usuário já existe
+    cursor.execute("SELECT id FROM users WHERE username=?", (username,))
+    if cursor.fetchone():
+        conn.close()
+        return jsonify({"error": "Usuário já existe"}), 409
+    
+    # Criar novo usuário
+    password_hash = generate_password_hash(password)
+    cursor.execute(
+        "INSERT INTO users (username, password_hash, display_name) VALUES (?, ?, ?)",
+        (username, password_hash, display_name or username)
+    )
+    conn.commit()
+    conn.close()
+    
+    return jsonify({"success": True, "message": "Usuário criado com sucesso!"}), 201
+
+@app.route('/api/logout', methods=['POST'])
+def api_logout():
+    session.clear()
+    return jsonify({"success": True}), 200
+
+@app.route('/desktop')
+@login_required
+def desktop_page():
+    if 'user_id' not in session:
+        return redirect('/login')
+    return render_template('desktop.html')
+
+@app.route('/desktop')
+def desktop():
+    # Ler assistente selecionado da URL (padrão: primeiro assistente ativo)
+    selected_assistant = request.args.get('assistant', '')
+    
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        cursor = get_cursor()
+        cursor.execute("SELECT * FROM assistants WHERE is_active=1 AND profile=? ORDER BY name", (CURRENT_PROFILE,))
+        rows = cursor.fetchall()
+        agents = {}
+        for row in rows:
+            agents[row['name']] = dict(row)
+        
+        # Se nenhum assistente foi selecionado ou não existe, usar o primeiro
+        if not selected_assistant or selected_assistant not in agents:
+            selected_assistant = list(agents.keys())[0] if agents else 'Pedro'
+    except Exception as e:
+        print(f"ERRO ao carregar assistentes: {e}")
+        agents = {}
+    return render_template('desktop.html', agents=agents, current_profile=CURRENT_PROFILE, selected_assistant=selected_assistant)
+
+@app.route('/chat-window')
+def chat_window():
+    return render_template('chat-window.html')
+
+
+
+def clean_markdown(text):
+    if not text: return ""
+    
+    # 1. Remover cabeçalhos markdown (#, ##, ###, etc.)
+    text = re.sub(r'^#{1,6}\s+', '', text, flags=re.MULTILINE)
+    
+    # 2. Remover linhas horizontais (---, ***, ___)
+    text = re.sub(r'^[-*_]{3,}$', '', text, flags=re.MULTILINE)
+    
+    # 3. Remover negrito e itálico (**texto**, *texto*, __texto__, _texto_)
+    text = text.replace('**', '').replace('*', '').replace('__', '').replace('_', '')
+    
+    # 4. Remover blocos de código inline (texto entre crases)
+    text = text.replace('`', '')
+    
+    return text.strip()
+
+
+def sanitize_ai_response(text):
+    """Filtra respostas inadequadas da IA - versão inteligente"""
+    if not text: return text
+    
+    text_lower = text.lower()
+    en_words = ['the ', 'and ', 'is ', 'are ', 'was ', 'were ', 'have ', 'has ', 'will ', 'would ', 'could ', 'should ']
+    pt_words = ['o ', 'a ', 'os ', 'as ', 'um ', 'uma ', 'é ', 'são ', 'foi ', 'foram ', 'tem ', 'vão ']
+    
+    en_count = sum(1 for word in en_words if word in text_lower)
+    pt_count = sum(1 for word in pt_words if word in text_lower)
+    
+    # Só bloqueia se tiver MUITO mais inglês que português
+    if en_count > pt_count and en_count >= 3:
+        return "Desculpe, não entendi sua pergunta. Pode reformular em português?"
+    
+    return text.strip()
+
+
+# === FUNÇÃO DE EXTRAÇÃO DE MEMÓRIAS ===
+def extract_and_save_memories(user_msg, ai_response, assistant_name):
+    """Usa IA para extrair fatos importantes e salvar no banco"""
+    print('🔍 [MEMÓRIA] Iniciando extração para:', assistant_name)
+    try:
+        import json
+        import re
+        
+        extraction_prompt = f"""Analise esta conversa e extraia APENAS fatos importantes sobre o usuário.
+Se não houver fatos novos importantes, responda APENAS: NENHUMA_MEMORIA
+
+Conversa:
+Usuário: {user_msg}
+Assistente: {ai_response}
+
+Responda estritamente em formato JSON:
+[{{"key": "categoria", "value": "fato"}}]"""
+        
+        print(' [MEMÓRIA] Chamando API...')
+        response = client.chat.completions.create(
+            model='qwen/qwen3.8-27b',
+            messages=[
+                {'role': 'system', 'content': 'Você é um extrator de dados JSON. Responda APENAS o JSON ou NENHUMA_MEMORIA.'},
+                {'role': 'user', 'content': extraction_prompt}
+            ],
+            temperature=0.1,
+            max_tokens=300
+        )
+        
+        extracted = response.choices[0].message.content.strip()
+        print(f'🔍 [MEMÓRIA] Resposta bruta: {extracted[:200]}...')
+        
+        # Remover tags de thinking e backticks
+        extracted = extracted.replace('<think>', '').replace('</think>', '')
+        extracted = extracted.replace('`', '').replace('```json', '').replace('```', '').strip()
+        
+        # Extrair JSON
+        memories = []
+        start_marker = '[{"key"'
+        start_idx = extracted.lower().find(start_marker.lower())
+        
+        if start_idx != -1:
+            end_idx = extracted.rfind('}]')
+            if end_idx != -1 and end_idx > start_idx:
+                json_str = extracted[start_idx:end_idx+2]
+                try:
+                    memories = json.loads(json_str)
+                    print(f'🔍 [MEMÓRIA] JSON extraído: {memories}')
+                except json.JSONDecodeError as e:
+                    print(f'⚠️ [MEMÓRIA] Erro JSON: {e}')
+                    memories = []
+        
+        # Fallback: extrair pares key-value
+        if not memories:
+            pairs = re.findall(r'"key":\s*"([^"]+)"\s*,\s*"value":\s*"([^"]+)"', extracted)
+            if pairs:
+                memories = [{'key': k, 'value': v} for k, v in pairs]
+                print(f'🔍 [MEMÓRIA] Pares extraídos: {memories}')
+        
+        # Salvar no banco
+        if memories:
+            conn = get_db()
+            cursor = conn.cursor()
+            for mem in memories:
+                key = str(mem.get('key', '')).strip()
+                value = str(mem.get('value', '')).strip()
+                if key and value:
+                    cursor.execute('SELECT id FROM memories WHERE assistant=? AND key=? AND value=?', 
+                                 (assistant_name, key, value))
+                    if not cursor.fetchone():
+                        cursor.execute("INSERT INTO memories (user_id, assistant, key, value, timestamp) VALUES (?, ?, ?, ?, datetime('now'))",
+                                     (session.get('user_id', 1), assistant_name, key, value))
+                        print(f'💾 Memória salva: {key} = {value}')
+                    else:
+                        print(f'⚠️ Já existe: {key} = {value}')
+            conn.commit()
+            conn.close()
+        else:
+            print('️ [MEMÓRIA] Nenhuma memória extraída')
+            
+    except Exception as e:
+        print(f'❌ [MEMÓRIA] Erro: {e}')
+
+@app.route('/api/chat', methods=['POST'])
+@login_required
+def chat():
+    # Padrões de regex definidos fora da string para evitar erros de escape
+    PAT_CLEAN_CJK = r'[\u4e00-\u9fff]+'
+    PAT_CLEAN_FIX = r'\(wait.*?\)|\(fix:.*?\)'
+    PAT_START_PATTERNS = [
+        r'(Ol[áa][!.,\s])',
+        r'(Para otimizar|Monitore|Instale)',
+        r'(Os módulos|A arquitetura)',
+        r'(O mercado|Petroleo|Commodities|Dados mostram)',
+        r'(Para organizar|Comece definindo|Use listas)',
+        r'(Aqui está|Você pode)'
+    ]
+    PAT_EN_WORDS = r'\b(Didactic|Portuguese|Check|Constraint|Yes|No|Starts|Ends|Imagine|Output|Input|Draft|Note)\b'
+    PAT_PT_SENTENCE = r'[A-ZÀ-Ú][^.!?]*[.!?](?:\s*😊)?'
+    
+    def clean_response(text):
+        if not text: return ""
+    
+        # Remover tags de raciocínio interno (think) se o modelo usar
+        text = re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL).strip()
+    
+        # Remover marcadores [FIM] se houver
+        if "[FIM]" in text:
+            text = text.split("[FIM]")[0].strip()
+        
+        # Remover caracteres CJK (chinês/japonês/coreano) que às vezes vazam do modelo
+        text = re.sub(r'[\u4e00-\u9fff\u3040-\u309f\u30a0-\u30ff]+', '', text)
+        
+        return text.strip()
+
+    data = request.get_json()
+    print("\n" + "="*40)
+    print("🕵️ DEBUG: Dados brutos recebidos do frontend:", data)
+    prompt = data.get('message', data.get('prompt', ''))
+    history = data.get('history', [])  # Histórico de mensagens do frontend
+    print("️ DEBUG: Texto da pergunta (prompt):", repr(prompt))
+    assistant = data.get('assistant', 'Ana')
+    nivel = data.get('nivel', 'leigo')  # Nível do usuário
+    print(f" Assistente selecionado: '{assistant}' | Nível: '{nivel}'")
+    base_prompt = AGENTS_CONFIG.get(assistant, {}).get('prompt', '')
+    
+    # === FALLBACK: Buscar prompt de agente personalizado no banco ===
+    if not base_prompt and assistant:
+        try:
+            conn = get_db()
+            cursor = conn.cursor()
+            # Buscar por nome exato ou nome normalizado (lowercase + underscore)
+            cursor.execute(
+                "SELECT system_prompt FROM custom_agents WHERE user_id=? AND (name=? OR LOWER(REPLACE(name, ' ', '_'))=?)",
+                (session.get('user_id', 1), assistant, assistant.lower())
+            )
+            row = cursor.fetchone()
+            conn.close()
+            if row:
+                base_prompt = row[0]
+                print(f"✅ Prompt de agente personalizado carregado para '{assistant}' ({len(base_prompt)} chars)")
+            else:
+                print(f"️ Agente '{assistant}' não encontrado em AGENTS_CONFIG nem em custom_agents")
+        except Exception as e:
+            print(f"️ Erro ao buscar agente personalizado: {e}")
+    if not base_prompt:
+        print(f"⚠️ AVISO: Prompt vazio para '{assistant}'! Verifique AGENTS_CONFIG")
+        print(f"   Chaves disponíveis: {list(AGENTS_CONFIG.keys())}")
+    else:
+        print(f"✅ Prompt carregado ({len(base_prompt)} chars): {base_prompt[:150]}...")
+    print("="*40 + "\n")
+    
+    # Construir contexto do histórico
+    history_context = ""
+    if history and len(history) > 0:
+        history_context = "\n\n[HISTÓRICO DA CONVERSA - Últimas mensagens]\n"
+        for msg in history:
+            role = "Usuário" if msg.get('role') == 'user' else "Assistente"
+            content = msg.get('content', '')
+            history_context += f"{role}: {content}\n"
+        history_context += "\n[NOVA MENSAGEM DO USUÁRIO]\n"
+    
+    system_prompt = base_prompt + history_context + "\n\n[INSTRUÇÕES OBRIGATÓRIAS]\n- Responda SEMPRE em português brasileiro natural e direto.\n- NÃO use inglês, LaTeX ou formatação técnica excessiva.\n- Seja claro, objetivo e conversacional.\n- Considere o histórico da conversa para manter o contexto."
+
+    try:
+        cursor = get_cursor()
+        cursor.execute("SELECT key, value FROM memories WHERE user_id=? AND assistant=?", (session.get('user_id', 1), assistant))
+        memories = [dict(row) for row in cursor.fetchall()]
+        
+        if memories:
+            memory_text = "\n\n[CONTEXTO DO USUARIO - USE APENAS SE RELEVANTE]\n"
+            for mem in memories:
+                memory_text += f"- {mem['key']}: {mem['value']}\n"
+            system_prompt += memory_text
+
+        # CORREÇÃO: Truncar prompt apenas se exceder 4000 caracteres (limite seguro Groq)
+        if len(system_prompt) > 4000:
+            system_prompt = system_prompt[:3997] + '...'
+            print(f"⚠️ System prompt TRUNCADO para {len(system_prompt)} chars")
+
+    except Exception as e:
+        print(f"Aviso: Erro ao carregar memorias: {e}")
+    
+    try:
+        response = client.chat.completions.create(
+            model="qwen/qwen3.8-27b",
+            messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": prompt}]
+        , max_tokens=4096, reasoning_effort="none")
+        ai_response = response.choices[0].message.content
+        cleaned = clean_response(ai_response)
+        cleaned = clean_markdown(cleaned)  # Remove formatação markdown
+        
+        # EXTRAIR E SALVAR MEMÓRIAS
+        extract_and_save_memories(prompt, cleaned, assistant)  # Reativado na V2.1
+        
+        try:
+            conn_hist = sqlite3.connect(CHAT_DB_PATH, timeout=30)
+            conn_hist.execute("PRAGMA busy_timeout=30000")
+            conn_hist.execute("PRAGMA journal_mode=WAL")
+            conn_hist.execute("INSERT INTO messages (user_id, assistant, user_msg, ai_response) VALUES (?, ?, ?, ?)",
+                     (session.get('user_id', 1), assistant, prompt, cleaned))
+            conn_hist.commit()
+            conn_hist.close()
+        except Exception as e:
+            pass  # Silencioso - não afeta o chat
+
+            
+                        # === ATUALIZAÇÃO DE MÉTRICAS (Simplificada) ===
+        # Nota: Métricas são opcionais. Se falhar, não afeta o chat.
+        try:
+            import sqlite3
+            now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            
+            # Conexão isolada com timeout alto
+            conn_temp = sqlite3.connect(CHAT_DB_PATH, timeout=30, isolation_level=None)
+            conn_temp.execute("PRAGMA busy_timeout=30000")
+            conn_temp.execute("PRAGMA journal_mode=WAL")
+            
+            # Verifica se tabela existe
+            cursor = conn_temp.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='assistants'")
+            if cursor.fetchone():
+                conn_temp.execute(
+                    "UPDATE assistants SET last_interaction=?, message_count=COALESCE(message_count, 0) + 1 WHERE name=?",
+                    (now, assistant)
+                )
+                print(f"✅ Métricas: {assistant}")
+            else:
+                print(f"ℹ️ Tabela assistants não existe, pulando métricas")
+            
+            conn_temp.close()
+        except Exception as e:
+            # Silencioso - não afeta o chat
+            pass
+        # ================================
+        return jsonify({"response": force_portuguese_response(cleaned)})
+    except Exception as e:
+        print(f"❌ Erro no chat: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+
+
+
+
+@app.route('/api/files/view/<path:filename>')
+def api_view_file(filename):
+    # Decodificar nome do arquivo (acentos, etc)
+    from urllib.parse import unquote
+    filename = unquote(filename)
+    print(f" [BACKEND] Arquivo solicitado: {filename}")
+    """Serve arquivo para visualização inline (DENTRO do iframe)"""
+    try:
+        filepath = os.path.join(UPLOAD_FOLDER, filename)
+        if not os.path.exists(filepath):
+            return jsonify({"error": "Arquivo não encontrado"}), 404
+        
+        from flask import send_file
+        import mimetypes
+        
+        mime_type, _ = mimetypes.guess_type(filepath)
+        if mime_type is None:
+            mime_type = 'application/octet-stream'
+        
+        # Headers CRUCIAIS para abrir dentro do iframe
+        response = send_file(
+            filepath, 
+            mimetype=mime_type, 
+            as_attachment=False,
+            conditional=True
+        )
+        
+        # Headers para permitir iframe
+        response.headers['Content-Disposition'] = 'inline'
+        response.headers['X-Frame-Options'] = 'SAMEORIGIN'
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        
+        print(f"✅ [BACKEND] Servindo arquivo inline: {filename} ({mime_type})")
+        return response
+    except Exception as e:
+        print(f"❌ [BACKEND] Erro ao servir arquivo: {e}")
+        return jsonify({"error": str(e)}), 500
+@app.route('/api/files/download/<filename>', methods=['GET'])
+def download_file(filename):
+    try:
+        cursor = get_cursor()
+        return send_from_directory(UPLOAD_FOLDER, filename, as_attachment=True)
+    except FileNotFoundError:
+        return jsonify({"error": "Arquivo nao encontrado"}), 404
+
+@app.route('/api/history/save', methods=['POST'])
+def save_history():
+    cursor = get_cursor()
+    data = request.get_json()
+    try:
+        cursor = get_cursor()
+        cursor.execute("INSERT INTO messages (user_id, assistant, user_msg, ai_response) VALUES (?, ?, ?, ?)",
+                 (data.get('assistant','Ana'), data.get('user_msg',''), data.get('ai_response','')))
+        return jsonify({"status": "saved"}), 201
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/history/<assistant>', methods=['GET'])
+def get_history(assistant):
+    try:
+        cursor = get_cursor()
+        cursor = get_cursor()
+        cursor.execute("SELECT * FROM messages WHERE user_id=? AND assistant=? ORDER BY timestamp DESC LIMIT 50", (session.get('user_id', 1), assistant))
+        return jsonify({"messages": rows}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/history/clear/<assistant>', methods=['DELETE'])
+def clear_history(assistant):
+    try:
+        cursor = get_cursor()
+        return jsonify({"status": "cleared"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/memory/save', methods=['POST'])
+def save_memory():
+    cursor = get_cursor()
+    data = request.get_json()
+    try:
+        cursor = get_cursor()
+        cursor.execute("INSERT OR REPLACE INTO memories (assistant, key, value) VALUES (?, ?, ?)",
+                 (data.get('assistant','Ana'), data.get('key',''), data.get('value','')))
+        return jsonify({"status": "saved", "key": data.get('key')}), 201
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/memories', methods=['GET'])
+def list_memories_api():
+    try:
+        cursor = get_cursor()
+        cursor.execute("SELECT id, key, value, timestamp FROM memories WHERE user_id=? ORDER BY id DESC", (session.get('user_id', 1),))
+        rows = cursor.fetchall()
+        
+        memories = []
+        for row in rows:
+            memories.append({
+                "id": row[0],
+                "content": row[2],
+                "timestamp": row[3]
+            })
+        
+        return jsonify({"memories": memories}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/memories', methods=['POST'])
+@login_required
+def save_memory_from_page():
+    data = request.get_json()
+    try:
+        titulo = data.get('titulo', 'Sem título').strip()
+        content = data.get('content', '').strip()
+        
+        if not titulo and not content:
+            return jsonify({"error": "Título ou conteúdo são obrigatórios"}), 400
+        
+        conn = get_db()
+        cursor = conn.cursor()
+        
+        # Salvar o título como 'key' e o conteúdo como 'value'
+        cursor.execute("INSERT INTO memories (user_id, assistant, key, value, timestamp) VALUES (?, ?, ?, ?, datetime('now'))",
+                 (session.get('user_id', 1), 'ThinkinOS', titulo, content))
+        
+        conn.commit()
+        memory_id = cursor.lastrowid
+        conn.close()
+        
+        return jsonify({"status": "saved", "id": memory_id, "message": "Memória salva!"}), 201
+    except Exception as e:
+        print(f"ERRO AO SALVAR MEMÓRIA: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/memories/<int:memory_id>', methods=['DELETE'])
+@login_required
+def delete_memory_by_id(memory_id):
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM memories WHERE id=? AND user_id=?", (memory_id, session.get('user_id', 1)))
+        conn.commit()
+        conn.close()
+        return jsonify({"status": "deleted", "message": "Memória excluída!"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/memory/get/<assistant>', methods=['GET'])
+def get_memories(assistant):
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, key, value, timestamp FROM memories WHERE user_id=? AND assistant=? ORDER BY timestamp DESC", 
+                      (session.get('user_id', 1), assistant))
+        rows = cursor.fetchall()
+        conn.close()
+        memories = [{"id": r[0], "key": r[1], "value": r[2], "timestamp": r[3]} for r in rows]
+        return jsonify({"memories": memories}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/memory/delete/<assistant>/<key>', methods=['DELETE'])
+def delete_memory(assistant, key):
+    try:
+        return jsonify({"status": "deleted"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+def set_profile_route(profile_name):
+    cursor = get_cursor()
+    global CURRENT_PROFILE
+    valid = ['personal', 'devops', 'enterprise']
+    if profile_name not in valid:
+        return jsonify({"error": "Perfil inválido"}), 400
+    
+    global AGENTS_CONFIG
+    
+    return jsonify({"status": "ok", "profile": profile_name}), 200
+
+def get_dock_assistants():
+    cursor = get_cursor()
+    profile = globals().get('CURRENT_PROFILE', 'personal')
+    try:
+        cursor = get_cursor()
+        cursor.execute("SELECT * FROM assistants WHERE is_active=1 AND profile=? ORDER BY name", (profile,))
+        rows = [dict(row) for row in cursor.fetchall()]
+        config = {}
+        for agent in rows:
+            config[agent['name']] = {
+                'prompt': agent['system_prompt'],
+                'display_name': agent['display_name'],
+                'color': agent['color'],
+                'category': agent['category']
+            }
+        return jsonify({"assistants": config, "profile": profile}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+
+@app.route('/api/profile/set/<profile_name>', methods=['POST'])
+def set_profile_route(profile_name):
+    cursor = get_cursor()
+    global CURRENT_PROFILE, AGENTS_CONFIG
+    valid = ['personal', 'devops', 'enterprise']
+    if profile_name not in valid:
+        return jsonify({"error": "Perfil inválido"}), 400
+    CURRENT_PROFILE = profile_name
+    AGENTS_CONFIG = load_agents_config(CURRENT_PROFILE)
+    return jsonify({"status": "ok", "profile": profile_name}), 200
+
+def get_all_assistants():
+    try:
+        cursor = get_cursor()
+        cursor = get_cursor()
+        cursor.execute("SELECT * FROM assistants WHERE is_active=1 ORDER BY name")
+        rows = [dict(row) for row in cursor.fetchall()]
+        config = {}
+        for agent in rows:
+            config[agent['name']] = {
+                'prompt': agent.get('system_prompt', ''),
+                'display_name': agent.get('display_name', agent['name']),
+                'color': agent.get('color', '#7c4dff'),
+                'category': agent.get('category', 'general')
+            }
+        return jsonify({"assistants": config}), 200
+    except Exception as e:
+        print(f"ERRO CRÍTICO EM /api/assistants: {e}")
+        return jsonify({"error": str(e), "assistants": {}}), 500
+
+def toggle_assistant(name):
+    try:
+        cursor = get_cursor()
+        
+        # Busca estado atual
+        cursor = get_cursor()
+        cursor.execute("SELECT is_active FROM assistants WHERE name=?", (name,))
+        row = c.fetchone()
+        
+        if not row:
+            return jsonify({"error": "Assistente não encontrado"}), 404
+            
+        new_status = 0 if row[0] == 1 else 1
+        cursor.execute("UPDATE assistants SET is_active=? WHERE name=?", (new_status, name))
+        
+        status_text = 'activated' if new_status == 1 else 'deactivated'
+        return jsonify({"status": status_text, "is_active": new_status}), 200
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+
+def delete_assistant(name):
+    try:
+        cursor = get_cursor()
+        cursor = get_cursor()
+        cursor.execute("DELETE FROM assistants WHERE name=?", (name,))
+        return jsonify({"status": "deleted"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+
+def get_assistant_metrics(name):
+    try:
+        cursor = get_cursor()
+        cursor = get_cursor()
+        cursor.execute("SELECT last_interaction, message_count FROM assistants WHERE name=?", (name,))
+        row = c.fetchone()
+        
+        if not row:
+            return jsonify({"error": "Assistente não encontrado"}), 404
+            
+        return jsonify({
+            "last_interaction": row["last_interaction"],
+            "message_count": row["message_count"] or 0
+        }), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+
+# === ROTAS DE GERENCIAMENTO DE ARQUIVOS ===
+
+
+
+
+
+# === GERENCIAMENTO DE ARQUIVOS (VERSÃO ÚNICA) ===
+
+
+
+
+
+# === ROTAS DE ARQUIVOS (ÚNICAS) ===
+
+
+
+
+@app.route('/api/files/list', methods=['GET'])
+def api_list_files():
+    try:
+        files = []
+        if os.path.exists(UPLOAD_FOLDER):
+            for filename in os.listdir(UPLOAD_FOLDER):
+                # Ignorar arquivos ocultos do sistema, mas permitir nossa lógica de pasta
+                if filename.startswith('.') and filename != '.folder':
+                    continue
+                
+                filepath = os.path.join(UPLOAD_FOLDER, filename)
+                stat = os.stat(filepath)
+                is_dir = os.path.isdir(filepath)
+                
+                files.append({
+                    "name": filename,
+                    "size": stat.st_size if not is_dir else 0,
+                    "is_dir": is_dir  # <-- O segredo que o frontend precisa!
+                })
+        return jsonify({"files": files}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/files/upload', methods=['POST'])
+def api_upload_file():
+    try:
+        if 'file' not in request.files:
+            return jsonify({"error": "Nenhum arquivo enviado"}), 400
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({"error": "Nome vazio"}), 400
+        filepath = os.path.join(UPLOAD_FOLDER, file.filename)
+        file.save(filepath)
+        return jsonify({"status": "success", "filename": file.filename}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/files/create', methods=['POST'])
+def api_create_file():
+    """Cria um novo arquivo (ou simula pasta via arquivo .folder)"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "Dados inválidos"}), 400
+        
+        filename = data.get('filename', '').strip()
+        content_file = data.get('content', '')
+        
+        if not filename:
+            return jsonify({"error": "Nome do arquivo obrigatório"}), 400
+        
+        # Segurança: evitar path traversal
+        if '..' in filename or filename.startswith('/'):
+            return jsonify({"error": "Nome de arquivo inválido"}), 400
+        
+        # Criar o arquivo na pasta de uploads
+        file_path = os.path.join(UPLOAD_FOLDER, filename)
+        
+        # Criar subpastas se necessário (ex: "MinhaPasta/.folder")
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+        
+        with open(file_path, 'w', encoding='utf-8') as f:
+            f.write(content_file)
+        
+        return jsonify({
+            "success": True, 
+            "message": f"Arquivo '{filename}' criado com sucesso",
+            "filename": filename
+        }), 201
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+
+@app.route('/api/files/delete/<path:filename>', methods=['DELETE'])
+def api_delete_file(filename):
+    try:
+        import os, shutil
+        filepath = os.path.join(UPLOAD_FOLDER, filename)
+        print(f'🗑️ [BACKEND] Tentando deletar: {filepath}')
+        
+        if not os.path.exists(filepath):
+            print(f'❌ [BACKEND] Não encontrado: {filepath}')
+            return jsonify({'error': 'Não encontrado'}), 404
+        
+        if os.path.isdir(filepath):
+            shutil.rmtree(filepath)
+            print(f'✅ [BACKEND] Pasta deletada com sucesso')
+        else:
+            os.remove(filepath)
+            print(f'✅ [BACKEND] Arquivo deletado com sucesso')
+        
+        return jsonify({'success': True})
+    except Exception as e:
+        print(f'❌ [BACKEND] ERRO CRÍTICO AO DELETAR: {e}')
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+def delete_file(filename):
+    try:
+        import os
+        # Sanitização básica para evitar path traversal
+        safe_name = os.path.basename(filename)
+        file_path = os.path.join('uploads', safe_name) # Ajuste se sua pasta for outra
+        
+        # Tenta deletar do banco primeiro (se houver tabela de arquivos)
+        # cursor = get_cursor()
+        # cursor.execute("DELETE FROM files WHERE name=?", (safe_name,))
+        
+        if os.path.exists(file_path):
+            os.remove(file_path)
+            return jsonify({"success": True, "message": f"Arquivo {safe_name} excluído."})
+        else:
+            # Se não achar no disco, assume sucesso para limpar a UI (ou retorna erro 404)
+            return jsonify({"success": True, "message": "Arquivo removido do registro."})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/files/update', methods=['POST'])
+def update_file():
+    try:
+        import os
+        data = request.get_json()
+        filename = data.get('filename')
+        content = data.get('content')
+        
+        safe_name = os.path.basename(filename)
+        file_path = os.path.join('uploads', safe_name)
+        
+        with open(file_path, 'w', encoding='utf-8') as f:
+            f.write(content)
+            
+        return jsonify({"success": True, "message": "Arquivo atualizado!"})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/files/open', methods=['GET'])
+def api_open_file():
+    filename = request.args.get('name')
+    if not filename or '..' in filename or '/' in filename:
+        return jsonify({"error": "Arquivo inválido"}), 400
+    try:
+        return send_from_directory(UPLOAD_FOLDER, filename, as_attachment=False)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 404
+
+
+
+
+
+
+    except Exception:
+        pass
+
+
+
+
+
+
+
+
+
+
+
+
+# === ROTAS DE ASSISTENTES (JSON-BASED) ===
+def list_assistants():
+    try:
+        fpath = os.path.join(os.path.dirname(__file__), 'assistants.json')
+        if not os.path.exists(fpath):
+            return jsonify({'assistants': {}}), 200
+        
+        with open(fpath, 'r') as f:
+            data = json.load(f)
+        
+        result = {}
+        for item in data:
+            name = item.get('name', str(len(result)))
+            item['active'] = True
+            result[name] = item
+        
+        return jsonify({'assistants': result}), 200
+    except Exception as e:
+        print("ERRO LIST:", e)
+        return jsonify({'assistants': {}, 'error': str(e)}), 200
+
+def create_assistant():
+    try:
+        data = request.get_json(silent=True)
+        if not data: return jsonify({'error': 'JSON invalido'}), 400
+        
+        name = str(data.get('name', '')).strip()
+        specialty = str(data.get('specialty', '')).strip()
+        prompt = str(data.get('prompt', '')).strip()
+        
+        if not name or not specialty:
+            return jsonify({'error': 'Nome e especialidade obrigatorios'}), 400
+        
+        fpath = os.path.join(os.path.dirname(__file__), 'assistants.json')
+        assistants = []
+        if os.path.exists(fpath):
+            try:
+                with open(fpath, 'r') as f:
+                    txt = f.read().strip()
+                    if txt: assistants = json.loads(txt)
+            except: assistants = []
+        
+        new_asst = {
+            'id': str(len(assistants) + 1),
+            'name': name,
+            'specialty': specialty.upper(),
+            'prompt': prompt if prompt else ('Especialista em ' + specialty),
+            'color': '#' + ''.join([random.choice('0123456789ABCDEF') for _ in range(6)]),
+            'created_at': datetime.now().isoformat(),
+            'active': True
+        }
+        
+        assistants.append(new_asst)
+        with open(fpath, 'w') as f:
+            json.dump(assistants, f, indent=2, ensure_ascii=False)
+        
+        print("Assistente criado:", name)
+        return jsonify({'status': 'success', 'assistant': new_asst}), 201
+    except Exception as e:
+        print("ERRO CREATE:", e)
+        import traceback; traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+# ==========================================
+
+
+
+def list_assistants():
+    """Rota isolada: lê apenas de assistants.json, retorna lista"""
+    import json as _json
+    import os as _os
+    
+    try:
+        fpath = _os.path.join(_os.path.dirname(__file__), 'assistants.json')
+        if not _os.path.exists(fpath):
+            return jsonify([]), 200
+        
+        with open(fpath, 'r') as f:
+            data = _json.load(f)
+        
+        # Filtrar apenas assistentes ativos
+        active_assistants = [item for item in data if item.get('active', False)]
+        
+        return jsonify(active_assistants), 200
+        
+    except Exception as e:
+        print("ERRO LIST:", e)
+        return jsonify([]), 200
+
+
+
+@app.route('/api/assistants/<string:name>/toggle', methods=['POST'])
+def toggle_assistant(name):
+    try:
+        import json
+        fpath = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'assistants.json')
+        
+        if not os.path.exists(fpath):
+            return jsonify({'error': 'Arquivo não encontrado'}), 404
+        
+        with open(fpath, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        
+        target = None
+        for item in data:
+            if item.get('name') == name:
+                target = item
+                break
+        
+        if not target:
+            return jsonify({'error': f'Assistente {name} não encontrado'}), 404
+        
+        target['active'] = not target.get('active', True)
+        
+        with open(fpath, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+        
+        print(f"✅ Toggle {name}: {'Ativo' if target['active'] else 'Inativo'}")
+        return jsonify({'status': 'success', 'active': target['active']}), 200
+        
+    except Exception as e:
+        print(f"❌ Erro toggle: {e}")
+        import traceback; traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/assistants/<string:name>', methods=['DELETE'])
+def delete_assistant(name):
+    try:
+        import json
+        fpath = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'assistants.json')
+        
+        if not os.path.exists(fpath):
+            return jsonify({'error': 'Arquivo não encontrado'}), 404
+        
+        with open(fpath, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        
+        new_data = [item for item in data if item.get('name') != name]
+        
+        if len(new_data) == len(data):
+            return jsonify({'error': f'Assistente {name} não encontrado'}), 404
+        
+        with open(fpath, 'w', encoding='utf-8') as f:
+            json.dump(new_data, f, indent=2, ensure_ascii=False)
+        
+        print(f"✅ Delete {name}")
+        return jsonify({'status': 'success'}), 200
+        
+    except Exception as e:
+        print(f"❌ Erro delete: {e}")
+        import traceback; traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+
+
+
+@app.route('/api/assistants/create', methods=['POST'])
+def handle_create_assistant():
+    """Rota dedicada para criação - nome único para evitar conflitos"""
+    try:
+        import json, random, os
+        from datetime import datetime
+        
+        if not request.is_json:
+            return jsonify({'error': 'Content-Type deve ser application/json'}), 400
+        
+        data = request.get_json(silent=True)
+        if not data or not isinstance(data, dict):
+            return jsonify({'error': 'JSON inválido'}), 400
+        
+        name = str(data.get('name', '')).strip()
+        specialty = str(data.get('specialty', '')).strip()
+        prompt = str(data.get('prompt', '')).strip()
+        
+        if not name or not specialty:
+            return jsonify({'error': 'Nome e especialidade obrigatórios'}), 400
+        
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        assistants_file = os.path.join(base_dir, 'assistants.json')
+        
+        assistants = []
+        if os.path.exists(assistants_file):
+            try:
+                with open(assistants_file, 'r', encoding='utf-8') as f:
+                    txt = f.read().strip()
+                    if txt: assistants = json.loads(txt)
+            except: assistants = []
+        
+        new_asst = {
+            'id': str(len(assistants) + 1),
+            'name': name,
+            'specialty': specialty.upper(),
+            'prompt': prompt if prompt else f'Especialista em {specialty}',
+            'color': '#' + ''.join([random.choice('0123456789ABCDEF') for _ in range(6)]),
+            'created_at': datetime.now().isoformat(),
+            'active': True,
+            'profile': 'devops',
+            'icon': '🤖'
+        }
+        
+        assistants.append(new_asst)
+        
+        with open(assistants_file, 'w', encoding='utf-8') as f:
+            json.dump(assistants, f, indent=2, ensure_ascii=False)
+        
+        print(f"✅ Assistente criado: {name}")
+        return jsonify({'status': 'success', 'assistant': new_asst}), 201
+        
+    except Exception as e:
+        import traceback
+        print(f"❌ ERRO CREATE: {traceback.format_exc()}")
+        return jsonify({'error': str(e)}), 500
+
+# ==========================================================
+# ROTAS DE NAVEGAÇÃO DA DOCK (Inseridas antes do app.run)
+# ==========================================================
+@app.route('/dashboard')
+def dashboard_page():
+    import os, sys, platform, time
+    from datetime import datetime, timedelta
+
+    cursor = get_cursor()
+    
+    # 1. Totais do Banco
+    try:
+        cursor.execute("SELECT COUNT(*) FROM messages")
+        total_mensagens = cursor.fetchone()[0]
+    except: total_mensagens = 0
+    
+    try:
+        cursor.execute("SELECT COUNT(*) FROM assistants WHERE is_active = 1")
+        total_assistentes = cursor.fetchone()[0]
+    except: total_assistentes = 0
+    
+    try:
+        cursor.execute("SELECT COUNT(*) FROM memories")
+        total_memorias = cursor.fetchone()[0]
+    except: total_memorias = 0
+    
+    total_sessoes = max(1, total_mensagens // 5 + 1) # Estimativa segura
+
+    # 2. Gráfico (Últimos 7 dias)
+    datas_grafico = []
+    valores_grafico = []
+    today = datetime.now().date()
+    
+    try:
+        cursor.execute("SELECT timestamp FROM messages")
+        rows = cursor.fetchall()
+        msg_dates = [str(row[0])[:10] for row in rows if row[0]] # Pega YYYY-MM-DD
+        
+        for i in range(6, -1, -1):
+            day = today - timedelta(days=i)
+            datas_grafico.append(day.strftime('%d/%m'))
+            valores_grafico.append(msg_dates.count(day.strftime('%Y-%m-%d')))
+    except:
+        datas_grafico = [ (today - timedelta(days=i)).strftime('%d/%m') for i in range(6, -1, -1) ]
+        valores_grafico = [0] * 7
+
+    # 3. Assistente Top
+    assistente_top = ("Nenhum", 0)
+    try:
+        cursor.execute("SELECT assistant, COUNT(*) as cnt FROM messages GROUP BY assistant ORDER BY cnt DESC LIMIT 1")
+        res = cursor.fetchone()
+        if res and res[1] > 0:
+            assistente_top = (res[0], res[1])
+    except: pass
+
+    # 4. Atividade Recente
+    atividade_recente = []
+    try:
+        cursor.execute("SELECT assistant, 'Conversa', timestamp, 1 FROM messages ORDER BY id DESC LIMIT 5")
+        atividade_recente = cursor.fetchall()
+    except: pass
+
+    # 5. Métricas de Sistema
+    python_version = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
+    
+    total_arquivos = 0
+    uso_disco_mb = 0.0
+    upload_dir = os.path.join(os.path.dirname(__file__) or '.', 'uploads')
+    if os.path.exists(upload_dir):
+        for dirpath, _, filenames in os.walk(upload_dir):
+            for f in filenames:
+                total_arquivos += 1
+                fp = os.path.join(dirpath, f)
+                if not os.path.islink(fp):
+                    uso_disco_mb += os.path.getsize(fp) / (1024 * 1024)
+    uso_disco_mb = round(uso_disco_mb, 2)
+
+    db_size_mb = 0.0
+    try:
+        db_path = os.path.join(os.path.dirname(__file__) or '.', 'thinkinos.db')
+        if os.path.exists(db_path):
+            db_size_mb = round(os.path.getsize(db_path) / (1024 * 1024), 2)
+    except: pass
+
+    # Uptime (Fallback seguro se psutil não estiver instalado)
+    uptime_horas = "Ativo"
+    try:
+                uptime_horas = round((time.time() - psutil.boot_time()) / 3600, 1)
+    except: pass
+
+    return render_template('dashboard.html',
+        total_mensagens=total_mensagens,
+        total_assistentes=total_assistentes,
+        total_memorias=total_memorias,
+        total_sessoes=total_sessoes,
+        datas_grafico=datas_grafico,
+        valores_grafico=valores_grafico,
+        assistente_top=assistente_top,
+        atividade_recente=atividade_recente,
+        python_version=python_version,
+        uso_disco_mb=uso_disco_mb,
+        total_arquivos=total_arquivos,
+        db_size_mb=db_size_mb,
+        uptime_horas=uptime_horas,
+        status_banco="Online",
+        status_api="Online",
+        sistema_operacional=platform.system(),
+        versao_so=platform.release()
+    )
+
+
+
+
+@app.route('/memories')
+@login_required
+def memories_page():
+    try:
+        cursor = get_cursor()
+        cursor.execute("SELECT id, key, value, timestamp FROM memories WHERE user_id=? ORDER BY id DESC", (session.get('user_id', 1),))
+        rows = cursor.fetchall()
+        
+        # Converter para formato que o template espera: lista de tuplas (id, titulo, content, data)
+        memorias = [(row[0], row[1], row[2], row[3]) for row in rows]
+        
+        return render_template('memories.html', memorias=memorias)
+    except Exception as e:
+        print(f"Erro ao carregar memórias: {e}")
+        return render_template('memories.html', memorias=[])
+
+
+@app.route('/arquivos')
+def arquivos_page():
+    return render_template('arquivos.html')
+
+
+
+
+
+
+
+
+
+@app.route('/perfil')
+@login_required
+def perfil_page():
+    # Buscar dados reais do usuário logado
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, username, display_name FROM users WHERE id=?", (session['user_id'],))
+    user_data = cursor.fetchone()
+    conn.close()
+    
+    if user_data:
+        current_user = {
+            'id': user_data[0],
+            'username': user_data[1],
+            'display_name': user_data[2],
+            'email': f"{user_data[1]}@thinkinos.local",
+            'role': 'Administrador' if user_data[1] == 'admin' else 'Usuário'
+        }
+    else:
+        current_user = {'id': 0, 'username': 'Desconhecido', 'display_name': 'Desconhecido', 'email': '', 'role': 'Desconhecido'}
+    
+    return render_template('perfil.html', user=current_user)
+
+@app.route('/api/perfil/update', methods=['POST'])
+def update_profile():
+    # Segurança: Validação rigorosa de entrada (Sanitização)
+    data = request.get_json()
+    new_username = str(data.get('username', '')).strip()
+    
+    # Previne injeção e limita tamanho
+    if not new_username or len(new_username) < 3 or len(new_username) > 30:
+        return jsonify({"error": "Nome deve ter entre 3 e 30 caracteres."}), 400
+    
+    # Remove caracteres perigosos
+    import re
+    if not re.match(r"^[a-zA-Z0-9_\s\-]+$", new_username):
+        return jsonify({"error": "Nome contém caracteres inválidos."}), 400
+
+    # Atualiza a sessão (em um sistema real, atualizaria o banco de dados aqui)
+    if 'user' not in session:
+        session['user'] = {}
+    session['user']['username'] = new_username
+    session.modified = True
+    
+    return jsonify({"success": True, "username": new_username})
+
+@app.route('/api/perfil/delete_data', methods=['POST'])
+def delete_user_data():
+    # LGPD: Direito ao esquecimento. Limpa dados do usuário atual.
+    try:
+        user_id = session.get('user', {}).get('id', 1)
+        cursor = get_cursor()
+        
+        # Limpa histórico de mensagens e memórias associadas a este usuário/perfil
+        cursor.execute("DELETE FROM messages WHERE profile=?", (CURRENT_PROFILE,))
+        cursor.execute("DELETE FROM memories WHERE profile=?", (CURRENT_PROFILE,))
+        
+        # Limpa a sessão
+        session.clear()
+        
+        return jsonify({"success": True, "message": "Dados excluídos com sucesso."})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/configuracoes')
+def configuracoes_page():
+    return render_template('configuracoes.html')
+
+@app.route('/chat')
+@login_required
+def chat_page():
+    from flask import request
+    nivel = request.args.get('nivel', 'leigo')
+    
+    assistentes = dict(AGENTS_CONFIG)
+    if 'user_id' in session:
+        try:
+            conn = get_db()
+            cursor = conn.cursor()
+            print(f"🔍 DEBUG API: session['user_id'] = {session.get('user_id')}")
+            cursor.execute("SELECT name, icon, system_prompt FROM custom_agents WHERE user_id=?", (session['user_id'],))
+            custom_agents = cursor.fetchall()
+            print(f"🔍 DEBUG API: Agentes customizados encontrados no DB: {len(custom_agents)}")
+            for row in cursor.fetchall():
+                key = row[0].lower().replace(' ', '_')
+                assistentes[key] = {
+                    'name': row[0],
+                    'icon': row[1] or '🤖',
+                    'prompt': row[2],
+                    'is_custom': True
+                }
+            conn.close()
+        except Exception as e:
+            print(f"️ Erro ao carregar agentes customizados no chat: {e}")
+    return render_template('chat-window.html', assistentes=assistentes, nivel=nivel)
+
+
+# === API DE PERFIL E PRIVACIDADE ===
+def api_update_perfil():
+    try:
+        data = request.get_json()
+        new_username = str(data.get('username', '')).strip()
+        
+        # Validação de segurança
+        import re
+        if not new_username or len(new_username) < 3 or len(new_username) > 50:
+            return jsonify({"error": "Nome inválido (3-50 caracteres)."}), 400
+        
+        # Sanitização básica
+        if not re.match(r"^[a-zA-Z0-9_\s\-\.]+$", new_username):
+            return jsonify({"error": "Caracteres especiais não permitidos."}), 400
+
+        # Atualizar na sessão
+        if 'user' not in session:
+            session['user'] = {'id': 1, 'username': 'user', 'email': ''}
+        
+        session['user']['username'] = new_username
+        session.modified = True
+        
+        print(f"✅ Nome atualizado para: {new_username}")
+        return jsonify({"success": True, "username": new_username})
+    except Exception as e:
+        print(f" Erro ao atualizar perfil: {e}")
+        return jsonify({"error": str(e)}), 500
+
+def api_delete_perfil_data():
+    try:
+        cursor = get_cursor()
+        # Deletar dados do perfil atual
+        cursor.execute("DELETE FROM messages WHERE profile=?", (CURRENT_PROFILE,))
+        cursor.execute("DELETE FROM memories WHERE profile=?", (CURRENT_PROFILE,))
+        
+        session.clear()
+        print("✅ Dados do usuário excluídos.")
+        return jsonify({"success": True})
+    except Exception as e:
+        print(f"❌ Erro ao excluir dados: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+
+# === API DE CONFIGURAÇÕES (GESTÃO) ===
+@app.route('/api/config', methods=['GET'])
+def get_config():
+    load_dotenv()
+    # Retorna apenas se a chave está configurada (mascarada) por segurança
+    groq_key = os.getenv('GROQ_API_KEY', '')
+    openai_key = os.getenv('OPENAI_API_KEY', '')
+    anthropic_key = os.getenv('ANTHROPIC_API_KEY', '')
+    google_key = os.getenv('GOOGLE_API_KEY', '')
+    
+    return jsonify({
+        'groq_api_key': '***' + groq_key[-4:] if len(groq_key) > 4 else '',
+        'groq_api_key_configured': bool(groq_key),
+        'openai_api_key': '***' + openai_key[-4:] if len(openai_key) > 4 else '',
+        'openai_api_key_configured': bool(openai_key),
+        'anthropic_api_key': '***' + anthropic_key[-4:] if len(anthropic_key) > 4 else '',
+        'anthropic_api_key_configured': bool(anthropic_key),
+        'google_api_key': '***' + google_key[-4:] if len(google_key) > 4 else '',
+        'google_api_key_configured': bool(google_key),
+    })
+
+def save_config():
+    try:
+        data = request.get_json()
+        env_file = find_dotenv()
+        
+        if data.get('groq_api_key'):
+            set_key(env_file, 'GROQ_API_KEY', data['groq_api_key'].strip())
+        if data.get('openai_api_key'):
+            set_key(env_file, 'OPENAI_API_KEY', data['openai_api_key'].strip())
+        if data.get('anthropic_api_key'):
+            set_key(env_file, 'ANTHROPIC_API_KEY', data['anthropic_api_key'].strip())
+        if data.get('google_api_key'):
+            set_key(env_file, 'GOOGLE_API_KEY', data['google_api_key'].strip())
+            
+        # Recarrega as variáveis de ambiente
+        load_dotenv(override=True)
+        
+        # Atualiza o cliente Groq se a chave mudou
+        global client
+        client = Groq(api_key=os.getenv('GROQ_API_KEY'))
+        
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+
+@app.route('/logout')
+def logout():
+    """Faz logout do usuário e redireciona para desktop"""
+    session.clear()
+    return redirect('/desktop')
+
+# --- Rotas de Navegação da Dock ---
+
+
+def arquivos_page():
+    return render_template('arquivos.html')
+
+
+
+
+
+
+
+
+
+
+@app.route('/api/assistants', methods=['POST'])
+def create_assistant():
+    try:
+        data = request.json
+        ASSISTANTS_JSON = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assistants.json")
+        
+        with open(ASSISTANTS_JSON, 'r', encoding='utf-8') as f:
+            assistentes = json.load(f)
+        
+        # Gera novo ID baseado no maior ID existente
+        max_id = max([int(a.get('id', 0)) for a in assistentes], default=0)
+        new_id = str(max_id + 1)
+        
+        new_assistant = {
+            "id": new_id,
+            "name": data.get('name', '').lower().replace(' ', '_'),
+            "display_name": data.get('display_name', ''),
+            "specialty": data.get('specialty', ''),
+            "description": data.get('description', ''),
+            "color": data.get('color', '#1CC54B'),
+            "prompt": data.get('prompt', ''),
+            "active": True,
+            "profile": data.get('profile', 'personal'),
+            "icon": "🤖",
+            "message_count": 0,
+            "active_time_seconds": 0,
+            "last_active": None
+        }
+        
+        assistentes.append(new_assistant)
+        
+        with open(ASSISTANTS_JSON, 'w', encoding='utf-8') as f:
+            json.dump(assistentes, f, indent=2, ensure_ascii=False)
+            
+        return jsonify({"success": True, "assistant": new_assistant})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+# === API: EDITAR ASSISTENTE EXISTENTE ===
+@app.route('/api/assistants/update', methods=['POST'])
+def api_update_assistant():
+    import json
+    import sqlite3
+    try:
+        data = request.get_json()
+        name_id = str(data.get('name', '')).strip()
+        display_name = str(data.get('display_name', name_id)).strip()
+        specialty = str(data.get('specialty', 'Geral')).strip()
+        color = str(data.get('color', '#8b5cf6')).strip()
+        prompt = str(data.get('prompt', '')).strip()
+
+        if not name_id:
+            return jsonify({'success': False, 'error': 'ID do assistente é obrigatório.'}), 400
+
+        # Conectar com timeout para evitar "database is locked"
+        db_path = os.path.join(os.path.dirname(__file__), 'thinkinos.db')
+        conn = sqlite3.connect(db_path, timeout=10)
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            UPDATE assistants 
+            SET display_name=?, category=?, color=?, system_prompt=? 
+            WHERE name=?
+        """, (display_name, specialty, color, prompt, name_id))
+        conn.commit()
+        conn.close()
+
+        # Atualizar o arquivo assistants.json
+        json_path = os.path.join(os.path.dirname(__file__), 'assistants.json')
+        if os.path.exists(json_path):
+            with open(json_path, 'r', encoding='utf-8') as f:
+                assistants_list = json.load(f)
+            
+            for a in assistants_list:
+                if a.get('name') == name_id:
+                    a['display_name'] = display_name
+                    a['specialty'] = specialty
+                    a['color'] = color
+                    a['prompt'] = prompt
+                    break
+            
+            with open(json_path, 'w', encoding='utf-8') as f:
+                json.dump(assistants_list, f, indent=2, ensure_ascii=False)
+
+        return jsonify({'success': True, 'message': f'Assistente {display_name} atualizado com sucesso!'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+
+
+
+@app.route('/test-builder')
+@login_required
+def test_builder_page():
+    return render_template('test_builder.html')
+
+# === APIs DO CONSTRUTOR DE AGENTES (FASE 3.2) ===
+
+@app.route('/api/custom_agents', methods=['GET'])
+@login_required
+def get_custom_agents():
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, name, icon, system_prompt, created_at FROM custom_agents WHERE user_id=?", (session['user_id'],))
+        agents = [{"id": r[0], "name": r[1], "icon": r[2], "prompt": r[3], "created_at": r[4]} for r in cursor.fetchall()]
+        conn.close()
+        return jsonify(agents), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/custom_agents', methods=['POST'])
+@login_required
+def create_custom_agent():
+    data = request.get_json()
+    name = data.get('name', '').strip()
+    icon = data.get('icon', '🤖').strip()
+    prompt = data.get('prompt', '').strip()
+    
+    if not name or not prompt:
+        return jsonify({"error": "Nome e Prompt são obrigatórios"}), 400
+        
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute("INSERT INTO custom_agents (user_id, name, icon, system_prompt) VALUES (?, ?, ?, ?)",
+                       (session['user_id'], name, icon, prompt))
+        conn.commit()
+        agent_id = cursor.lastrowid
+        conn.close()
+        return jsonify({"id": agent_id, "message": "Agente criado!"}), 201
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/custom_agents/<int:agent_id>', methods=['DELETE'])
+@login_required
+def delete_custom_agent(agent_id):
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        # Segurança: só deleta se o agente pertencer ao usuário logado
+        cursor.execute("DELETE FROM custom_agents WHERE id=? AND user_id=?", (agent_id, session['user_id']))
+        conn.commit()
+        conn.close()
+        return jsonify({"message": "Agente excluído!"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/assistants')
+def get_assistants():
+    print("🔍 [DEBUG] Função get_assistants foi chamada!")
+    print(f"🔍 [DEBUG] Conteúdo da sessão: {dict(session)}")
+    
+    # 1. Começa com os 10 agentes padrão
+    all_assistants = list(AGENTS_CONFIG.values())
+    print(f"🔍 [DEBUG] Agentes padrão carregados: {len(all_assistants)}")
+    
+    # 2. Se houver usuário logado, busca os agentes personalizados dele
+    if 'user_id' in session:
+        print(f"🔍 [DEBUG] user_id encontrado na sessão: {session['user_id']}")
+        try:
+            conn = get_db()
+            cursor = conn.cursor()
+            cursor.execute("SELECT name, icon, system_prompt FROM custom_agents WHERE user_id=?", (session['user_id'],))
+            custom_agents = cursor.fetchall()
+            conn.close()
+            print(f"🔍 [DEBUG] Agentes customizados encontrados no DB: {len(custom_agents)}")
+            
+            for c in custom_agents:
+                all_assistants.append({
+                    "id": f"custom_{c[0].lower().replace(' ', '_')}",
+                    "name": c[0].lower().replace(' ', '_'),
+                    "display_name": c[0],
+                    "icon": c[1] if c[1] else '🤖',
+                    "prompt": c[2],
+                    "description": f"Agente personalizado: {c[0]}",
+                    "specialty": "Personalizado",
+                    "color": "#8b5cf6",
+                    "profile": "custom",
+                    "active": True,
+                    "active_time_seconds": 0,
+                    "last_active": None,
+                    "message_count": 0,
+                    "is_custom": True
+                })
+        except Exception as e:
+            print(f"⚠️ [DEBUG] Erro ao carregar agentes customizados: {e}")
+    else:
+        print("⚠️ [DEBUG] user_id NÃO encontrado na sessão!")
+            
+    print(f"🔍 [DEBUG] Total de agentes retornados: {len(all_assistants)}")
+    return jsonify(all_assistants)
+
+
+# === API DE VIRTUALIZAÇÃO (V4.0) ===
+@app.route('/api/vm/containers', methods=['GET'])
+@login_required
+def get_containers():
+    try:
+        containers = docker_client.containers.list(all=True)
+        result = []
+        for c in containers:
+            result.append({
+                "id": c.id[:12],
+                "name": c.name,
+                "image": c.image.tags[0] if c.image.tags else "unknown",
+                "status": c.status,
+                "ports": c.ports
+            })
+        return jsonify(result), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/vm/start/<distro>', methods=['POST'])
+@login_required
+def start_container(distro):
+    try:
+        # Mapeamento de distros leves
+        images = {
+            "alpine": "alpine:latest",
+            "ubuntu": "ubuntu:latest"
+        }
+        image_name = images.get(distro.lower(), "alpine:latest")
+        
+        # Nome base do container
+        base_name = f"thinkinos_{distro}_{session['user_id']}"
+        
+        # 1. Verificar se já existe um container com esse nome
+        existing = None
+        try:
+            existing = docker_client.containers.get(base_name)
+        except Exception:
+            pass
+        
+        if existing:
+            # Container já existe
+            if existing.status == 'running':
+                return jsonify({
+                    "success": True,
+                    "message": f"Container {distro} já está rodando!",
+                    "container_id": existing.id[:12],
+                    "status": "already_running"
+                }), 200
+            else:
+                # Container existe mas está parado - reativar
+                existing.start()
+                return jsonify({
+                    "success": True,
+                    "message": f"Container {distro} reativado!",
+                    "container_id": existing.id[:12],
+                    "status": "restarted"
+                }), 200
+        
+        # 2. Container não existe - criar novo com nome único (com timestamp)
+        import time
+        unique_name = f"{base_name}_{int(time.time())}"
+        
+        container = docker_client.containers.run(
+            image_name,
+            "sleep infinity",
+            name=unique_name,
+            detach=True,
+            tty=True,
+            stdin_open=True
+        )
+        return jsonify({
+            "success": True,
+            "message": f"Container {distro} iniciado!",
+            "container_id": container.id[:12]
+        }), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+@app.route('/api/vm/stop/<container_id>', methods=['POST'])
+@login_required
+def stop_container(container_id):
+    try:
+        container = docker_client.containers.get(container_id)
+        container.stop()
+        return jsonify({"success": True, "message": "Container parado!"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+
+# === WEBSOCKET PARA TERMINAL WEB ===
+# === WEBSOCKET PARA TERMINAL WEB (V4.0 - SocketIO) ===
+@socketio.on('terminal_input')
+def handle_terminal_input(data):
+    import subprocess
+    container_id = data.get('container_id')
+    command = data.get('command')
+    
+    print(f"🔍 [TERMINAL] Recebido: container={container_id}, command={command}")
+    
+    if not container_id or not command:
+        print("❌ [TERMINAL] Dados inválidos")
+        emit('terminal_output', {'output': 'Erro: Dados inválidos\r\n'})
+        return
+    
+    try:
+        # Verificar se container existe e está rodando
+        container = docker_client.containers.get(container_id)
+        print(f"🔍 [TERMINAL] Container status: {container.status}")
+        
+        if container.status != 'running':
+            emit('terminal_output', {'output': f'\r\n\x1b[31mErro: Container está "{container.status}"\x1b[0m\r\n'})
+            return
+        
+        # Executar comando
+        print(f"⚙️ [TERMINAL] Executando: docker exec {container_id} /bin/sh -c '{command}'")
+        result = subprocess.run(
+            ['docker', 'exec', container_id, '/bin/sh', '-c', command],
+            capture_output=True,
+            text=True,
+            timeout=15
+        )
+        
+        output = result.stdout
+        if result.stderr:
+            output += result.stderr
+        
+        print(f"✅ [TERMINAL] Saída ({len(output)} chars)")
+        emit('terminal_output', {'output': output})
+        
+    except subprocess.TimeoutExpired:
+        print("❌ [TERMINAL] Timeout")
+        emit('terminal_output', {'output': '\r\n[Comando expirou após 15s]\r\n'})
+    except Exception as e:
+        print(f"❌ [TERMINAL] Erro: {e}")
+        emit('terminal_output', {'output': f'\r\n\x1b[31m[Erro: {str(e)}]\x1b[0m\r\n'})
+
+
+
+# === ROTAS PLACEHOLDER (Páginas do Dock) ===
+@app.route('/gestao')
+@login_required
+def gestao():
+    return "<h1 style='color: white; text-align: center; margin-top: 50px;'>Gestão - Em Desenvolvimento</h1><p style='text-align: center; color: #888;'>Esta funcionalidade estará disponível em breve.</p><a href='/desktop' style='display: block; text-align: center; margin-top: 20px;'>← Voltar ao Desktop</a>"
+
+@app.route('/perfil')
+@login_required
+def perfil():
+    return "<h1 style='color: white; text-align: center; margin-top: 50px;'>Perfil - Em Desenvolvimento</h1><p style='text-align: center; color: #888;'>Esta funcionalidade estará disponível em breve.</p><a href='/desktop' style='display: block; text-align: center; margin-top: 20px;'>← Voltar ao Desktop</a>"
+
+@app.route('/arquivos')
+@login_required
+def arquivos():
+    return "<h1 style='color: white; text-align: center; margin-top: 50px;'>Arquivos - Em Desenvolvimento</h1><p style='text-align: center; color: #888;'>Esta funcionalidade estará disponível em breve.</p><a href='/desktop' style='display: block; text-align: center; margin-top: 20px;'>← Voltar ao Desktop</a>"
+
+@app.route('/novo')
+@login_required
+def novo():
+    return "<h1 style='color: white; text-align: center; margin-top: 50px;'>Novo - Em Desenvolvimento</h1><p style='text-align: center; color: #888;'>Esta funcionalidade estará disponível em breve.</p><a href='/desktop' style='display: block; text-align: center; margin-top: 20px;'>← Voltar ao Desktop</a>"
+
+
+
+
+def _calculate_real_tokens_from_messages(msg_count):
+    try:
+        import sqlite3, os
+        db_path = os.path.join(os.path.dirname(__file__), 'chat_history.db')
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        cursor.execute("SELECT COALESCE(SUM(LENGTH(user_msg)), 0) FROM messages")
+        total_chars = cursor.fetchone()[0] or 0
+        conn.close()
+        estimated = int(total_chars / 4)
+        result = max(estimated, msg_count * 20)
+        print(f"✅ Tokens reais: {result} (de {total_chars} chars na coluna 'user_msg')")
+        return result
+    except Exception as e:
+        print(f"⚠️ Erro tokens: {e}")
+        return msg_count * 150
+  # Fallback seguro
+
+
+def _get_real_token_estimate(msg_count):
+    try:
+        db_path = os.path.join(os.path.dirname(__file__), 'chat_history.db')
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        # Soma o tamanho real do texto de todas as mensagens
+        cursor.execute("SELECT COALESCE(SUM(LENGTH(content)), 0) FROM messages")
+        total_chars = cursor.fetchone()[0] or 0
+        conn.close()
+        
+        # Estimativa conservadora: 1 token a cada 4 caracteres
+        tokens = int(total_chars / 4)
+        return max(tokens, msg_count * 20) # Mínimo de segurança
+    except Exception as e:
+        print(f"⚠️ Erro cálculo tokens: {e}")
+        return msg_count * 150 # Fallback antigo se falhar
+
+@app.route('/api/metrics')
+def api_metrics():
+    """Retorna métricas do sistema (CPU, RAM, Disco)"""
+    try:
+        # Importação local de segurança caso a global falhe
+        import psutil
+        
+        # CPU
+        cpu_percent = psutil.cpu_percent(interval=0.5)
+        
+        # RAM
+        ram = psutil.virtual_memory()
+        ram_percent = ram.percent
+        ram_used_gb = round(ram.used / (1024**3), 2)
+        ram_total_gb = round(ram.total / (1024**3), 2)
+        
+        # Disco
+        disk = psutil.disk_usage('/')
+        disk_percent = disk.percent
+        disk_used_gb = round(disk.used / (1024**3), 2)
+        disk_total_gb = round(disk.total / (1024**3), 2)
+        
+        return jsonify({
+            'cpu': cpu_percent,
+            'ram_percent': ram_percent,
+            'ram_used_gb': ram_used_gb,
+            'ram_total_gb': ram_total_gb,
+            'disk_percent': disk_percent,
+            'disk_used_gb': disk_used_gb,
+            'disk_total_gb': disk_total_gb
+        })
+    except NameError as e:
+        print(f"❌ [MÉTRICAS] NameError: {e}")
+        return jsonify({'error': f'NameError: {e}. Execute: pip install psutil'}), 500
+    except Exception as e:
+        print(f"❌ [MÉTRICAS] Erro: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/editor')
+def code_editor():
+
+    # === SEGURANÇA CRÍTICA: Bloquear arquivos do sistema ===
+    filename = request.args.get('file', '')
+    
+    # Lista de arquivos/diretórios PROIBIDOS
+    blocked_patterns = [
+        'app.py', '.env', '.git', '.db', 'credential', 'secret', 
+        'password', 'token', 'key', 'config.py', 'requirements.txt',
+        'venv', 'node_modules', 'package.json', 'Dockerfile',
+        'templates/', 'static/', 'uploads/../', '..', './', '../'
+    ]
+    
+    # Bloquear se contiver qualquer padrão proibido
+    if any(pattern in filename for pattern in blocked_patterns):
+        from flask import flash
+        flash('⛔ Acesso negado: arquivo do sistema', 'error')
+        return redirect('/desktop')
+    
+    # Verificar se está tentando acessar fora de uploads
+    if '/' in filename and not filename.startswith('uploads/'):
+        flash('⛔ Acesso negado: apenas arquivos de uploads', 'error')
+        return redirect('/desktop')
+    
+    # Normalizar caminho e verificar
+    if filename:
+        file_path = os.path.normpath(os.path.join(UPLOAD_FOLDER, filename))
+        upload_path = os.path.normpath(UPLOAD_FOLDER)
+        
+        if not file_path.startswith(upload_path):
+            flash('⛔ Acesso negado: caminho inválido', 'error')
+            return redirect('/desktop')
+
+    filename = request.args.get('file', 'app.py')
+    # Segurança básica: prevenir path traversal
+    if '..' in filename or filename.startswith('/'):
+        return "Acesso negado", 403
+    return render_template('editor.html', filename=filename)
+
+@app.route('/api/file/read', methods=['GET'])
+def api_read_file():
+    filename = request.args.get('file', '')
+    if '..' in filename or filename.startswith('/'):
+        return jsonify({'error': 'Acesso negado'}), 403
+    
+    filepath = os.path.join(os.path.dirname(__file__), filename)
+    if not os.path.exists(filepath):
+        return jsonify({'error': 'Arquivo não encontrado'}), 404
+        
+    try:
+        with open(filepath, 'r', encoding='utf-8') as f:
+            return jsonify({'content': f.read(), 'filename': filename})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+
+
+
+@app.route('/api/file/save', methods=['POST'])
+def api_save_file():
+    data = request.json
+    
+    # PROTEÇÃO: Bloquear salvamento de HTML em arquivos Python
+    filename = data.get('file', '')
+    new_content = data.get('content', '')
+    
+    if filename.endswith('.py'):
+        html_tags = ['<html>', '<h1', '<h2', '<div', '<span', '<script', '<style']
+        if any(tag in new_content.lower() for tag in html_tags):
+            return jsonify({'error': 'Conteúdo HTML detectado em arquivo .py! Salvamento bloqueado.'}), 400
+    filename = data.get('file', '')
+    new_content = data.get('content', '')
+    
+    if '..' in filename or filename.startswith('/'):
+        return jsonify({'error': 'Acesso negado'}), 403
+        
+    filepath = os.path.join(os.path.dirname(__file__), filename)
+    
+    try:
+        if os.path.exists(filepath):
+            import shutil
+            shutil.copy2(filepath, filepath + '.bak')
+            
+        with open(filepath, 'w', encoding='utf-8') as f:
+            f.write(new_content)
+            f.flush()
+            os.fsync(f.fileno())
+        
+        # Emitir para todos os tipos
+        socketio.emit('file_saved', {
+    'file': filename,
+    'type': 'css' if filename.endswith('.css') else 'js' if filename.endswith('.js') else 'html' if filename.endswith('.html') else 'other'
+})
+            
+        return jsonify({'success': True, 'message': f'{filename} salvo com backup!'})
+    except Exception as e:
+        print(f"Erro ao salvar {filename}: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/git/status', methods=['GET'])
+def api_git_status_v2():
+    try:
+        import subprocess
+        result = subprocess.run(['git', 'status', '--porcelain'], 
+                              capture_output=True, text=True, cwd=os.path.dirname(__file__))
+        files = []
+        for line in result.stdout.strip().split('\n'):
+            if line:
+                status = line[:2].strip()
+                filename = line[3:].strip()
+                files.append({'status': status, 'file': filename})
+        return jsonify({'success': True, 'files': files})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/git/commit', methods=['POST'])
+def api_git_commit_v2():
+    try:
+        import subprocess
+        data = request.get_json(force=True, silent=True)
+        if not data or 'message' not in data:
+            return jsonify({'success': False, 'error': 'Dados inválidos'}), 400
+        
+        message = data['message'].strip()
+        if not message:
+            return jsonify({'success': False, 'error': 'Mensagem vazia'}), 400
+        
+        project_dir = os.path.dirname(__file__)
+        
+        config_check = subprocess.run(['git', 'config', 'user.name'], 
+                                     capture_output=True, text=True, cwd=project_dir)
+        if not config_check.stdout.strip():
+            subprocess.run(['git', 'config', 'user.name', 'Luperesil'], cwd=project_dir)
+            subprocess.run(['git', 'config', 'user.email', 'luperesil@thinkinos.local'], cwd=project_dir)
+        
+        subprocess.run(['git', 'add', '.'], check=True, cwd=project_dir, capture_output=True)
+        result = subprocess.run(['git', 'commit', '-m', message], 
+                              capture_output=True, text=True, cwd=project_dir)
+        
+        if result.returncode == 0:
+            return jsonify({'success': True, 'output': result.stdout})
+        elif 'nothing to commit' in result.stdout.lower():
+            return jsonify({'success': True, 'output': 'Nenhuma alteração pendente.'})
+        else:
+            return jsonify({'success': False, 'error': result.stderr}), 500
+    except subprocess.CalledProcessError as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/git/push', methods=['POST'])
+def api_git_push_v2():
+    try:
+        import subprocess
+        result = subprocess.run(['git', 'push'], 
+                              capture_output=True, text=True, 
+                              cwd=os.path.dirname(__file__))
+        if result.returncode == 0:
+            return jsonify({'success': True, 'output': result.stdout})
+        else:
+            return jsonify({'success': False, 'error': result.stderr}), 500
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/proxy')
+def api_proxy():
+    """Proxy reverso com URL Rewriting seguro"""
+
+    # === SEGURANÇA: Bloquear arquivos sensíveis ===
+    filename = request.args.get('file', '')
+    blocked_patterns = ['app.py', '.env', '.git', '.db', 'credential', 'secret', 'password', 'token', 'key', 'config.py']
+    
+    if any(pattern in filename.lower() for pattern in blocked_patterns):
+        from flask import flash
+        flash('Acesso negado: arquivo do sistema', 'error')
+        return redirect('/desktop')
+    
+    # Limitar apenas à pasta de uploads
+    upload_real = os.path.realpath(UPLOAD_FOLDER)
+    file_real = os.path.realpath(os.path.join(UPLOAD_FOLDER, filename))
+    if not file_real.startswith(upload_real):
+        flash('Acesso negado: caminho inválido', 'error')
+        return redirect('/desktop')
+    import requests
+    from flask import request, Response
+    from urllib.parse import urlparse
+    
+    target_url = request.args.get('url', '')
+    if not target_url or not target_url.startswith('http'):
+        return jsonify({'error': 'URL inválida'}), 400
+    
+    try:
+        resp = requests.get(
+            target_url, timeout=15,
+            headers={
+                'User-Agent': 'Mozilla/5.0 ThinkinBrowser/4.0',
+                'Accept': 'text/html,*/*',
+                'Referer': target_url
+            },
+            allow_redirects=True
+        )
+        
+        parsed = urlparse(resp.url)
+        base = f"{parsed.scheme}://{parsed.netloc}"
+        html = resp.text
+        
+        # COMPILAR PADRÕES SEPARADAMENTE PARA EVITAR ERROS DE SINTAXE
+        # Cada padrão é uma string simples sem mistura de aspas
+        p_src_dq = re.compile(r'(src=")(/(?!api/))')
+        p_src_sq = re.compile(r"(src=')(/(?!api/))")
+        p_href_dq = re.compile(r'(href=")(/(?!api/))')
+        p_href_sq = re.compile(r"(href=')(/(?!api/))")
+        p_act_dq = re.compile(r'(action=")(/(?!api/))')
+        p_act_sq = re.compile(r"(action=')(/(?!api/))")
+        p_css_url = re.compile(r'''(url\(\s*['"]?)(/(?!api/))''')
+        
+        # APLICAR REWRITING
+        repl_src = r'' + base + r''
+        repl_href = r'' + base + r''
+        repl_act = r'' + base + r''
+        repl_css = r'' + base + r''
+        
+        html = p_src_dq.sub(repl_src, html)
+        html = p_src_sq.sub(repl_src, html)
+        html = p_href_dq.sub(repl_href, html)
+        html = p_href_sq.sub(repl_href, html)
+        html = p_act_dq.sub(repl_act, html)
+        html = p_act_sq.sub(repl_act, html)
+        # INJETAR TAG BASE PARA RESOLVER CAMINHOS RELATIVOS RESTANTES
+        base_tag = f'<base href="{base}/">'
+        if '<head>' in html:
+            html = html.replace('<head>', '<head>' + base_tag, 1)
+        elif '<html>' in html:
+            html = html.replace('<html>', '<html>' + base_tag, 1)
+        else:
+            html = base_tag + html
+            
+        html = p_css_url.sub(repl_css, html)
+        
+        response = Response(
+            html.encode('utf-8'),
+            status=resp.status_code,
+            content_type='text/html; charset=utf-8'
+        )
+        
+        # Repassar cookies do site alvo para o navegador (se houver)
+        if 'Set-Cookie' in resp.headers:
+            response.headers['Set-Cookie'] = resp.headers['Set-Cookie']
+        
+        for h in ['X-Frame-Options', 'Content-Security-Policy', 
+                  'Referrer-Policy', 'Strict-Transport-Security']:
+            if h in response.headers: del response.headers[h]
+            
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        return response
+        
+    except requests.exceptions.Timeout:
+        return jsonify({'error': 'Timeout'}), 504
+    except Exception as e:
+        return jsonify({'error': str(e)}), 502
+
+
+@app.route('/api/launch-thinkinbrowser')
+def launch_thinkinbrowser():
+    """Lança o ThinkinBrowser Nativo (PyQt5 + Chromium)"""
+    import subprocess
+    import sys
+    import os
+    
+    try:
+        # Caminho para o script do browser nativo
+        browser_script = os.path.join(os.path.dirname(__file__), 'native_browser.py')
+        
+        # Lançar em background (sem bloquear o Flask)
+        subprocess.Popen([
+            sys.executable,  # Python do venv
+            browser_script
+        ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+        
+        return jsonify({'status': 'launched', 'message': 'ThinkinBrowser Nativo iniciado!'})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+import shutil
+from werkzeug.utils import secure_filename
+
+# Diretório raiz do Workspace (segurança: limita o acesso a esta pasta)
+WORKSPACE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'workspace')
+if not os.path.exists(WORKSPACE_DIR):
+    os.makedirs(WORKSPACE_DIR)
+
+def get_safe_path(user_path):
+    """Previne Path Traversal (ex: ../../etc/passwd)"""
+    # Resolve o caminho absoluto real
+    abs_path = os.path.realpath(os.path.join(WORKSPACE_DIR, user_path.lstrip('/')))
+    # Garante que o caminho começa com o WORKSPACE_DIR
+    if not abs_path.startswith(os.path.realpath(WORKSPACE_DIR)):
+        return None
+    return abs_path
+
+@app.route('/api/fs/list', methods=['GET'])
+def fs_list():
+    path = request.args.get('path', '/')
+    safe_path = get_safe_path(path)
+    if not safe_path or not os.path.exists(safe_path):
+        return jsonify({'error': 'Caminho inválido'}), 404
+    
+    items = []
+    try:
+        for item in os.listdir(safe_path):
+            item_path = os.path.join(safe_path, item)
+            rel_path = os.path.relpath(item_path, WORKSPACE_DIR)
+            items.append({
+                'name': item,
+                'path': rel_path,
+                'is_dir': os.path.isdir(item_path),
+                'size': os.path.getsize(item_path) if os.path.isfile(item_path) else 0,
+                'modified': os.path.getmtime(item_path)
+            })
+        # Ordenar: pastas primeiro, depois arquivos
+        items.sort(key=lambda x: (not x['is_dir'], x['name'].lower()))
+        return jsonify({'path': path, 'items': items})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/fs/create', methods=['POST'])
+def fs_create():
+    data = request.json
+    path = data.get('path', '')
+    name = data.get('name', '')
+    is_dir = data.get('is_dir', False)
+    
+    safe_parent = get_safe_path(path)
+    if not safe_parent: return jsonify({'error': 'Caminho inválido'}), 400
+    
+    new_path = os.path.join(safe_parent, secure_filename(name))
+    try:
+        if is_dir:
+            os.makedirs(new_path, exist_ok=True)
+        else:
+            open(new_path, 'a').close() # Cria arquivo vazio
+        return jsonify({'success': True, 'path': os.path.relpath(new_path, WORKSPACE_DIR)})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/fs/delete', methods=['POST'])
+def fs_delete():
+    data = request.json
+    path = data.get('path', '')
+    safe_path = get_safe_path(path)
+    if not safe_path or not os.path.exists(safe_path):
+        return jsonify({'error': 'Arquivo não encontrado'}), 404
+    
+    try:
+        if os.path.isdir(safe_path):
+            shutil.rmtree(safe_path)
+        else:
+            os.remove(safe_path)
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/fs/rename', methods=['POST'])
+def fs_rename():
+    data = request.json
+    old_path = data.get('old_path', '')
+    new_name = data.get('new_name', '')
+    
+    safe_old = get_safe_path(old_path)
+    if not safe_old or not os.path.exists(safe_old):
+        return jsonify({'error': 'Arquivo não encontrado'}), 404
+        
+    new_path = os.path.join(os.path.dirname(safe_old), secure_filename(new_name))
+    try:
+        os.rename(safe_old, new_path)
+        return jsonify({'success': True, 'new_path': os.path.relpath(new_path, WORKSPACE_DIR)})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/fs/upload', methods=['POST'])
+def fs_upload():
+    if 'file' not in request.files:
+        return jsonify({'error': 'Nenhum arquivo enviado'}), 400
+    
+    file = request.files['file']
+    dest_path = request.form.get('path', '/')
+    safe_dest = get_safe_path(dest_path)
+    
+    if not safe_dest: return jsonify({'error': 'Destino inválido'}), 400
+    
+    filename = secure_filename(file.filename)
+    file_path = os.path.join(safe_dest, filename)
+    
+    try:
+        file.save(file_path)
+        return jsonify({'success': True, 'path': os.path.relpath(file_path, WORKSPACE_DIR)})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/fs/download')
+def fs_download():
+    path = request.args.get('path', '')
+    safe_path = get_safe_path(path)
+    if not safe_path or not os.path.isfile(safe_path):
+        return jsonify({'error': 'Arquivo não encontrado'}), 404
+    
+    from flask import send_file
+    return send_file(safe_path, as_attachment=True, download_name=os.path.basename(safe_path))
+
+
+import pty
+import os
+import select
+import struct
+import fcntl
+import termios
+
+# Dicionário para armazenar sessões de terminal ativas
+terminal_sessions = {}
+
+@app.route('/api/terminal/create', methods=['POST'])
+def create_terminal():
+    """Cria uma nova sessão de terminal"""
+    try:
+        # Criar pseudo-terminal
+        master_fd, slave_fd = pty.openpty()
+        
+        # Configurar ambiente do terminal
+        env = os.environ.copy()
+        env['TERM'] = 'xterm-256color'
+        env['COLORTERM'] = 'truecolor'
+        
+        # Iniciar shell bash
+        pid = os.fork()
+        if pid == 0:
+            # Processo filho: executar shell
+            os.setsid()
+            os.close(master_fd)
+            
+            # Configurar slave_fd como terminal de controle
+            fcntl.ioctl(slave_fd, termios.TIOCSCTTY, 0)
+            os.dup2(slave_fd, 0)
+            os.dup2(slave_fd, 1)
+            os.dup2(slave_fd, 2)
+            if slave_fd > 2:
+                os.close(slave_fd)
+            
+            # Executar bash
+            os.execvpe('/bin/bash', ['/bin/bash', '--login'], env)
+        else:
+            # Processo pai: fechar slave_fd e armazenar sessão
+            os.close(slave_fd)
+            session_id = f"term_{pid}"
+            terminal_sessions[session_id] = {
+                'master_fd': master_fd,
+                'pid': pid
+            }
+            return jsonify({'success': True, 'session_id': session_id})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/terminal/read', methods=['POST'])
+def read_terminal():
+    """Lê dados do terminal"""
+    data = request.json
+    session_id = data.get('session_id')
+    
+    if session_id not in terminal_sessions:
+        return jsonify({'success': False, 'error': 'Sessão não encontrada'}), 404
+    
+    try:
+        master_fd = terminal_sessions[session_id]['master_fd']
+        
+        # Verificar se há dados disponíveis
+        ready, _, _ = select.select([master_fd], [], [], 0.1)
+        
+        if ready:
+            output = os.read(master_fd, 1024).decode('utf-8', errors='replace')
+            return jsonify({'success': True, 'output': output})
+        else:
+            return jsonify({'success': True, 'output': ''})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/terminal/write', methods=['POST'])
+def write_terminal():
+    """Escreve dados no terminal"""
+    data = request.json
+    session_id = data.get('session_id')
+    input_data = data.get('input', '')
+    
+    if session_id not in terminal_sessions:
+        return jsonify({'success': False, 'error': 'Sessão não encontrada'}), 404
+    
+    try:
+        master_fd = terminal_sessions[session_id]['master_fd']
+        os.write(master_fd, input_data.encode('utf-8'))
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/terminal/resize', methods=['POST'])
+def resize_terminal():
+    """Redimensiona o terminal"""
+    data = request.json
+    session_id = data.get('session_id')
+    cols = data.get('cols', 80)
+    rows = data.get('rows', 24)
+    
+    if session_id not in terminal_sessions:
+        return jsonify({'success': False, 'error': 'Sessão não encontrada'}), 404
+    
+    try:
+        master_fd = terminal_sessions[session_id]['master_fd']
+        # Estrutura winsize: rows, cols, xpixel, ypixel
+        winsize = struct.pack('HHHH', rows, cols, 0, 0)
+        fcntl.ioctl(master_fd, termios.TIOCSWINSZ, winsize)
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/terminal/close', methods=['POST'])
+def close_terminal():
+    """Fecha uma sessão de terminal"""
+    data = request.json
+    session_id = data.get('session_id')
+    
+    if session_id not in terminal_sessions:
+        return jsonify({'success': False, 'error': 'Sessão não encontrada'}), 404
+    
+    try:
+        session = terminal_sessions[session_id]
+        os.close(session['master_fd'])
+        os.kill(session['pid'], 9)  # SIGKILL
+        del terminal_sessions[session_id]
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# === API DE HISTÓRICO DE CONVERSAS (V3.1) ===
+@app.route('/api/chat/history/<assistant_name>', methods=['GET'])
+def get_chat_history(assistant_name):
+    try:
+        conn = sqlite3.connect('thinkinos.db')
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute("SELECT role, content, timestamp FROM chat_history WHERE assistant_name = ? ORDER BY timestamp DESC LIMIT 50", (assistant_name,))
+        messages = [dict(row) for row in cursor.fetchall()]
+        messages.reverse()
+        conn.close()
+        return jsonify({"success": True, "history": messages})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/chat/save', methods=['POST'])
+def save_chat_message():
+    try:
+        data = request.json
+        assistant_name = data.get('assistant_name')
+        role = data.get('role')
+        content = data.get('content')
+        if not all([assistant_name, role, content]):
+            return jsonify({"success": False, "error": "Dados incompletos"}), 400
+        conn = sqlite3.connect('thinkinos.db')
+        cursor = conn.cursor()
+        cursor.execute("INSERT INTO chat_history (assistant_name, role, content) VALUES (?, ?, ?)", (assistant_name, role, content))
+        conn.commit()
+        conn.close()
+        return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+
+# === TERMINAL WEB ===
+from subprocess import Popen, PIPE, TimeoutExpired
+import shlex
+import os
+
+terminal_sessions = {}
+
+@socketio.on('terminal_connect')
+def handle_terminal_connect(data):
+    user_id = data.get('user_id', 'default')
+    if user_id not in terminal_sessions:
+        terminal_sessions[user_id] = {
+            'cwd': '/home/lps',
+            'history': [],
+            'env': {'PATH': '/usr/bin:/bin:/usr/local/bin'}
+        }
+    print(f" [TERMINAL] Usuario {user_id} conectado")
+    emit('terminal_response', {'output': 'ThinkinOS Terminal v1.0\nUsuario: ' + user_id + '\nDiretorio: /home/lps\n\nDigite "help" para ver os comandos.\n$ '})
+
+@socketio.on('terminal_command')
+def handle_terminal_command(data):
+    user_id = data.get('user_id', 'default')
+    command = data.get('command', '').strip()
+    
+    if not command:
+        emit('terminal_response', {'output': '$ '})
+        return
+    
+    if user_id not in terminal_sessions:
+        terminal_sessions[user_id] = {'cwd': '/home/lps', 'history': [], 'env': {'PATH': '/usr/bin:/bin:/usr/local/bin'}}
+    
+    session = terminal_sessions[user_id]
+    session['history'].append(command)
+    
+    if command == 'help':
+        output = "Comandos disponiveis:\n  help - Mostra esta ajuda\n  clear - Limpa a tela\n  pwd - Mostra diretorio atual\n  ls - Lista arquivos\n  cd <dir> - Muda de diretorio\n  cat <file> - Mostra conteudo do arquivo\n  echo <text> - Imprime texto\n  whoami - Mostra usuario atual\n  date - Mostra data/hora\n  history - Mostra historico\n"
+        emit('terminal_response', {'output': output + '$ '})
+        return
+    
+    if command == 'clear':
+        emit('terminal_response', {'output': '\x1b[2J\x1b[H$ '})
+        return
+    
+    if command == 'pwd':
+        emit('terminal_response', {'output': session['cwd'] + '\n$ '})
+        return
+    
+    if command == 'whoami':
+        emit('terminal_response', {'output': 'luperesil\n$ '})
+        return
+    
+    if command == 'date':
+        from datetime import datetime
+        emit('terminal_response', {'output': datetime.now().strftime('%Y-%m-%d %H:%M:%S') + '\n$ '})
+        return
+    
+    if command == 'history':
+        hist = '\n'.join([str(i+1) + '  ' + cmd for i, cmd in enumerate(session['history'][-20:])])
+        emit('terminal_response', {'output': hist + '\n$ '})
+        return
+    
+    if command.startswith('cd '):
+        new_dir = command[3:].strip()
+        if new_dir == '..':
+            session['cwd'] = '/'.join(session['cwd'].split('/')[:-1]) or '/'
+        elif new_dir.startswith('/'):
+            session['cwd'] = new_dir
+        else:
+            session['cwd'] = session['cwd'] + '/' + new_dir
+        emit('terminal_response', {'output': '$ '})
+        return
+    
+    if command.startswith('ls'):
+        try:
+            path = command[2:].strip() if len(command) > 2 else session['cwd']
+            if not path.startswith('/'):
+                path = session['cwd'] + '/' + path
+            files = os.listdir(path)
+            
+            # Separar pastas e arquivos
+            folders = []
+            files_only = []
+            for f in files:
+                full_path = os.path.join(path, f)
+                if os.path.isdir(full_path):
+                    folders.append(f)
+                else:
+                    files_only.append(f)
+            
+            # Ordenar
+            folders.sort()
+            files_only.sort()
+            
+            # Formatar com cores ANSI
+            output = ''
+            all_items = []
+            for f in folders:
+                # Truncar se muito longo
+                display = f[:20] + '...' if len(f) > 20 else f
+                all_items.append('[1;34m' + display + '/[0m')  # Azul para pastas
+            for f in files_only:
+                display = f[:20] + '...' if len(f) > 20 else f
+                all_items.append(display)  # Branco para arquivos
+            
+            # Formatar em colunas
+            if all_items:
+                col_width = 25
+                cols = 3
+                rows = (len(all_items) + cols - 1) // cols
+                for i in range(rows):
+                    row = ''
+                    for j in range(cols):
+                        idx = i + j * rows
+                        if idx < len(all_items):
+                            row += all_items[idx].ljust(col_width)
+                    output += row + '\n'
+            else:
+                output = '(vazio)\n'
+            
+            emit('terminal_response', {'output': output + '$ '})
+        except Exception as e:
+            emit('terminal_response', {'output': 'Erro: ' + str(e) + '\n\\$ '})
+        return
+    
+    if command.startswith('cat '):
+        filename = command[4:].strip()
+        if not filename.startswith('/'):
+            filename = session['cwd'] + '/' + filename
+        try:
+            with open(filename, 'r', encoding='utf-8', errors='ignore') as f:
+                content = f.read()
+            emit('terminal_response', {'output': content + '\n$ '})
+        except Exception as e:
+            emit('terminal_response', {'output': 'Erro: ' + str(e) + '\n$ '})
+        return
+    
+    if command.startswith('echo '):
+        text = command[5:]
+        emit('terminal_response', {'output': text + '\n$ '})
+        return
+    
+    blocked_commands = ['rm -rf /', 'mkfs', 'dd if=', 'shutdown', 'reboot', 'halt', 'poweroff']
+    if any(blocked in command for blocked in blocked_commands):
+        emit('terminal_response', {'output': 'Comando bloqueado por seguranca!\n$ '})
+        return
+    
+    try:
+        full_command = 'cd ' + session['cwd'] + ' && ' + command
+        process = Popen(full_command, shell=True, stdout=PIPE, stderr=PIPE)
+        stdout, stderr = process.communicate(timeout=10)
+        output = stdout.decode('utf-8', errors='ignore')
+        error = stderr.decode('utf-8', errors='ignore')
+        result = output if output else ''
+        if error:
+            result += error
+        emit('terminal_response', {'output': result + '$ '})
+    except TimeoutExpired:
+        emit('terminal_response', {'output': 'Comando expirou (timeout 10s)\n$ '})
+    except Exception as e:
+        emit('terminal_response', {'output': 'Erro: ' + str(e) + '\n$ '})
+
+print("✅ Terminal Web backend adicionado")
+
+
+@app.route('/api/quick-metrics')
+def get_quick_metrics():
+    import psutil
+    try:
+        cpu = psutil.cpu_percent(interval=0.5)
+        ram = psutil.virtual_memory().percent
+        disk = psutil.disk_usage('/').percent
+        return {'cpu': cpu, 'ram': ram, 'disk': disk}
+    except Exception as e:
+        return {'cpu': 0, 'ram': 0, 'disk': 0, 'error': str(e)}
+
+
+# === SEGURANÇA: Validação de caminhos de arquivos ===
+ALLOWED_BASE_DIRS = [
+    os.path.expanduser('/home/lps/documentos'),
+    os.path.expanduser('/home/lps/projetos'),
+    os.path.expanduser('/home/lps/Downloads'),
+    os.path.expanduser('/home/lps/thinkinos-platform/static'),
+]
+
+BLOCKED_PATTERNS = [
+    '/etc/', '/root/', '/var/log/', '/proc/', '/sys/', '/dev/',
+    'app.py', 'config.py', '.env', 'database.db', '.sqlite',
+    '/home/lps/thinkinos-platform/app.py',
+    '/home/lps/thinkinos-platform/templates/',
+    '/home/lps/thinkinos-platform/.env',
+    '../',
+]
+
+def is_safe_path(file_path):
+    file_path = os.path.normpath(file_path)
+    for pattern in BLOCKED_PATTERNS:
+        if pattern in file_path:
+            return False, "Acesso negado: padrao bloqueado"
+    real_path = os.path.realpath(file_path)
+    allowed = False
+    for base_dir in ALLOWED_BASE_DIRS:
+        real_base = os.path.realpath(base_dir)
+        if real_path.startswith(real_base):
+            allowed = True
+            break
+    if not allowed:
+        return False, "Diretorio nao permitido"
+    if not os.path.exists(file_path):
+        return False, "Arquivo nao encontrado"
+    if os.path.isdir(file_path):
+        return False, "Caminho e um diretorio"
+    return True, "OK"
+
+
+@app.route('/api/file/open', methods=['POST'])
+def api_file_open():
+    """API segura para abrir arquivos."""
+    from flask import jsonify, request
+    
+    data = request.get_json() or {}
+    file_path = data.get('file', '')
+    
+    # Validação de segurança BACKEND (não pode ser burlada)
+    is_safe, msg = is_safe_path(file_path)
+    if not is_safe:
+        return jsonify({'error': msg}), 403
+    
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        return jsonify({'content': content, 'file': file_path})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+
+@app.route('/api/files/download-zip', methods=['POST'])
+def api_download_zip():
+    import zipfile
+    import io
+    import time
+    from flask import send_file, request, jsonify
+    
+    data = request.get_json() or {}
+    files_list = data.get('files', [])
+    
+    print(f"📦 [ZIP] Recebido: {files_list}")
+    print(f"📁 [ZIP] UPLOAD_FOLDER: {UPLOAD_FOLDER}")
+    
+    if not files_list:
+        return jsonify({'error': 'Nenhum arquivo selecionado'}), 400
+
+    memory_file = io.BytesIO()
+    created = 0
+    
+    # Usar ZIP_STORED (sem compressão) para máxima compatibilidade
+    with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_STORED, allowZip64=True) as zf:
+        for filename in files_list:
+            possible_paths = [
+                os.path.join(UPLOAD_FOLDER, filename),
+                os.path.join(os.getcwd(), 'uploads', filename),
+                os.path.join(os.path.expanduser('~'), 'thinkinos-platform', 'uploads', filename),
+                filename
+            ]
+            
+            file_path = None
+            for path in possible_paths:
+                if os.path.exists(path):
+                    file_path = path
+                    break
+            
+            if file_path and os.path.isfile(file_path):
+                print(f"✅ [ZIP] Adicionando: {file_path}")
+                try:
+                    # Usar ZipInfo para garantir compatibilidade
+                    info = zipfile.ZipInfo(os.path.basename(filename), date_time=time.localtime(time.time())[:6])
+                    info.compress_type = zipfile.ZIP_STORED
+                    with open(file_path, 'rb') as f:
+                        zf.writestr(info, f.read())
+                    created += 1
+                except Exception as e:
+                    print(f"❌ [ZIP] Erro: {e}")
+            else:
+                print(f"️ [ZIP] Não encontrado: {filename}")
+    
+    if created == 0:
+        return jsonify({'error': 'Nenhum arquivo válido'}), 404
+
+    memory_file.seek(0)
+    print(f"✅ [ZIP] Criado com {created} arquivo(s), tamanho: {memory_file.tell()} bytes")
+    
+    response = send_file(
+        memory_file,
+        mimetype='application/zip',
+        as_attachment=True,
+        download_name='thinkinos_selecao.zip'
+    )
+    response.headers['Content-Disposition'] = 'attachment; filename="thinkinos_selecao.zip"'
+    return response
+
+
+
+# === API DE MÉTRICAS DO SISTEMA ===
+@app.route('/api/system_metrics')
+def get_system_metrics():
+    import psutil
+    try:
+        # CPU
+        cpu_percent = psutil.cpu_percent(interval=1)
+        
+        # RAM
+        ram = psutil.virtual_memory()
+        ram_percent = ram.percent
+        ram_used_gb = ram.used / (1024 ** 3)
+        ram_total_gb = ram.total / (1024 ** 3)
+        
+        # Disco
+        disk = psutil.disk_usage('/')
+        disk_percent = disk.percent
+        disk_used_gb = disk.used / (1024 ** 3)
+        disk_total_gb = disk.total / (1024 ** 3)
+        
+        return {
+            'cpu': cpu_percent,
+            'ram': {'percent': ram_percent, 'used': round(ram_used_gb, 1), 'total': round(ram_total_gb, 1)},
+            'disk': {'percent': disk_percent, 'used': round(disk_used_gb, 1), 'total': round(disk_total_gb, 1)}
+        }
+    except Exception as e:
+        return {'error': str(e)}, 500
+
+
+# === ROTA VNC NO DASHBOARD ===
+@app.route('/vnc')
+def vnc_client():
+    from flask import request, render_template_string
+    vm_name = request.args.get('vm', 'ubuntu-desktop')
+    ws_port = 6081
+    
+    with open(os.path.join(os.path.dirname(__file__), 'templates', 'vnc_client.html'), 'r', encoding='utf-8') as f:
+        template_content = f.read()
+    
+    return render_template_string(template_content, vm_name=vm_name, ws_port=ws_port)
+
+
+# === API PARA INICIAR VM GRÁFICA ===
+@app.route('/api/vm/start-graphic', methods=['POST'])
+def start_vm_graphic_api():
+    import subprocess, json, hashlib
+    from flask import request
+    
+    data = request.get_json() or {}
+    vm_name = data.get('vm_name', 'ubuntu-desktop')
+    
+    try:
+        script_path = '/home/lps/thinkinos-platform/scripts/start_vm_graphic.sh'
+        
+        # Executar script em background sem bloquear o Flask
+        subprocess.Popen(
+            ['bash', script_path, vm_name],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True
+        )
+        
+        # Calcular porta WS esperada (mesma lógica do bash)
+        vm_hash = int(hashlib.md5(vm_name.encode()).hexdigest(), 16)
+        ws_port = 6080 + (vm_hash % 100)
+        
+        return json.dumps({
+            'success': True, 
+            'vm_name': vm_name, 
+            'ws_port': ws_port,
+            'message': f'VM {vm_name} iniciando em modo gráfico...'
+        })
+        
+    except Exception as e:
+        return json.dumps({'success': False, 'error': str(e)}), 500
+
+
+
+@app.route('/browser')
+@login_required
+def browser_page():
+    return render_template('browser.html')
+
+
+# ===== DESAFIOS DO DIA (MODO APRENDER) =====
+DAILY_CHALLENGES = [
+    # ==================== NÍVEL LEIGO ====================
+    {"id": 1, "nivel": "leigo", "type": "diary", "title": "Metas do Dia", "description": "Liste 3 coisas importantes que você quer conquistar hoje. Vou te ajudar a organizar!", "starter_code": ""},
+    {"id": 2, "nivel": "leigo", "type": "diary", "title": "Rotina Matinal", "description": "Descreva sua rotina ideal para começar o dia com energia. O que você faz ao acordar?", "starter_code": ""},
+    {"id": 3, "nivel": "leigo", "type": "diary", "title": "Diário de Gratidão", "description": "Escreva 3 coisas pelas quais você é grato hoje. A gratidão muda tudo!", "starter_code": ""},
+    {"id": 4, "nivel": "leigo", "type": "diary", "title": "Planejamento Semanal", "description": "Quais são suas prioridades para esta semana? Vamos organizar juntos!", "starter_code": ""},
+    {"id": 5, "nivel": "leigo", "type": "diary", "title": "Controle de Hábitos", "description": "Qual hábito você quer desenvolver este mês? Beber mais água? Exercícios? Leitura?", "starter_code": ""},
+    {"id": 6, "nivel": "leigo", "type": "diary", "title": "Reflexão do Dia", "description": "O que você aprendeu de novo hoje? O que faria diferente?", "starter_code": ""},
+    # ==================== NÍVEL INTERMEDIÁRIO ====================
+    {"id": 7, "nivel": "intermediario", "type": "code", "title": "Soma de Pares", "description": "Crie uma função em Python chamada 'soma_pares' que recebe uma lista de números e retorna a soma apenas dos números pares.", "starter_code": "def soma_pares(numeros):\n    # Seu código aqui\n    pass\n\n# Teste:\nprint(soma_pares([1, 2, 3, 4, 5])) # Deve retornar 6"},
+    {"id": 8, "nivel": "intermediario", "type": "code", "title": "Verificador de Palíndromo", "description": "Escreva uma função 'eh_palindromo' que verifica se uma string é igual ao seu inverso (ignorando espaços e maiúsculas).", "starter_code": "def eh_palindromo(texto):\n    # Seu código aqui\n    pass\n\n# Teste:\nprint(eh_palindromo('Ame o poema')) # Deve retornar True"},
+    {"id": 9, "nivel": "intermediario", "type": "code", "title": "Contador de Vogais", "description": "Crie um script que conte quantas vogais (a, e, i, o, u) existem em uma frase fornecida pelo usuário.", "starter_code": "frase = 'ThinkinOS é incrível'\nvogais = 'aeiouAEIOU'\n# Conte as vogais e imprima o resultado"},
+    {"id": 10, "nivel": "intermediario", "type": "code", "title": "FizzBuzz", "description": "Escreva um programa que imprima os números de 1 a 100. Para múltiplos de 3, imprima 'Fizz'. Para múltiplos de 5, imprima 'Buzz'. Para múltiplos de ambos, 'FizzBuzz'.", "starter_code": "for i in range(1, 101):\n    # Seu código aqui\n    pass"},
+    {"id": 11, "nivel": "intermediario", "type": "code", "title": "Calculadora de IMC", "description": "Crie uma função que calcula o IMC dado peso e altura, e retorna a categoria.", "starter_code": "def calcular_imc(peso, altura):\n    # Seu código aqui\n    pass\n\nprint(calcular_imc(70, 1.75))"},
+    {"id": 12, "nivel": "intermediario", "type": "code", "title": "Gerador de Senhas", "description": "Crie um programa que gera uma senha aleatória com tamanho configurável, incluindo letras, números e símbolos.", "starter_code": "import random\nimport string\n\ndef gerar_senha(tamanho=12):\n    # Seu código aqui\n    pass\n\nprint(gerar_senha(16))"},
+    # ==================== NÍVEL AVANÇADO ====================
+    {"id": 13, "nivel": "avancado", "type": "code", "title": "Script de Backup", "description": "Escreva um script Python que faz backup de uma pasta específica, compactando em .tar.gz e adicionando a data no nome.", "starter_code": "import tarfile\nimport datetime\n\ndef fazer_backup(pasta_origem, pasta_destino):\n    # Seu código aqui\n    pass"},
+    {"id": 14, "nivel": "avancado", "type": "code", "title": "Monitoramento de Disco", "description": "Crie um script que verifica o uso do disco e envia um alerta se ultrapassar 80% de uso.", "starter_code": "import shutil\n\ndef verificar_disco(caminho='/'):\n    # Seu código aqui\n    pass\n\nverificar_disco()"},
+    {"id": 15, "nivel": "avancado", "type": "code", "title": "Organizador de Downloads", "description": "Escreva um script que organiza a pasta de Downloads movendo arquivos para subpastas por tipo.", "starter_code": "import os\nimport shutil\n\ndef organizar_downloads(pasta='/home/user/Downloads'):\n    # Seu código aqui\n    pass"},
+    {"id": 16, "nivel": "avancado", "type": "code", "title": "Analisador de Logs", "description": "Crie um script que lê um arquivo de log e conta quantas vezes cada nível de erro aparece.", "starter_code": "from collections import Counter\n\ndef analisar_logs(arquivo_log):\n    # Seu código aqui\n    pass"},
+    {"id": 17, "nivel": "avancado", "type": "code", "title": "Automação com Cron", "description": "Escreva um script Python que adiciona uma tarefa ao crontab do usuário para rodar todo dia às 8h.", "starter_code": "import subprocess\n\ndef adicionar_cron(comando, hora='8', minuto='0'):\n    # Seu código aqui\n    pass"}
+]
+
+@app.route('/api/challenge', methods=['GET'])
+def get_daily_challenge():
+    import random
+    from flask import request
+    nivel = request.args.get('nivel', 'intermediario')
+    desafios_filtrados = [c for c in DAILY_CHALLENGES if c.get('nivel') == nivel]
+    if not desafios_filtrados:
+        desafios_filtrados = DAILY_CHALLENGES
+    challenge = random.choice(desafios_filtrados)
+    return jsonify(challenge)
+
+
+# ==================== TERMINAL WEB ====================
+@app.route('/terminal')
+def terminal_page():
+    """Página do terminal web"""
+    return render_template('terminal.html')
+
+@app.route('/api/workspace/terminal', methods=['POST'])
+def workspace_terminal():
+    """Executa comandos no workspace"""
+    import subprocess
+    import os
+    
+    data = request.get_json()
+    command = data.get('command', '')
+    
+    if not command:
+        return jsonify({'success': False, 'error': 'Nenhum comando fornecido'})
+    
+    try:
+        # Executa no diretório do workspace
+        workspace_dir = os.path.expanduser('~/thinkinos-platform')
+        result = subprocess.run(
+            command,
+            shell=True,
+            cwd=workspace_dir,
+            capture_output=True,
+            text=True,
+            timeout=30
+        )
+        
+        output = result.stdout
+        if result.stderr:
+            output += "\n" + result.stderr
+        
+        return jsonify({
+            'success': True,
+            'output': output,
+            'returncode': result.returncode
+        })
+    except subprocess.TimeoutExpired:
+        return jsonify({'success': False, 'error': 'Comando expirou (timeout 30s)'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+# =====================================================
+
+
+# ==================== API DO DIÁRIO ====================
+import json
+from datetime import datetime
+
+DIARY_FILE = os.path.join(os.path.dirname(__file__), 'diary.json')
+
+@app.route('/api/diary', methods=['GET'])
+def get_diary():
+    """Retorna todas as entradas do diário"""
+    if os.path.exists(DIARY_FILE):
+        with open(DIARY_FILE, 'r', encoding='utf-8') as f:
+            entries = json.load(f)
+        return jsonify({'success': True, 'entries': entries})
+    return jsonify({'success': True, 'entries': []})
+
+@app.route('/api/diary', methods=['POST'])
+def save_diary_entry():
+    """Salva uma nova entrada no diário"""
+    data = request.get_json()
+    content = data.get('content', '').strip()
+    
+    if not content:
+        return jsonify({'success': False, 'error': 'Conteúdo vazio'})
+    
+    entry = {
+        'id': len(os.path.exists(DIARY_FILE) and json.load(open(DIARY_FILE, 'r')) or []) + 1,
+        'content': content,
+        'timestamp': datetime.now().isoformat()
+    }
+    
+    entries = []
+    if os.path.exists(DIARY_FILE):
+        with open(DIARY_FILE, 'r', encoding='utf-8') as f:
+            entries = json.load(f)
+    
+    entries.append(entry)
+    
+    with open(DIARY_FILE, 'w', encoding='utf-8') as f:
+        json.dump(entries, f, ensure_ascii=False, indent=2)
+    
+    return jsonify({'success': True, 'entry': entry})
+# =====================================================
+
+
+# ==================== IDE WEB ====================
+@app.route('/ide')
+def ide_page():
+    """Página da IDE web"""
+    return render_template('ide.html')
+
+@app.route('/api/workspace/files', methods=['GET'])
+def list_workspace_files():
+    """Lista arquivos do workspace"""
+    import os
+    workspace_dir = os.path.expanduser('~/thinkinos-platform')
+    files = []
+    for root, dirs, filenames in os.walk(workspace_dir):
+        # Ignorar diretórios ocultos e venv
+        dirs[:] = [d for d in dirs if not d.startswith('.') and d != 'venv' and d != '__pycache__']
+        for filename in filenames:
+            if not filename.startswith('.') and not filename.endswith('.pyc'):
+                filepath = os.path.join(root, filename)
+                relpath = os.path.relpath(filepath, workspace_dir)
+                files.append({
+                    'name': filename,
+                    'path': relpath,
+                    'size': os.path.getsize(filepath)
+                })
+    return jsonify({'success': True, 'files': sorted(files, key=lambda x: x['name'])})
+
+@app.route('/api/workspace/file', methods=['GET'])
+def get_file_content():
+    """Lê o conteúdo de um arquivo"""
+    import os
+    filepath = request.args.get('path', '')
+    if not filepath:
+        return jsonify({'success': False, 'error': 'Caminho não fornecido'})
+    
+    workspace_dir = os.path.expanduser('~/thinkinos-platform')
+    full_path = os.path.join(workspace_dir, filepath)
+    
+    # Segurança: verificar se está dentro do workspace
+    if not os.path.realpath(full_path).startswith(os.path.realpath(workspace_dir)):
+        return jsonify({'success': False, 'error': 'Acesso negado'})
+    
+    try:
+        with open(full_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        return jsonify({'success': True, 'content': content, 'path': filepath})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/workspace/file', methods=['POST'])
+def save_file_content():
+    """Salva o conteúdo de um arquivo"""
+    import os
+    data = request.get_json()
+    filepath = data.get('path', '')
+    content = data.get('content', '')
+    
+    if not filepath:
+        return jsonify({'success': False, 'error': 'Caminho não fornecido'})
+    
+    workspace_dir = os.path.expanduser('~/thinkinos-platform')
+    full_path = os.path.join(workspace_dir, filepath)
+    
+    # Segurança: verificar se está dentro do workspace
+    if not os.path.realpath(full_path).startswith(os.path.realpath(workspace_dir)):
+        return jsonify({'success': False, 'error': 'Acesso negado'})
+    
+    try:
+        with open(full_path, 'w', encoding='utf-8') as f:
+            f.write(content)
+        return jsonify({'success': True, 'message': 'Arquivo salvo com sucesso!'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+# =====================================================
+
+if __name__ == '__main__':
+    socketio.run(app, host='0.0.0.0', port=5000, debug=True, allow_unsafe_werkzeug=True)

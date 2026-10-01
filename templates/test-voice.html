@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Teste de Voz - ThinkinOS</title>
+    <style>
+        body { 
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); 
+            color: white; 
+            padding: 20px; 
+            font-family: 'Segoe UI', sans-serif;
+            height: 100vh;
+        }
+        #voice-controls {
+            position: fixed; 
+            bottom: 80px; 
+            right: 20px; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 12px; 
+            z-index: 9999;
+        }
+        button {
+            width: 65px; 
+            height: 65px; 
+            border-radius: 50%; 
+            border: none; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+            color: white; 
+            font-size: 30px; 
+            cursor: pointer; 
+            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.6); 
+            transition: all 0.3s;
+        }
+        button:active {
+            transform: scale(0.95);
+        }
+        #status {
+            margin-top: 50px;
+            padding: 20px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎙️ Teste de Voz - ThinkinOS</h1>
+    <div id="voice-controls">
+        <button id="btn-stt" title="Segure para gravar">🎙️</button>
+    </div>
+    <div id="status">
+        <p>Status: <span id="status-text">Aguardando...</span></p>
+        <p>Transcrição: <span id="transcricao">-</span></p>
+    </div>
+    
+    <script>
+        let isRecording = false;
+        let mediaRecorder = null;
+        let audioChunks = [];
+        
+        const btnStt = document.getElementById('btn-stt');
+        const statusText = document.getElementById('status-text');
+        const transcricaoText = document.getElementById('transcricao');
+        
+        btnStt.addEventListener('mousedown', startRecording);
+        btnStt.addEventListener('mouseup', stopRecording);
+        btnStt.addEventListener('touchstart', startRecording);
+        btnStt.addEventListener('touchend', stopRecording);
+        
+        async function startRecording(e) {
+            e.preventDefault();
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                audioChunks = [];
+                
+                mediaRecorder.ondataavailable = (event) => {
+                    audioChunks.push(event.data);
+                };
+                
+                mediaRecorder.onstop = async () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                    await sendToTranscription(audioBlob);
+                    stream.getTracks().forEach(track => track.stop());
+                };
+                
+                mediaRecorder.start();
+                isRecording = true;
+                
+                btnStt.style.background = 'linear-gradient(135deg, #ff416c, #ff4b2b)';
+                btnStt.style.transform = 'scale(1.1)';
+                btnStt.innerHTML = '🔴';
+                statusText.innerText = "Gravando...";
+                
+                console.log("🎙️ Gravando...");
+            } catch (error) {
+                console.error("Erro:", error);
+                statusText.innerText = "Erro: " + error.message;
+            }
+        }
+        
+        function stopRecording(e) {
+            if (e) e.preventDefault();
+            if (mediaRecorder && isRecording) {
+                mediaRecorder.stop();
+                isRecording = false;
+                btnStt.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+                btnStt.style.transform = 'scale(1)';
+                btnStt.innerHTML = '🎙️';
+                statusText.innerText = "Processando...";
+            }
+        }
+        
+        async function sendToTranscription(audioBlob) {
+            try {
+                const formData = new FormData();
+                formData.append('audio', audioBlob, 'audio.webm');
+                
+                const response = await fetch('/api/voice/transcribe', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.sucesso) {
+                    transcricaoText.innerText = result.texto;
+                    statusText.innerText = "✅ Sucesso!";
+                } else {
+                    statusText.innerText = "❌ Erro: " + result.erro;
+                }
+            } catch (error) {
+                statusText.innerText = "❌ Erro de conexão";
+            } finally {
+                btnStt.innerHTML = '🎙️';
+            }
+        }
+        
+        console.log("✅ Página de teste carregada!");
+    </script>
+</body>
+</html>

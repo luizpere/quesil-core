@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Perfil e Privacidade - ThinkinOS</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            color: #e0e0e0;
+        }
+        .perfil-container {
+            background: rgba(30, 30, 46, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 40px;
+            max-width: 550px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            backdrop-filter: blur(10px);
+        }
+        
+        /* === NOVA BARRA DE NAVEGAÇÃO === */
+        .nav-bar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .nav-btn {
+            flex: 1;
+            padding: 10px 16px;
+            border-radius: 8px;
+            text-decoration: none;
+            color: #e0e0e0;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+        .nav-btn:hover {
+            background: rgba(255,255,255,0.1);
+            transform: translateY(-2px);
+        }
+        .nav-btn.primary {
+            background: #667eea;
+            border-color: #667eea;
+        }
+        .nav-btn.primary:hover {
+            background: #5a6fd6;
+        }
+        .nav-btn.danger {
+            background: rgba(220, 53, 69, 0.2);
+            border-color: rgba(220, 53, 69, 0.3);
+            color: #ff6b6b;
+        }
+        .nav-btn.danger:hover {
+            background: #dc3545;
+            color: white;
+        }
+        /* ============================ */
+        
+        .perfil-header { text-align: center; margin-bottom: 30px; }
+        .avatar {
+            width: 100px; height: 100px; border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 20px; font-size: 50px; color: white;
+            border: 3px solid rgba(255,255,255,0.2);
+        }
+        h1 { color: #ffffff; margin-bottom: 8px; font-size: 28px; }
+        .email { color: #a0a0b0; font-size: 14px; }
+        
+        .info-section { margin-top: 30px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); }
+        .info-item { margin-bottom: 20px; }
+        .label { font-weight: 600; color: #8b9bb4; margin-bottom: 8px; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
+        
+        .value-box { 
+            display: flex; gap: 10px; align-items: center;
+        }
+        .value { 
+            flex: 1; color: #ffffff; padding: 12px; background: rgba(0,0,0,0.3); 
+            border-radius: 8px; font-size: 15px; border: 1px solid rgba(255,255,255,0.1); 
+        }
+        .btn-edit {
+            background: #667eea; color: white; border: none; padding: 12px 16px;
+            border-radius: 8px; cursor: pointer; font-weight: 600; transition: 0.2s;
+        }
+        .btn-edit:hover { background: #5a6fd6; }
+
+        .danger-zone {
+            margin-top: 40px; padding: 20px;
+            background: rgba(220, 53, 69, 0.1);
+            border: 1px solid rgba(220, 53, 69, 0.3);
+            border-radius: 12px;
+        }
+        .danger-title { color: #ff6b6b; font-weight: 700; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+        .danger-desc { color: #a0a0b0; font-size: 13px; margin-bottom: 15px; line-height: 1.5; }
+        .btn-danger {
+            background: transparent; color: #ff6b6b; border: 1px solid #ff6b6b; 
+            padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600; 
+            transition: 0.2s; width: 100%;
+        }
+        .btn-danger:hover { background: #ff6b6b; color: white; }
+
+        .status-badge {
+            display: inline-block; padding: 4px 12px; border-radius: 20px;
+            background: rgba(40, 167, 69, 0.2); color: #28a745; 
+            font-size: 12px; font-weight: 700; border: 1px solid rgba(40, 167, 69, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="perfil-container">
+        
+        <!-- === BARRA DE NAVEGAÇÃO ADICIONADA === -->
+        <div class="nav-bar">
+            <a href="/desktop" class="nav-btn primary">
+                ️ Desktop
+            </a>
+            <a href="/chat" class="nav-btn">
+                 Chat
+            </a>
+            <a href="/logout" class="nav-btn danger">
+                🚪 Sair
+            </a>
+        </div>
+        <!-- ===================================== -->
+        
+        <div class="perfil-header">
+            <div class="avatar">👤</div>
+            <h1 id="display-username">{{ user.username if user else 'Usuário' }}</h1>
+            <p class="email">{{ user.email if user and user.email else 'usuario@thinkinos.local' }}</p>
+        </div>
+        
+        <div class="info-section">
+            <div class="info-item">
+                <div class="label">Nome de Exibição</div>
+                <div class="value-box">
+                    <input type="text" id="input-username" class="value" value="{{ user.username if user else 'Usuário' }}" style="color: white; background: rgba(0,0,0,0.5);">
+                    <button class="btn-edit" onclick="saveUsername()">Salvar</button>
+                </div>
+            </div>
+            
+            <div class="info-item">
+                <div class="label">ID do Perfil</div>
+                <div class="value">#{{ user.id if user else '000' }}</div>
+            </div>
+            
+            <div class="info-item">
+                <div class="label">Status do Sistema</div>
+                <div class="value"><span class="status-badge">✅ Seguro e Estável</span></div>
+            </div>
+        </div>
+
+        <div class="danger-zone">
+            <div class="danger-title">️ Zona de Perigo (LGPD)</div>
+            <p class="danger-desc">
+                Ao clicar abaixo, todos os seus dados locais, incluindo histórico de conversas com a IA e memórias personalizadas, serão permanentemente excluídos. Esta ação não pode ser desfeita.
+            </p>
+            <button class="btn-danger" onclick="deleteAllData()">🗑️ Excluir Todos os Meus Dados</button>
+        </div>
+    </div>
+
+    <script>
+        async function saveUsername() {
+            const newName = document.getElementById('input-username').value.trim();
+            const btn = document.querySelector('.btn-edit');
+            const originalText = btn.textContent;
+            
+            btn.textContent = 'Salvando...';
+            btn.disabled = true;
+
+            try {
+                const response = await fetch('/api/perfil/update', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ username: newName })
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('display-username').textContent = newName;
+                    alert('✅ Nome atualizado com sucesso!');
+                } else {
+                    alert('❌ Erro: ' + data.error);
+                }
+            } catch (error) {
+                alert('❌ Erro de conexão.');
+            } finally {
+                btn.textContent = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        async function deleteAllData() {
+            if (confirm('️ TEM CERTEZA?\n\nIsso apagará TODO o seu histórico de chat e memórias da IA. Esta ação é irreversível.')) {
+                if (confirm('Última chance: Deseja realmente prosseguir com a exclusão dos dados?')) {
+                    try {
+                        const response = await fetch('/api/perfil/delete_data', { method: 'POST' });
+                        const data = await response.json();
+                        if (data.success) {
+                            alert('✅ Dados excluídos. Você será redirecionado.');
+                            window.location.href = '/desktop';
+                        } else {
+                            alert('❌ Erro ao excluir dados: ' + data.error);
+                        }
+                    } catch (error) {
+                        alert('❌ Erro de conexão.');
+                    }
+                }
+            }
+        }
+    </script>
+</body>
+</html>

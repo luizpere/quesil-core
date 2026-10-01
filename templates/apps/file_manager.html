@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Gerenciador</title>
+<!-- Carregando Ace Editor via CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.6/ace.js">
+// === SISTEMA DE SELEÇÃO E ZIP v8.0 ===
+let selectedFiles = new Set();
+
+function toggleSelection(element, filename) {
+    element.classList.toggle('selected');
+    const checkbox = element.querySelector('.file-checkbox');
+    if (checkbox) checkbox.checked = element.classList.contains('selected');
+    
+    if (element.classList.contains('selected')) {
+        selectedFiles.add(filename);
+    } else {
+        selectedFiles.delete(filename);
+    }
+    updateZipButton();
+}
+
+function updateZipButton() {
+    const btn = document.getElementById('btn-download-zip');
+    if (selectedFiles.size > 0) {
+        btn.style.opacity = '1';
+        btn.style.pointerEvents = 'auto';
+        btn.innerText = `📦 Baixar ZIP (${selectedFiles.size})`;
+    } else {
+        btn.style.opacity = '0.5';
+        btn.style.pointerEvents = 'none';
+        btn.innerText = '📦 Baixar ZIP';
+    }
+}
+
+window.downloadSelectedAsZip = function() {
+    if (selectedFiles.size === 0) return;
+    const filesArray = Array.from(selectedFiles);
+    console.log('📦 Criando ZIP com:', filesArray);
+    
+    fetch('/api/files/download-zip', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({files: filesArray, path: currentPath})
+    })
+    .then(res => {
+        if (!res.ok) throw new Error('Erro ao gerar ZIP');
+        return res.blob();
+    })
+    .then(blob => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'thinkinos_selecao.zip';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+        selectedFiles.clear();
+        loadFiles(); // Recarrega para limpar seleção visual
+    })
+    .catch(err => alert('Erro: ' + err.message));
+};
+
+// Observador para adicionar checkboxes e eventos aos novos .file-item
+const observer = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+        mutation.addedNodes.forEach((node) => {
+            if (node.classList && node.classList.contains('file-item')) {
+                const cb = document.createElement('input');
+                cb.type = 'checkbox';
+                cb.className = 'file-checkbox';
+                
+                const nameEl = node.querySelector('.name');
+                const filename = nameEl ? nameEl.innerText : '';
+                
+                cb.onclick = (e) => {
+                    e.stopPropagation();
+                    toggleSelection(node, filename);
+                };
+                
+                node.prepend(cb);
+                
+                node.onclick = (e) => {
+                    if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'BUTTON') {
+                        toggleSelection(node, filename);
+                    }
+                };
+            }
+        });
+    });
+});
+observer.observe(document.getElementById('fileList'), { childList: true });
+
+// Drag & Drop nativo
+const fileListEl = document.getElementById('fileList');
+const dropZoneEl = document.getElementById('drop-zone');
+
+fileListEl.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropZoneEl.style.display = 'block';
+});
+
+dropZoneEl.addEventListener('dragleave', (e) => {
+    e.preventDefault();
+    dropZoneEl.style.display = 'none';
+});
+
+dropZoneEl.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZoneEl.style.display = 'none';
+    const files = e.dataTransfer.files;
+    if (files.length > 0) uploadMultipleFiles(files);
+});
+
+async function uploadMultipleFiles(files) {
+    let successCount = 0;
+    for (let i = 0; i < files.length; i++) {
+        const formData = new FormData();
+        formData.append('file', files[i]);
+        if (currentPath) formData.append('path', currentPath);
+        try {
+            const res = await fetch('/api/files/upload', { method: 'POST', body: formData });
+            const data = await res.json();
+            if (data.sucesso) successCount++;
+        } catch (e) { console.error(e); }
+    }
+    if (successCount > 0) {
+        alert(`✅ ${successCount} arquivo(s) enviado(s)!`);
+        loadFiles();
+    } else {
+        alert('❌ Erro no upload dos arquivos.');
+    }
+}
+
+updateZipButton();
+console.log('✅ [FM v8.0] Sistema de Seleção, ZIP e Drag&Drop ativo');
+
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.6/ext-searchbox.js">
+// === SISTEMA DE SELEÇÃO E ZIP v8.0 ===
+let selectedFiles = new Set();
+
+function toggleSelection(element, filename) {
+    element.classList.toggle('selected');
+    const checkbox = element.querySelector('.file-checkbox');
+    if (checkbox) checkbox.checked = element.classList.contains('selected');
+    
+    if (element.classList.contains('selected')) {
+        selectedFiles.add(filename);
+    } else {
+        selectedFiles.delete(filename);
+    }
+    updateZipButton();
+}
+
+function updateZipButton() {
+    const btn = document.getElementById('btn-download-zip');
+    if (selectedFiles.size > 0) {
+        btn.style.opacity = '1';
+        btn.style.pointerEvents = 'auto';
+        btn.innerText = `📦 Baixar ZIP (${selectedFiles.size})`;
+    } else {
+        btn.style.opacity = '0.5';
+        btn.style.pointerEvents = 'none';
+        btn.innerText = '📦 Baixar ZIP';
+    }
+}
+
+window.downloadSelectedAsZip = function() {
+    if (selectedFiles.size === 0) return;
+    const filesArray = Array.from(selectedFiles);
+    console.log('📦 Criando ZIP com:', filesArray);
+    
+    fetch('/api/files/download-zip', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({files: filesArray, path: currentPath})
+    })
+    .then(res => {
+        if (!res.ok) throw new Error('Erro ao gerar ZIP');
+        return res.blob();
+    })
+    .then(blob => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'thinkinos_selecao.zip';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+        selectedFiles.clear();
+        loadFiles(); // Recarrega para limpar seleção visual
+    })
+    .catch(err => alert('Erro: ' + err.message));
+};
+
+// Observador para adicionar checkboxes e eventos aos novos .file-item
+const observer = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+        mutation.addedNodes.forEach((node) => {
+            if (node.classList && node.classList.contains('file-item')) {
+                const cb = document.createElement('input');
+                cb.type = 'checkbox';
+                cb.className = 'file-checkbox';
+                
+                const nameEl = node.querySelector('.name');
+                const filename = nameEl ? nameEl.innerText : '';
+                
+                cb.onclick = (e) => {
+                    e.stopPropagation();
+                    toggleSelection(node, filename);
+                };
+                
+                node.prepend(cb);
+                
+                node.onclick = (e) => {
+                    if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'BUTTON') {
+                        toggleSelection(node, filename);
+                    }
+                };
+            }
+        });
+    });
+});
+observer.observe(document.getElementById('fileList'), { childList: true });
+
+// Drag & Drop nativo
+const fileListEl = document.getElementById('fileList');
+const dropZoneEl = document.getElementById('drop-zone');
+
+fileListEl.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropZoneEl.style.display = 'block';
+});
+
+dropZoneEl.addEventListener('dragleave', (e) => {
+    e.preventDefault();
+    dropZoneEl.style.display = 'none';
+});
+
+dropZoneEl.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZoneEl.style.display = 'none';
+    const files = e.dataTransfer.files;
+    if (files.length > 0) uploadMultipleFiles(files);
+});
+
+async function uploadMultipleFiles(files) {
+    let successCount = 0;
+    for (let i = 0; i < files.length; i++) {
+        const formData = new FormData();
+        formData.append('file', files[i]);
+        if (currentPath) formData.append('path', currentPath);
+        try {
+            const res = await fetch('/api/files/upload', { method: 'POST', body: formData });
+            const data = await res.json();
+            if (data.sucesso) successCount++;
+        } catch (e) { console.error(e); }
+    }
+    if (successCount > 0) {
+        alert(`✅ ${successCount} arquivo(s) enviado(s)!`);
+        loadFiles();
+    } else {
+        alert('❌ Erro no upload dos arquivos.');
+    }
+}
+
+updateZipButton();
+console.log('✅ [FM v8.0] Sistema de Seleção, ZIP e Drag&Drop ativo');
+
+</script>
+<style>
+body{margin:0;padding:0;background:#1a1a2e;color:#fff;font-family:sans-serif;height:100vh;display:flex;flex-direction:column}
+.toolbar{padding:10px;background:rgba(168,85,247,0.2);border-bottom:2px solid #a855f7;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.nav-bar{display:flex;align-items:center;gap:10px;flex:1;min-width:200px}
+.btn{background:#a855f7;color:#fff;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-weight:bold;font-size:13px}
+.btn:hover{background:#9333ea}
+.btn:disabled{background:#555;cursor:not-allowed}
+.breadcrumbs{background:#111;padding:5px 10px;border-radius:6px;font-size:14px;flex:1;overflow-x:auto;white-space:nowrap}
+.file-list{flex:1;overflow-y:auto;padding:20px;display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:20px}
+.file-item{background:rgba(255,255,255,0.05);border-radius:12px;padding:15px;text-align:center;cursor:pointer;border:2px solid transparent}
+.file-item:hover{background:rgba(168,85,247,0.2);border-color:#a855f7}
+.icon{font-size:40px;display:block;margin-bottom:10px}
+.name{font-size:13px;word-break:break-word}
+.modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:1000;justify-content:center;align-items:center}
+.modal.active{display:flex}
+.modal-box{background:#1e1e2e;padding:0;border-radius:12px;width:90%;max-width:900px;height:80vh;display:flex;flex-direction:column;overflow:hidden;border:1px solid #a855f7}
+.modal-header{padding:12px 20px;background:rgba(168,85,247,0.2);border-bottom:1px solid #a855f7;display:flex;justify-content:space-between;align-items:center}
+.modal-header h3{margin:0;color:#a855f7;font-size:16px}
+.editor-container{flex:1;width:100%;position:relative}
+.modal-footer{padding:10px 20px;background:#111;border-top:1px solid #333;display:flex;justify-content:space-between;align-items:center}
+.hints{font-size:12px;color:#888}
+</style>
+
+<style>
+/* Forçar área de drop compacta */
+.drop-zone, #drop-area, [class*="drop"], [id*="drop"] {
+    min-height: 60px !important;
+    max-height: 80px !important;
+    padding: 10px !important;
+    margin-bottom: 15px !important;
+    font-size: 12px !important;
+}
+/* Estilo para checkboxes de seleção */
+.file-checkbox {
+    position: absolute;
+    top: 5px;
+    left: 5px;
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    z-index: 10;
+    accent-color: #0af;
+}
+.file-card { position: relative; }
+.file-card.selected { border: 2px solid #0af !important; background: rgba(0, 170, 255, 0.1); }
+</style>
+
+
+<style>
+/* Área de Drop Compacta e Explícita */
+#drop-zone {
+    border: 2px dashed #a855f7;
+    border-radius: 8px;
+    padding: 8px !important;
+    text-align: center;
+    color: #a855f7;
+    font-size: 12px;
+    margin: 10px 20px;
+    background: rgba(168, 85, 247, 0.05);
+    display: none; /* Só aparece ao arrastar */
+    min-height: 40px !important;
+    max-height: 50px !important;
+}
+/* Seleção de Arquivos */
+.file-item { position: relative; transition: all 0.2s; }
+.file-item.selected { 
+    border: 2px solid #4ade80 !important; 
+    background: rgba(74, 222, 128, 0.15) !important;
+}
+.file-checkbox {
+    position: absolute;
+    top: 5px;
+    left: 5px;
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    z-index: 10;
+    accent-color: #a855f7;
+}
+#btn-download-zip { transition: all 0.3s; }
+</style>
+
+</head>
+<body>
+<div class="toolbar">
+    <div class="nav-bar">
+        <button class="btn" id="btnBack" onclick="goBack()" disabled>⬆️ Voltar</button>
+        <div class="breadcrumbs" id="breadcrumbs">🏠 Workspace</div>
+    </div>
+    <div>
+        <input type="file" id="fileInput" style="display:none" onchange="uploadFile(event)">
+        <button class="btn" onclick="document.getElementById('fileInput').click()">️ Upload</button>
+        <button class="btn" onclick="createFolder()">📁 Nova Pasta</button>
+        <button class="btn" onclick="loadFiles()">🔄 Atualizar</button>
+            <button id="btn-download-zip" class="btn" style="background:#d69e2e; color:white; margin-left:10px; opacity:0.5; pointer-events:none;" onclick="downloadSelectedAsZip()">📦 Baixar ZIP</button>
+    </div>
+</div>
+<div id="drop-zone">📂 Arraste e solte arquivos aqui para upload rápido</div>
+<div class="file-list" id="fileList"><p style="color:#888;grid-column:1/-1;text-align:center">Carregando...</p></div>
+
+<div class="modal" id="editModal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h3 id="editTitle">Editor</h3>
+            <button class="btn" style="background:#555" onclick="closeModal()">✕ Fechar</button>
+        </div>
+        <div id="editor-container" class="editor-container"></div>
+        <div class="modal-footer">
+            <div class="hints">💡 Ctrl+S (Salvar) | Ctrl+F (Buscar) | Ctrl+H (Substituir)</div>
+            <button class="btn" onclick="saveFile()">💾 Salvar Alterações</button>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentFile = null;
+let currentPath = '';
+let editor;
+
+window.addEventListener('DOMContentLoaded', function() { 
+    loadFiles(); 
+    // Inicializar o Ace Editor
+    editor = ace.edit("editor-container");
+    editor.setTheme("ace/theme/dracula");
+    editor.session.setMode("ace/mode/text");
+    editor.setOptions({
+        fontSize: "14px",
+        showPrintMargin: false,
+        wrap: true
+    });
+    
+    // Adicionar atalho Ctrl+S
+    editor.commands.addCommand({
+        name: "saveFile",
+        bindKey: {win: "Ctrl-S", mac: "Command-S"},
+        exec: function(editor) { saveFile(); }
+    });
+});
+
+function updateBreadcrumbs() {
+    var bc = document.getElementById('breadcrumbs');
+    var btn = document.getElementById('btnBack');
+    if (currentPath === '') {
+        bc.innerText = '🏠 Workspace';
+        btn.disabled = true;
+    } else {
+        var parts = currentPath.split('/');
+        var text = '🏠 Workspace';
+        for(var i=0; i<parts.length; i++) text += ' > ' + parts[i];
+        bc.innerText = text;
+        btn.disabled = false;
+    }
+}
+
+function goBack() {
+    if (currentPath === '') return;
+    var parts = currentPath.split('/');
+    parts.pop();
+    currentPath = parts.join('/');
+    updateBreadcrumbs();
+    loadFiles();
+}
+
+async function loadFiles() {
+    console.log('🔄 Carregando arquivos em: ' + currentPath);
+    var list = document.getElementById('fileList');
+    list.innerHTML = '<p style="color:#888;grid-column:1/-1;text-align:center">Carregando...</p>';
+    try {
+        var url = '/api/files/list';
+        if (currentPath) url += '?path=' + encodeURIComponent(currentPath);
+        var res = await fetch(url);
+        var data = await res.json();
+        list.innerHTML = '';
+        var files = Array.isArray(data) ? data : (data.sucesso ? data.files : []);
+        if(files.length === 0) { list.innerHTML = '<p style="color:#888;grid-column:1/-1;text-align:center">Pasta vazia</p>'; return; }
+        for(var i = 0; i < files.length; i++) {
+            var f = files[i];
+            var div = document.createElement('div');
+            div.className = 'file-item';
+            if (f.is_dir) {
+                div.ondblclick = (function(name) { return function() { openFolder(name); }; })(f.name);
+            } else {
+                div.onclick = (function(name) { return function() { openFile(name); }; })(f.name);
+            }
+            var icon = f.is_dir ? '📁' : '📄';
+            div.innerHTML = '<span class="icon">' + icon + '</span><div class="name">' + f.name + '</div>';
+            list.appendChild(div);
+        }
+    } catch(e) { console.error('❌ Erro fatal:', e); list.innerHTML = '<p style="color:red;text-align:center">Erro</p>'; }
+}
+
+function openFolder(name) {
+    if (currentPath === '') currentPath = name;
+    else currentPath = currentPath + '/' + name;
+    updateBreadcrumbs();
+    loadFiles();
+}
+
+async function openFile(name) {
+    try {
+        var url = '/api/files/read?filename=' + encodeURIComponent(name);
+        if (currentPath) url += '&path=' + encodeURIComponent(currentPath);
+        var res = await fetch(url);
+        var data = await res.json();
+        if(data.sucesso) {
+            currentFile = name;
+            document.getElementById('editTitle').innerText = 'Editando: ' + name;
+            
+            // Carregar conteúdo no editor
+            editor.setValue(data.content || '', -1); // -1 move o cursor para o início
+            
+            // Detectar linguagem pela extensão
+            var ext = name.split('.').pop().toLowerCase();
+            var mode = "ace/mode/text";
+            if(ext === 'py') mode = "ace/mode/python";
+            else if(ext === 'js') mode = "ace/mode/javascript";
+            else if(ext === 'html') mode = "ace/mode/html";
+            else if(ext === 'css') mode = "ace/mode/css";
+            else if(ext === 'json') mode = "ace/mode/json";
+            else if(ext === 'md') mode = "ace/mode/markdown";
+            editor.session.setMode(mode);
+
+            document.getElementById('editModal').classList.add('active');
+            // Forçar o editor a redesenhar após o modal abrir
+            setTimeout(function() { editor.resize(); }, 100);
+        } else { alert('Erro: ' + data.erro); }
+    } catch(e) { alert('Erro ao abrir'); }
+}
+
+async function saveFile() {
+    if(!currentFile) return;
+    var content = editor.getValue();
+    try {
+        var body = {filename: currentFile, content: content, path: currentPath};
+        var res = await fetch('/api/files/save', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
+        var data = await res.json();
+        if(data.sucesso) { 
+            // Feedback visual rápido no rodapé
+            var hints = document.querySelector('.hints');
+            var originalText = hints.innerText;
+            hints.innerText = '✅ Salvo com sucesso!';
+            hints.style.color = '#4ade80';
+            setTimeout(() => { hints.innerText = originalText; hints.style.color = '#888'; }, 2000);
+        }
+        else { alert('Erro: ' + data.erro); }
+    } catch(e) { alert('Erro ao salvar'); }
+}
+
+function closeModal() { 
+    document.getElementById('editModal').classList.remove('active'); 
+    currentFile = null; 
+}
+
+async function uploadFile(event) {
+    var file = event.target.files[0]; if(!file) return;
+    var formData = new FormData(); formData.append('file', file);
+    if (currentPath) formData.append('path', currentPath);
+    try {
+        var res = await fetch('/api/files/upload', { method: 'POST', body: formData });
+        var data = await res.json();
+        if(data.sucesso) { alert(data.msg); loadFiles(); } else { alert('Erro: ' + data.erro); }
+    } catch(e) { alert('Erro no upload'); }
+    event.target.value = '';
+}
+
+async function createFolder() {
+    var name = prompt('Nome da nova pasta:');
+    if(!name || !name.trim()) return;
+    try {
+        var body = {nome: name.trim(), path: currentPath};
+        var res = await fetch('/api/files/create_folder', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
+        var data = await res.json();
+        if(data.sucesso) { alert(data.msg || 'Pasta criada!'); loadFiles(); }
+        else { alert('Erro: ' + data.erro); }
+    } catch(e) { alert('Erro ao criar pasta'); }
+}
+
+// === SISTEMA DE SELEÇÃO E ZIP v8.0 ===
+let selectedFiles = new Set();
+
+function toggleSelection(element, filename) {
+    element.classList.toggle('selected');
+    const checkbox = element.querySelector('.file-checkbox');
+    if (checkbox) checkbox.checked = element.classList.contains('selected');
+    
+    if (element.classList.contains('selected')) {
+        selectedFiles.add(filename);
+    } else {
+        selectedFiles.delete(filename);
+    }
+    updateZipButton();
+}
+
+function updateZipButton() {
+    const btn = document.getElementById('btn-download-zip');
+    if (selectedFiles.size > 0) {
+        btn.style.opacity = '1';
+        btn.style.pointerEvents = 'auto';
+        btn.innerText = `📦 Baixar ZIP (${selectedFiles.size})`;
+    } else {
+        btn.style.opacity = '0.5';
+        btn.style.pointerEvents = 'none';
+        btn.innerText = '📦 Baixar ZIP';
+    }
+}
+
+window.downloadSelectedAsZip = function() {
+    if (selectedFiles.size === 0) return;
+    const filesArray = Array.from(selectedFiles);
+    console.log('📦 Criando ZIP com:', filesArray);
+    
+    fetch('/api/files/download-zip', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({files: filesArray, path: currentPath})
+    })
+    .then(res => {
+        if (!res.ok) throw new Error('Erro ao gerar ZIP');
+        return res.blob();
+    })
+    .then(blob => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'thinkinos_selecao.zip';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+        selectedFiles.clear();
+        loadFiles(); // Recarrega para limpar seleção visual
+    })
+    .catch(err => alert('Erro: ' + err.message));
+};
+
+// Observador para adicionar checkboxes e eventos aos novos .file-item
+const observer = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+        mutation.addedNodes.forEach((node) => {
+            if (node.classList && node.classList.contains('file-item')) {
+                const cb = document.createElement('input');
+                cb.type = 'checkbox';
+                cb.className = 'file-checkbox';
+                
+                const nameEl = node.querySelector('.name');
+                const filename = nameEl ? nameEl.innerText : '';
+                
+                cb.onclick = (e) => {
+                    e.stopPropagation();
+                    toggleSelection(node, filename);
+                };
+                
+                node.prepend(cb);
+                
+                node.onclick = (e) => {
+                    if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'BUTTON') {
+                        toggleSelection(node, filename);
+                    }
+                };
+            }
+        });
+    });
+});
+observer.observe(document.getElementById('fileList'), { childList: true });
+
+// Drag & Drop nativo
+const fileListEl = document.getElementById('fileList');
+const dropZoneEl = document.getElementById('drop-zone');
+
+fileListEl.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropZoneEl.style.display = 'block';
+});
+
+dropZoneEl.addEventListener('dragleave', (e) => {
+    e.preventDefault();
+    dropZoneEl.style.display = 'none';
+});
+
+dropZoneEl.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZoneEl.style.display = 'none';
+    const files = e.dataTransfer.files;
+    if (files.length > 0) uploadMultipleFiles(files);
+});
+
+async function uploadMultipleFiles(files) {
+    let successCount = 0;
+    for (let i = 0; i < files.length; i++) {
+        const formData = new FormData();
+        formData.append('file', files[i]);
+        if (currentPath) formData.append('path', currentPath);
+        try {
+            const res = await fetch('/api/files/upload', { method: 'POST', body: formData });
+            const data = await res.json();
+            if (data.sucesso) successCount++;
+        } catch (e) { console.error(e); }
+    }
+    if (successCount > 0) {
+        alert(`✅ ${successCount} arquivo(s) enviado(s)!`);
+        loadFiles();
+    } else {
+        alert('❌ Erro no upload dos arquivos.');
+    }
+}
+
+updateZipButton();
+console.log('✅ [FM v8.0] Sistema de Seleção, ZIP e Drag&Drop ativo');
+
+</script>
+</body>
+</html>

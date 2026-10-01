@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>ThinkinOS Terminal V4.2</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css" />
+    <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.min.js"></script>
+    <style>
+        body { 
+            background: #0a0a0f; margin: 0; padding: 0; height: 100vh; 
+            display: flex; flex-direction: column; overflow: hidden; 
+            user-select: none; -webkit-user-select: none;
+        }
+        .header { 
+            background: #14141e; padding: 8px 15px; display: flex; 
+            justify-content: space-between; align-items: center; 
+            border-bottom: 1px solid #333; flex-shrink: 0; 
+        }
+        .title { color: #00ff00; font-family: monospace; font-weight: bold; }
+        .btn-close { 
+            background: #ff5555; color: white; border: none; 
+            padding: 5px 12px; cursor: pointer; border-radius: 4px; 
+        }
+        #terminal-container { 
+            flex: 1; position: relative; background: #0a0a0f; overflow: hidden; 
+            outline: none; 
+        }
+        .xterm { padding: 10px !important; height: 100% !important; width: 100% !important; }
+        
+        /* INPUT ESCONDIDO PARA CAPTURA DE TECLADO */
+        #hidden-input {
+            position: absolute; opacity: 0; top: -1000px; left: -1000px;
+            width: 1px; height: 1px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <span class="title">🐧 ThinkinOS Terminal V4.2 (Nativo)</span>
+        <button class="btn-close" onclick="window.location.href='/desktop'">✕ Fechar</button>
+    </div>
+    
+    <!-- INPUT ESCONDIDO -->
+    <input type="text" id="hidden-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+    
+    <div id="terminal-container" tabindex="0"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const term = new Terminal({
+                cursorBlink: true,
+                theme: { background: '#0a0a0f', foreground: '#00ff00', cursor: '#00ff00' },
+                fontSize: 14,
+                fontFamily: 'Courier New, monospace',
+                convertEol: true,
+                disableStdin: false
+            });
+            
+            const fitAddon = new FitAddon.FitAddon();
+            term.loadAddon(fitAddon);
+            
+            const container = document.getElementById('terminal-container');
+            const hiddenInput = document.getElementById('hidden-input');
+            
+            term.open(container);
+            fitAddon.fit();
+            
+            window.addEventListener('resize', () => fitAddon.fit());
+            
+            const socket = io();
+            
+            socket.on('connect', () => {
+                console.log("✅ WebSocket conectado");
+                focusTerminal();
+            });
+            
+            // RECEBER OUTPUT DO SERVIDOR (INCLUINDO ECO DO SHELL)
+            socket.on('output', (data) => {
+                term.write(data);
+            });
+            
+            // FUNÇÃO DE FOCO ROBUSTA
+            function focusTerminal() {
+                container.focus();
+                term.focus();
+                hiddenInput.focus();
+                console.log("🎯 Foco triplo aplicado");
+            }
+            
+            // CLIQUE EM QUALQUER LUGAR FOCA NO TERMINAL
+            document.body.addEventListener('click', (e) => {
+                if (!e.target.closest('.btn-close')) {
+                    focusTerminal();
+                }
+            });
+            
+            // 🔑 CAPTURAR DIGITAÇÃO SEM ECO LOCAL (SHELL FAZ O ECO)
+            hiddenInput.addEventListener('input', (e) => {
+                const val = e.target.value;
+                if (val) {
+                    // ❌ REMOVIDO: term.write(val) — o shell já faz eco via WebSocket
+                    // ✅ APENAS ENVIAR AO SERVIDOR
+                    socket.emit('input', val);
+                    e.target.value = '';
+                }
+            });
+            
+            // 🔑 CAPTURAR TECLA ENTER
+            hiddenInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    // ❌ REMOVIDO: term.write('\r\n') — o shell já envia nova linha
+                    socket.emit('input', '\n');
+                    console.log("⏎ Enter enviado!");
+                    hiddenInput.focus();
+                }
+            });
+            
+            // PREVENIR COMPORTAMENTOS PADRÃO DO NAVEGADOR
+            document.addEventListener('keydown', (e) => {
+                if (document.activeElement !== hiddenInput) {
+                    e.preventDefault();
+                    focusTerminal();
+                }
+            });
+            
+            // FOCO INICIAL
+            setTimeout(focusTerminal, 300);
+        });
+    </script>
+</body>
+</html>
+#terminal-container
+

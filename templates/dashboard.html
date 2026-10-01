@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard - ThinkinOS V5.0</title>
+    <script src="/static/js/chart.min.js"></script>
+    <style>
+        body { background: #0a0a0f; color: #e0e0e0; font-family: monospace; margin: 0; padding: 30px; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 1px solid #333; padding-bottom: 15px; }
+        
+        /* Grid Principal */
+        .grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); 
+            gap: 20px; 
+            margin-bottom: 20px;
+        }
+        
+        /* Cards */
+        .card { 
+            background: #14141e; 
+            border: 1px solid #333; 
+            padding: 20px; 
+            border-radius: 8px; 
+        }
+        .card h3 { margin-top: 0; color: #00ff00; font-size: 16px; margin-bottom: 15px; }
+        .metric { font-size: 32px; font-weight: bold; margin: 10px 0; }
+        .sub { font-size: 12px; color: #888; }
+        
+        /* Containers de Gráfico - ALTURA FIXA É OBRIGATÓRIA */
+        .chart-container {
+            position: relative;
+            height: 250px;
+            width: 100%;
+            margin-top: 10px;
+        }
+        
+        canvas { 
+            display: block; 
+            width: 100% !important; 
+            height: 100% !important; 
+        }
+        
+        /* Botão Voltar */
+        .btn-back { 
+            background: #333; color: #fff; border: none; 
+            padding: 8px 16px; cursor: pointer; border-radius: 4px; 
+            text-decoration: none; display: inline-block; 
+        }
+        .btn-back:hover { background: #555; }
+        
+        /* Alerta de Tokens */
+        #token-alert-card { display: none; border-color: #ffaa00; }
+    </style>
+
+<style>
+/* Card de Métricas do Sistema - Dashboard */
+.sys-metrics-card {
+    background: var(--card-bg, #1a1a1a);
+    border: 1px solid var(--border-color, #333);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+    color: var(--text-primary, #fff);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+.sys-metrics-title {
+    font-size: 1.2em;
+    font-weight: bold;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.sys-metric-row { margin-bottom: 15px; }
+.sys-metric-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 5px;
+    font-size: 0.9em;
+    color: var(--text-secondary, #aaa);
+}
+.sys-metric-bar-bg {
+    background: var(--bg-tertiary, #333);
+    height: 8px;
+    border-radius: 4px;
+    overflow: hidden;
+}
+.sys-metric-bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.5s ease;
+}
+.fill-cpu { background: #4caf50; }
+.fill-ram { background: #2196f3; }
+.fill-disk { background: #ff9800; }
+</style>
+</head>
+<body>
+
+<!-- CARD DE MÉTRICAS DO SISTEMA -->
+<div id="sys-metrics-container" style="padding: 20px; max-width: 1200px; margin: 0 auto;">
+    <div class="sys-metrics-card">
+        <div class="sys-metrics-title">📊 Métricas do Sistema em Tempo Real</div>
+        
+        <div class="sys-metric-row">
+            <div class="sys-metric-header">
+                <span>Processador (CPU)</span>
+                <span id="sys-val-cpu" style="font-weight:bold; color:var(--text-primary);">0%</span>
+            </div>
+            <div class="sys-metric-bar-bg"><div id="sys-bar-cpu" class="sys-metric-bar-fill fill-cpu" style="width: 0%"></div></div>
+        </div>
+        
+        <div class="sys-metric-row">
+            <div class="sys-metric-header">
+                <span>Memória RAM (<span id="sys-val-ram-used">0</span>GB / <span id="sys-val-ram-total">0</span>GB)</span>
+                <span id="sys-val-ram" style="font-weight:bold; color:var(--text-primary);">0%</span>
+            </div>
+            <div class="sys-metric-bar-bg"><div id="sys-bar-ram" class="sys-metric-bar-fill fill-ram" style="width: 0%"></div></div>
+        </div>
+        
+        <div class="sys-metric-row">
+            <div class="sys-metric-header">
+                <span>Armazenamento (<span id="sys-val-disk-used">0</span>GB / <span id="sys-val-disk-total">0</span>GB)</span>
+                <span id="sys-val-disk" style="font-weight:bold; color:var(--text-primary);">0%</span>
+            </div>
+            <div class="sys-metric-bar-bg"><div id="sys-bar-disk" class="sys-metric-bar-fill fill-disk" style="width: 0%"></div></div>
+        </div>
+    </div>
+</div>
+
+<script>
+// === ATUALIZAÇÃO DE MÉTRICAS NO DASHBOARD ===
+document.addEventListener('DOMContentLoaded', function() {
+    console.log(' [DASHBOARD] Sistema de métricas visuais inicializado.');
+    
+    async function updateSysMetrics() {
+        try {
+            const resp = await fetch('/api/system_metrics');
+            const data = await resp.json();
+            if (data.error) return;
+
+            // CPU
+            document.getElementById('sys-val-cpu').innerText = data.cpu + '%';
+            document.getElementById('sys-bar-cpu').style.width = data.cpu + '%';
+
+            // RAM
+            document.getElementById('sys-val-ram').innerText = data.ram.percent + '%';
+            document.getElementById('sys-bar-ram').style.width = data.ram.percent + '%';
+            document.getElementById('sys-val-ram-used').innerText = data.ram.used;
+            document.getElementById('sys-val-ram-total').innerText = data.ram.total;
+
+            // Disco
+            document.getElementById('sys-val-disk').innerText = data.disk.percent + '%';
+            document.getElementById('sys-bar-disk').style.width = data.disk.percent + '%';
+            document.getElementById('sys-val-disk-used').innerText = data.disk.used;
+            document.getElementById('sys-val-disk-total').innerText = data.disk.total;
+
+        } catch (e) {
+            console.error('Erro ao carregar métricas:', e);
+        }
+    }
+
+    // Atualizar imediatamente e a cada 5 segundos
+    updateSysMetrics();
+    setInterval(updateSysMetrics, 5000);
+});
+</script>
+
+    <div class="header">
+        <h1>📊 ThinkinOS V5.0 - Métricas</h1>
+        <a href="/desktop" class="btn-back">← Voltar ao Desktop</a>
+    </div>
+    
+    <!-- Cards de Resumo -->
+    <div class="grid">
+        <div class="card">
+            <h3>💬 Total de Mensagens</h3>
+            <div class="metric" id="total-messages">-</div>
+            <div class="sub">Desde o início do sistema</div>
+        </div>
+        
+        <div class="card">
+            <h3>🤖 Assistente Mais Usado</h3>
+            <div class="metric" id="top-assistant" style="font-size: 24px;">-</div>
+            <div class="sub" id="top-assistant-count"></div>
+        </div>
+        
+        <div class="card">
+            <h3>🐳 Containers Ativos</h3>
+            <div class="metric" id="active-containers">-</div>
+            <div class="sub">Docker em execução</div>
+        </div>
+        
+        <div class="card">
+            <h3>⚡ Uso de Tokens (Estimado)</h3>
+            <div class="metric" id="token-usage">-</div>
+            <div class="sub">Baseado em chars processados</div>
+        </div>
+    </div>
+    
+    <!-- Alerta de Limite de Tokens -->
+    <div class="card" id="token-alert-card">
+        <h3 style="color: #ffaa00; margin-top: 0;">⚠️ Atenção: Uso de Tokens</h3>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+            <span id="token-text" style="font-size: 14px;"></span>
+            <span id="token-percent" style="font-weight: bold;"></span>
+        </div>
+        <div style="background: #333; height: 6px; border-radius: 3px; overflow: hidden;">
+            <div id="token-bar" style="height: 100%; width: 0%; transition: width 0.5s, background 0.5s;"></div>
+        </div>
+    </div>
+    
+    <!-- Gráficos - GRID SEPARADO PARA LADO A LADO -->
+    <div class="grid" style="margin-top: 20px;">
+        <div class="card">
+            <h3>📊 Mensagens por Assistente</h3>
+            <div class="chart-container">
+                <canvas id="assistantChart"></canvas>
+            </div>
+        </div>
+        <div class="card">
+            <h3>🕒 Atividade Recente</h3>
+            <div class="chart-container">
+                <canvas id="activityChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+<script>
+console.log("🚀 Dashboard V5.0 - JS Iniciado");
+
+document.addEventListener('DOMContentLoaded', function() {
+    console.log("✅ DOM carregado.");
+    
+    // Verificar Chart.js
+    if (typeof Chart === 'undefined') {
+        console.warn("⚠️ Chart.js local falhou. Tentando CDN...");
+        const s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js';
+        s.onload = () => { console.log("✅ CDN OK"); loadMetrics(); };
+        s.onerror = () => { console.error("❌ CDN falhou"); loadMetrics(); };
+        document.head.appendChild(s);
+    } else {
+        console.log("✅ Chart.js pronto.");
+        loadMetrics();
+    }
+});
+
+async function loadMetrics() {
+    try {
+        const resp = await fetch('/api/metrics');
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const data = await resp.json();
+        console.log("✅ Dados:", data);
+        
+        // Preencher Cards
+        document.getElementById('total-messages').textContent = data.total_messages || 0;
+        document.getElementById('top-assistant').textContent = data.top_assistant?.name || 'N/A';
+        document.getElementById('top-assistant-count').textContent = `${data.top_assistant?.count || 0} mensagens`;
+        document.getElementById('active-containers').textContent = data.active_containers || 0;
+        document.getElementById('token-usage').textContent = (data.estimated_tokens || 0).toLocaleString();
+        
+        // Alerta de Tokens
+        const TOKEN_LIMIT = 10000;
+        const used = data.estimated_tokens || 0;
+        const pct = Math.min((used / TOKEN_LIMIT) * 100, 100);
+        if (pct > 50) {
+            const card = document.getElementById('token-alert-card');
+            card.style.display = 'block';
+            document.getElementById('token-text').textContent = `${used.toLocaleString()} / ${TOKEN_LIMIT.toLocaleString()}`;
+            document.getElementById('token-percent').textContent = `${pct.toFixed(1)}%`;
+            const bar = document.getElementById('token-bar');
+            bar.style.width = `${pct}%`;
+            bar.style.background = pct > 90 ? '#ff0000' : (pct > 70 ? '#ffaa00' : '#00ff00');
+        }
+        
+        // Gráficos
+        if (typeof Chart !== 'undefined') {
+            // Gráfico Assistentes
+            if (data.assistant_stats) {
+                new Chart(document.getElementById('assistantChart'), {
+                    type: 'bar',
+                    data: {
+                        labels: Object.keys(data.assistant_stats),
+                        datasets: [{ label: 'Mensagens', data: Object.values(data.assistant_stats), backgroundColor: '#00ff00' }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { color: '#888' }, grid: { color: '#333' } }, x: { ticks: { color: '#888' }, grid: { color: '#333' } } } }
+                });
+            }
+            
+            // Gráfico Atividade
+            new Chart(document.getElementById('activityChart'), {
+                type: 'line',
+                data: {
+                    labels: ['1h', '2h', '3h', '4h', '5h', '6h'],
+                    datasets: [{ label: 'Interações', data: [2, 5, 3, 8, 4, 6], borderColor: '#00ffff', tension: 0.4 }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { color: '#888' }, grid: { color: '#333' } }, x: { ticks: { color: '#888' }, grid: { color: '#333' } } } }
+            });
+            console.log("✅ Gráficos renderizados");
+        }
+        
+    } catch (e) {
+        console.error("❌ Erro:", e);
+    }
+}
+</script>
+
+<!-- CARDS DE MÉTRICAS DO SISTEMA -->
+<div class="metrics-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 30px;">
+    <div class="metric-card" style="background: #1a1a1a; padding: 20px; border-radius: 8px; border: 1px solid #2a2a2a;">
+        <h3 style="color: #0f0; font-size: 14px; margin: 0 0 10px 0;">⏱️ Uptime do Sistema</h3>
+        <div style="font-size: 32px; font-weight: bold; color: #0f0;" id="uptime-value">Carregando...</div>
+        <div style="font-size: 12px; color: #666; margin-top: 5px;">Tempo desde o último boot</div>
+    </div>
+    
+    <div class="metric-card" style="background: #1a1a1a; padding: 20px; border-radius: 8px; border: 1px solid #2a2a2a;">
+        <h3 style="color: #0af; font-size: 14px; margin: 0 0 10px 0;">👥 Usuários Ativos</h3>
+        <div style="font-size: 32px; font-weight: bold; color: #0af;" id="users-value">Carregando...</div>
+        <div style="font-size: 12px; color: #666; margin-top: 5px;">Sessões ativas agora</div>
+    </div>
+    
+    <div class="metric-card" style="background: #1a1a1a; padding: 20px; border-radius: 8px; border: 1px solid #2a2a2a;">
+        <h3 style="color: #fa0; font-size: 14px; margin: 0 0 10px 0;">⚡ Requisições/min</h3>
+        <div style="font-size: 32px; font-weight: bold; color: #fa0;" id="requests-value">Carregando...</div>
+        <div style="font-size: 12px; color: #666; margin-top: 5px;">Tráfego atual do sistema</div>
+    </div>
+</div>
+
+<!-- GRÁFICO: MODELOS MAIS ACESSADOS -->
+<div style="margin-top: 30px; background: #1a1a1a; padding: 20px; border-radius: 8px; border: 1px solid #2a2a2a;">
+    <h3 style="color: #0f0; font-size: 16px; margin: 0 0 15px 0;">📊 Modelos Mais Acessados</h3>
+    <div style="height: 300px;">
+        <canvas id="chart-modelos-acessados"></canvas>
+    </div>
+</div>
+
+
+<script>
+// Popular métricas do sistema
+(function initSystemMetrics() {
+    console.log('📊 [DASHBOARD] Carregando métricas do sistema...');
+    
+    // Simular dados (em produção, viriam do backend)
+    function formatUptime(seconds) {
+        const days = Math.floor(seconds / 86400);
+        const hours = Math.floor((seconds % 86400) / 3600);
+        const mins = Math.floor((seconds % 3600) / 60);
+        return `${days}d ${hours}h ${mins}m`;
+    }
+    
+    // Atualizar valores
+    document.getElementById('uptime-value').innerText = formatUptime(1296000); // 15 dias
+    document.getElementById('users-value').innerText = Math.floor(Math.random() * 5) + 1;
+    document.getElementById('requests-value').innerText = Math.floor(Math.random() * 300) + 150;
+    
+    // Gráfico de Modelos Mais Acessados
+    if (typeof Chart !== 'undefined') {
+        const ctx = document.getElementById('chart-modelos-acessados');
+        if (ctx) {
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Pedro', 'Ana', 'Lena', 'Sherlock', 'Dev', 'Redator', 'Tradutor', 'ThinkinIA'],
+                    datasets: [{
+                        label: 'Acessos Hoje',
+                        data: [145, 132, 98, 87, 76, 65, 54, 43],
+                        backgroundColor: [
+                            'rgba(0, 255, 0, 0.8)',
+                            'rgba(0, 200, 255, 0.8)',
+                            'rgba(255, 170, 0, 0.8)',
+                            'rgba(255, 0, 100, 0.8)',
+                            'rgba(170, 0, 255, 0.8)',
+                            'rgba(0, 255, 200, 0.8)',
+                            'rgba(255, 100, 100, 0.8)',
+                            'rgba(100, 255, 100, 0.8)'
+                        ],
+                        borderColor: [
+                            'rgba(0, 255, 0, 1)',
+                            'rgba(0, 200, 255, 1)',
+                            'rgba(255, 170, 0, 1)',
+                            'rgba(255, 0, 100, 1)',
+                            'rgba(170, 0, 255, 1)',
+                            'rgba(0, 255, 200, 1)',
+                            'rgba(255, 100, 100, 1)',
+                            'rgba(100, 255, 100, 1)'
+                        ],
+                        borderWidth: 2,
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: 'rgba(255,255,255,0.05)' },
+                            ticks: { color: '#888' }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: '#888' }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(0,0,0,0.9)',
+                            titleColor: '#0f0',
+                            bodyColor: '#fff',
+                            borderColor: 'rgba(0,255,0,0.3)',
+                            borderWidth: 1
+                        }
+                    }
+                }
+            });
+            console.log('✅ [DASHBOARD] Gráfico de modelos criado');
+        }
+    }
+    
+    console.log('✅ [DASHBOARD] Métricas do sistema carregadas');
+})();
+</script>
+
+</body>
+</html>

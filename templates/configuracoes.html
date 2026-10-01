@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configurações - ThinkinOS</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #e0e0e0;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #00bcd4;
+            margin-bottom: 30px;
+            font-size: 2em;
+        }
+        .card {
+            background: rgba(30, 30, 30, 0.8);
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .card h2 {
+            color: #6200ea;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+        .card p {
+            color: var(--text-secondary, #aaa);
+            margin-bottom: 15px;
+            line-height: 1.6;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #00bcd4;
+            font-weight: bold;
+        }
+        input[type="password"], input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            background: #2d2d2d;
+            border: 1px solid #444;
+            border-radius: 8px;
+            color: white;
+            font-size: 14px;
+        }
+        input:focus {
+            outline: none;
+            border-color: #6200ea;
+        }
+        .status {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.85em;
+            margin-left: 10px;
+        }
+        .status.configured { background: #4caf50; color: white; }
+        .status.pending { background: #ff9800; color: white; }
+        button {
+            background: #6200ea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+        button:hover { background: #7c1dff; }
+        .btn-voltar {
+            background: #444;
+            margin-right: 10px;
+        }
+        .btn-voltar:hover { background: #555; }
+        .info-box {
+            background: rgba(0, 188, 212, 0.1);
+            border-left: 3px solid #00bcd4;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .info-box a { color: #00bcd4; }
+        .success-msg {
+            background: rgba(76, 175, 80, 0.2);
+            border-left: 3px solid #4caf50;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+    
+        .theme-section {
+            background: var(--card-bg, #1a1a1a);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border-color, #333);
+        }
+        .theme-section h2 {
+            margin-top: 0;
+            color: var(--text-primary, #fff);
+            font-size: 1.2em;
+            margin-bottom: 15px;
+        }
+        .color-options {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        .color-option {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 3px solid transparent;
+            transition: all 0.2s;
+            position: relative;
+        }
+        .color-option:hover {
+            transform: scale(1.1);
+        }
+        .color-option.active {
+            border-color: var(--text-primary, #fff);
+            box-shadow: 0 0 10px rgba(255,255,255,0.5);
+        }
+        .color-option.active::after {
+            content: '✓';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: var(--text-primary, #fff);
+            font-weight: bold;
+            font-size: 18px;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+        }
+
+    
+/* === MODO CLARO/ESCURO === */
+:root[data-theme="light"] {
+    --bg-primary: #f5f5f5;
+    --bg-secondary: #ffffff;
+    --bg-tertiary: #e0e0e0;
+    --text-primary: #1a1a1a;
+    --text-secondary: #4a4a4a;
+    --border-color: #d0d0d0;
+    --shadow-color: rgba(0,0,0,0.1);
+    --card-bg: #ffffff;
+    --header-bg: #ffffff;
+}
+
+:root[data-theme="dark"] {
+    --bg-primary: #0a0a0a;
+    --bg-secondary: #1a1a1a;
+    --bg-tertiary: #2a2a2a;
+    --text-primary: #ffffff;
+    --text-secondary: #b0b0b0;
+    --border-color: #333333;
+    --shadow-color: rgba(0,0,0,0.5);
+    --card-bg: #1a1a1a;
+    --header-bg: #0a0a0a;
+}
+
+/* Toggle Switch */
+.theme-toggle-switch {
+    position: relative;
+    width: 60px;
+    height: 30px;
+    background: var(--border-color);
+    border-radius: 15px;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+.theme-toggle-switch.active {
+    background: var(--accent-color);
+}
+
+.theme-toggle-switch::after {
+    content: '';
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 24px;
+    height: 24px;
+    background: white;
+    border-radius: 50%;
+    transition: transform 0.3s;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.theme-toggle-switch.active::after {
+    transform: translateX(30px);
+}
+
+.theme-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin-right: 20px;
+    font-size: 0.95em;
+    color: var(--text-primary);
+}
+
+
+/* === APLICAÇÃO GLOBAL DE TEMAS === */
+body {
+    background: var(--bg-primary, #0a0a0a) !important;
+    color: var(--text-primary, #fff) !important;
+}
+
+.theme-section, .card, .info-box {
+    background: var(--card-bg, #1a1a1a) !important;
+    color: var(--text-primary, #fff) !important;
+    border-color: var(--border-color, #333) !important;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    color: var(--text-primary, #fff) !important;
+}
+
+p, span, div {
+    color: var(--text-primary, #fff);
+}
+
+.theme-section p, .info-box p {
+    color: var(--text-secondary, #aaa) !important;
+}
+
+button {
+    background: var(--accent-color, #4caf50) !important;
+    color: white !important;
+}
+
+</style>
+</head>
+<body>
+    <div class="container">
+        <h1>⚙️ Configurações de IA</h1>
+
+    <div class="theme-section" style="background: var(--card-bg, #1a1a1a); border: 1px solid var(--border-color, #333); border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+        <h2>🎨 Aparência e Temas</h2>
+        <p style="color: var(--text-secondary, #aaa); margin-bottom: 15px; font-size: 0.9em;">Escolha a cor de destaque do seu ThinkinOS. A alteração é aplicada imediatamente e salva no seu navegador.</p>
+        <div class="color-options" id="theme-colors">
+            <div class="color-option" style="background:#4caf50" data-color="#4caf50" title="Verde (Padrão)"></div>
+            <div class="color-option" style="background:#2196f3" data-color="#2196f3" title="Azul"></div>
+            <div class="color-option" style="background:#9c27b0" data-color="#9c27b0" title="Roxo"></div>
+            <div class="color-option" style="background:#ff9800" data-color="#ff9800" title="Laranja"></div>
+            <div class="color-option" style="background:#f44336" data-color="#f44336" title="Vermelho"></div>
+        </div>
+        </div>
+        
+        <!-- TOGGLE MODO CLARO/ESCURO -->
+        <div class="theme-section" style="background: var(--card-bg, #1a1a1a); border: 1px solid var(--border-color, #333); border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+            <h2>🌗 Modo Escuro/Claro</h2>
+            <p style="color: var(--text-secondary, #aaa); margin-bottom: 15px; font-size: 0.9em;">Alterne entre os modos de exibição do ThinkinOS.</p>
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+                <div>
+                    <div style="font-weight: 600; color: var(--text-primary, #fff);">Tema atual</div>
+                    <div style="font-size: 0.85em; color: var(--text-secondary, #aaa);" id="current-theme-mode">Modo Escuro</div>
+                </div>
+                <div class="theme-toggle-switch" id="theme-mode-toggle" onclick="toggleThemeMode()"></div>
+            </div>
+        </div>
+        
+        <div class="info-box" style="background: rgba(33, 150, 243, 0.1); border-left: 4px solid #2196f3; border-radius: 8px; padding: 15px; margin-bottom: 20px; color: var(--text-primary, #fff);">
+            💡 Configure as chaves de API dos provedores que deseja usar. 
+            A Groq já está configurada por padrão. As outras são opcionais.
+        </div>
+        
+        <div class="success-msg" id="successMsg">
+            ✅ Configurações salvas com sucesso!
+        </div>
+        
+        <div class="card">
+            <h2>🤖 Groq <span class="status configured" id="status-groq">Configurada</span></h2>
+            <p>Modelos: Llama 3.3, Mixtral, Gemma. <strong>Rápido e gratuito!</strong></p>
+            <div class="form-group">
+                <label>Chave da API Groq</label>
+                <input type="password" style="background: var(--bg-tertiary, #2a2a2a); color: var(--text-primary, #fff); border: 1px solid var(--border-color, #333);" id="groq_api_key" placeholder="gsk_...">
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>🟢 OpenAI <span class="status pending" id="status-openai">Pendente</span></h2>
+            <p>Modelos: GPT-4o, GPT-4o-mini, o1. <a href="https://platform.openai.com/api-keys" target="_blank">Obter chave</a></p>
+            <div class="form-group">
+                <label>Chave da API OpenAI</label>
+                <input type="password" style="background: var(--bg-tertiary, #2a2a2a); color: var(--text-primary, #fff); border: 1px solid var(--border-color, #333);" id="openai_api_key" placeholder="sk-...">
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2> Anthropic <span class="status pending" id="status-anthropic">Pendente</span></h2>
+            <p>Modelos: Claude 3.5 Sonnet, Claude 3 Opus. <a href="https://console.anthropic.com/settings/keys" target="_blank">Obter chave</a></p>
+            <div class="form-group">
+                <label>Chave da API Anthropic</label>
+                <input type="password" style="background: var(--bg-tertiary, #2a2a2a); color: var(--text-primary, #fff); border: 1px solid var(--border-color, #333);" id="anthropic_api_key" placeholder="sk-ant-...">
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>🔵 Google AI <span class="status pending" id="status-google">Pendente</span></h2>
+            <p>Modelos: Gemini 1.5 Pro, Gemini 1.5 Flash. <a href="https://aistudio.google.com/app/apikey" target="_blank">Obter chave</a></p>
+            <div class="form-group">
+                <label>Chave da API Google</label>
+                <input type="password" style="background: var(--bg-tertiary, #2a2a2a); color: var(--text-primary, #fff); border: 1px solid var(--border-color, #333);" id="google_api_key" placeholder="AIza...">
+            </div>
+        </div>
+        
+        <!-- NOVA SEÇÃO: GERENCIAMENTO DE ASSISTENTES -->
+        <div class="card">
+            <h2>🤖 Gerenciar Assistentes</h2>
+            <p>Visualize e gerencie os assistentes ativos no sistema.</p>
+            <div id="assistants-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; margin-top: 15px;">
+                <!-- Preenchido via JS -->
+                <p style="color: #888; font-size: 14px;">Carregando assistentes...</p>
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 10px; margin-top: 30px;">
+            <button class="btn-voltar" onclick="window.location.href='/desktop'">← Voltar ao Desktop</button>
+            <button onclick="salvarConfig()">💾 Salvar Configurações de API</button>
+        </div>
+    </div>
+    
+    
+
+
+
+
+
+<script>
+// === SISTEMA DE TEMAS v3.0 (ROBUSTO) ===
+(function() {
+    console.log('🎨 Sistema de Temas v3.0 carregado');
+    
+    // Função GLOBAL para aplicar tema
+    window.applyThemeColor = function(color) {
+        console.log(`🎨 Aplicando tema: ${color}`);
+        localStorage.setItem('theme-color', color);
+        
+        // Criar/Atualizar stylesheet de tema
+        var styleId = 'dynamic-theme-stylesheet';
+        var style = document.getElementById(styleId);
+        if (!style) {
+            style = document.createElement('style');
+            style.id = styleId;
+            document.head.appendChild(style);
+        }
+        
+        // CSS abrangente para aplicar o tema
+        var css = `
+            /* Cores primárias */
+            :root {
+                --primary-color: ${color} !important;
+                --accent-color: ${color} !important;
+                --theme-color: ${color} !important;
+            }
+            
+            /* Títulos e logos */
+            h1, h2, h3, .logo, .header-title, .brand, .app-title {
+                color: ${color} !important;
+                text-shadow: 0 0 20px ${color}40 !important;
+            }
+            
+            /* Cards */
+            .card {
+                border: 2px solid ${color}40 !important;
+                box-shadow: 0 4px 15px ${color}20 !important;
+            }
+            
+            .card:hover {
+                border-color: ${color}80 !important;
+                box-shadow: 0 6px 20px ${color}40 !important;
+            }
+            
+            /* Headers e barras superiores */
+            header, .header, .top-bar, .navbar, .app-header {
+                background: linear-gradient(135deg, ${color}dd, ${color}99) !important;
+            }
+            
+            /* Botões e elementos interativos */
+            button, .btn {
+                background: ${color} !important;
+            }
+            
+            /* Links */
+            a {
+                color: ${color} !important;
+            }
+            
+            /* Scrollbar */
+            ::-webkit-scrollbar-thumb {
+                background: ${color} !important;
+            }
+        `;
+        
+        style.textContent = css;
+        console.log('✅ CSS de tema aplicado');
+        
+        // Atualizar botões de cor (marcar o ativo)
+        var buttons = document.querySelectorAll('.color-option');
+        buttons.forEach(function(btn) {
+            btn.classList.remove('active');
+            var btnColor = btn.style.backgroundColor || getComputedStyle(btn).backgroundColor;
+            if (btnColor.startsWith('rgb')) {
+                var rgb = btnColor.match(/\d+/g);
+                if (rgb) {
+                    btnColor = '#' + rgb.map(x => parseInt(x).toString(16).padStart(2, '0')).join('');
+                }
+            }
+            if (btnColor.toLowerCase() === color.toLowerCase()) {
+                btn.classList.add('active');
+            }
+        });
+    };
+    
+    // Reparar botões de cor
+    function fixColorButtons() {
+        var buttons = document.querySelectorAll('.color-option');
+        console.log(`🎨 Encontrados ${buttons.length} botões de cor`);
+        
+        buttons.forEach(function(btn, index) {
+            // Clonar para remover listeners antigos
+            var newBtn = btn.cloneNode(true);
+            btn.parentNode.replaceChild(newBtn, btn);
+            
+            newBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                var color = this.style.backgroundColor || getComputedStyle(this).backgroundColor;
+                
+                // Converter rgb para hex
+                if (color.startsWith('rgb')) {
+                    var rgb = color.match(/\d+/g);
+                    if (rgb && rgb.length === 3) {
+                        color = '#' + rgb.map(x => parseInt(x).toString(16).padStart(2, '0')).join('');
+                    }
+                }
+                
+                console.log(`🎨 Cor clicada: ${color}`);
+                applyThemeColor(color);
+            });
+            
+            console.log(`✅ Handler adicionado ao botão ${index}`);
+        });
+    }
+    
+    // Carregar tema salvo
+    function loadSavedTheme() {
+        var savedColor = localStorage.getItem('theme-color');
+        if (savedColor) {
+            console.log(`🎨 Carregando tema salvo: ${savedColor}`);
+            setTimeout(function() {
+                applyThemeColor(savedColor);
+            }, 100);
+        }
+    }
+    
+    // Executar
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+            fixColorButtons();
+            loadSavedTheme();
+        });
+    } else {
+        setTimeout(function() {
+            fixColorButtons();
+            loadSavedTheme();
+        }, 300);
+    }
+    
+    console.log('✅ Sistema de Temas v3.0 inicializado');
+})();
+</script>
+
+</body>
+</html>

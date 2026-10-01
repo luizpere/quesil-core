@@ -1,0 +1,1449 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+
+<script>
+// === FUNÇÕES GLOBAIS SIMPLES (Para evitar erros) ===
+window.closeTerminalModal = function() {
+    var modal = document.getElementById('terminal-modal');
+    var overlay = document.getElementById('terminal-overlay');
+    if (modal) modal.style.display = 'none';
+    if (overlay) overlay.style.display = 'none';
+    console.log('✅ Terminal fechado');
+};
+
+window.openTerminal = function() {
+    var modal = document.getElementById('terminal-modal');
+    var overlay = document.getElementById('terminal-overlay');
+    if (modal) modal.style.display = 'flex';
+    if (overlay) overlay.style.display = 'block';
+    console.log('✅ Terminal aberto');
+};
+</script>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ThinkinOS v2.0</title>
+    
+    <!-- CSS Dependencies -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.min.css" />
+    
+    <!-- JS Dependencies -->
+    <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.min.js"></script>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    
+    <!-- Terminal Functions -->
+    <script>
+    // === TERMINAL WEB LEGACY ===
+    let currentContainerId = null;
+
+    function showComingSoon(feature) {
+        alert(feature + ' - Em desenvolvimento!\n\nEsta funcionalidade estará disponível em breve.');
+    }
+
+    function refitTerminal() {
+        if (terminal && typeof fitAddon !== 'undefined' && fitAddon) {
+            setTimeout(() => {
+                try {
+                    fitAddon.fit();
+                    console.log("Terminal redimensionado:", terminal.cols, "x", terminal.rows);
+                } catch (e) {
+                    console.error("Erro ao redimensionar:", e);
+                }
+            }, 300);
+        }
+    }
+    </script>
+
+<style>
+    /* === THINKINOS V2.0 CORE STYLES === */
+    body {
+        margin: 0; padding: 0;
+        background-color: #0a0a0a;
+        color: #e0e0e0;
+        font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        overflow: hidden; height: 100vh;
+    }
+    
+    /* Dock */
+    .dock {
+        position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+        background: rgba(30, 30, 30, 0.85); backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px;
+        padding: 10px 20px; display: flex; gap: 15px;
+        z-index: 10000; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+    .dock-item {
+        display: flex; flex-direction: column; align-items: center;
+        color: #fff; text-decoration: none; font-size: 12px; cursor: pointer;
+        transition: transform 0.2s;
+    }
+    .dock-item:hover { transform: translateY(-5px); }
+    .dock-icon { font-size: 24px; margin-bottom: 4px; }
+
+    /* Modals & Overlays */
+    .vm-overlay, #terminal-overlay {
+        position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0,0,0,0.7); z-index: 9998; display: none;
+    }
+    .vm-overlay.active, #terminal-overlay.active { display: block; }
+    
+    .vm-modal, #terminal-modal {
+        position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+        background: #1e1e1e; border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 12px; box-shadow: 0 20px 50px rgba(0,0,0,0.7);
+        z-index: 9999; display: none; flex-direction: column;
+        overflow: hidden; min-width: 600px; min-height: 400px;
+    }
+
+    /* === V3.1 TERMINAL TABS STYLES === */
+    .terminal-tabs-bar {
+        display: flex; background: #1e1e1e; border-bottom: 1px solid #333; min-height: 35px;
+    }
+    .terminal-tab {
+        padding: 8px 16px; background: #2d2d2d; color: #ccc; border: none;
+        border-right: 1px solid #333; cursor: pointer; font-size: 13px;
+        display: flex; align-items: center; gap: 8px;
+    }
+    .terminal-tab:hover { background: #3d3d3d; }
+    .terminal-tab.active { background: #0f0f0f; color: #fff; border-bottom: 2px solid #4dabf7; }
+    .terminal-tab-close { font-size: 16px; line-height: 1; padding: 0 4px; border-radius: 3px; }
+    .terminal-tab-close:hover { background: #cc3333; color: #fff; }
+    .terminal-add-btn {
+        padding: 8px 12px; background: #1e1e1e; color: #4dabf7; border: none;
+        cursor: pointer; font-size: 18px; font-weight: bold;
+    }
+    .terminal-add-btn:hover { background: #3d3d3d; }
+    .terminal-container-wrapper {
+        position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+        display: none; padding: 10px; background: #000;
+    }
+    .terminal-container-wrapper.active { display: block; }
+
+    /* Animations */
+    @keyframes blink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
+</style>
+
+</head>
+<body>
+    <div class="header">
+        <h1>ThinkinOS <span style="color: #4caf50;">v2.0</span></h1>
+        <div style="position: absolute; top: 20px; right: 120px; color: #fff; font-size: 1.1em; font-family: 'Courier New', monospace;" id="clock">00:00:00</div>
+        <button class="logout-btn" onclick="location.href='/logout'">Sair</button>
+    </div>
+    
+    <div id="assistants-container" class="grid"></div>
+
+    <!-- DOCK -->
+    <div class="dock">
+        <a class="dock-item" href="/desktop"><span class="dock-icon">🏠</span><span class="dock-label">Início</span></a>
+        <a class="dock-item" onclick="openFileManager()"><span class="dock-icon">📁</span><span class="dock-label">Arquivos</span></a>
+        <a class="dock-item" onclick="openChat('Ana')"><span class="dock-icon">💬</span><span class="dock-label">Chat</span></a>
+        <a class="dock-item" href="/perfil"><span class="dock-icon">👤</span><span class="dock-label">Perfil</span></a>
+        <a class="dock-item" onclick="showComingSoon('Gestão')"><span class="dock-icon">⚙️</span><span class="dock-label">Gestão</span></a>
+        <a class="dock-item" id="dock-terminal-btn" onclick="this.closest('.vm-overlay').style.display='none'; document.getElementById('terminal-modal').style.display='none'"><span class="dock-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle; margin-right: 6px;">
+  <rect x="2" y="2" width="20" height="20" rx="6" fill="#007ACC"/>
+  <path d="M7 7H17V9H13V17H11V9H7V7Z" fill="white"/>
+  <circle cx="17" cy="17" r="2.5" fill="#00FF88"/>
+</svg></span><span class="dock-label">Terminal</span></a>
+        <a class="dock-item" onclick="showComingSoon('Novo Assistente')"><span class="dock-icon">➕</span><span class="dock-label">Novo</span></a>
+    </div>
+
+    <!-- VM MODAL -->
+    <div class="vm-overlay" id="vm-overlay" onclick="closeVMManager()"></div>
+    <div class="vm-modal" id="vm-modal">
+        <div id="term-header" style="padding:8px 16px; background:#2d2d2d; border-bottom:1px solid rgba(255,255,255,0.1); display:flex; justify-content:space-between; align-items:center; user-select:none; cursor:move;">
+            <h2> Gerenciador de Máquinas Virtuais</h2>
+            <button class="close-btn" onclick="closeVMManager()">&times;</button>
+        </div>
+        <div class="vm-actions">
+            <button class="btn btn-primary" onclick="startVM('alpine')">▶ Ligar Alpine</button>
+            <button class="btn btn-primary" onclick="startVM('ubuntu')" style="background: #E95420;">▶ Ligar Ubuntu</button>
+            <button class="btn" onclick="loadVMs()" style="background: #555; color: white;">🔄 Atualizar</button>
+        </div>
+        <div class="vm-list" id="vm-list"><p style="text-align: center; color: #888;">Carregando...</p></div>
+    </div>
+
+    
+
+<!-- Modal do Terminal Web -->
+<div class="vm-overlay" id="terminal-overlay" onclick="this.closest('.vm-overlay').style.display='none'; document.getElementById('terminal-modal').style.display='none'"></div>
+<div id="terminal-modal" style="display:none; position:fixed; top:40px; left:100px; width:900px; height:600px; background:#1e1e1e; border:1px solid rgba(255,255,255,0.1); border-radius:12px; box-shadow:0 20px 50px rgba(0,0,0,0.7); z-index:10000; flex-direction:column; overflow:hidden;">
+    <div id="terminal-header" style="padding:8px 16px; background:#2d2d2d; border-bottom:1px solid rgba(255,255,255,0.1); display:flex; justify-content:space-between; align-items:center; user-select:none; cursor:move;">
+        <h2><svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle; margin-right: 6px;"><rect x="2" y="2" width="20" height="20" rx="6" fill="#007ACC"/><path d="M7 7H17V9H13V17H11V9H7V7Z" fill="white"/><circle cx="17" cy="17" r="2.5" fill="#00FF88"/></svg> Terminal Thinkin</h2>
+        <button onclick="this.closest('.vm-overlay').style.display='none'; document.getElementById('terminal-modal').style.display='none'" style="padding:4px 12px; background:#cc3333; color:white; border:none; border-radius:4px; cursor:pointer; font-size:13px;">✕ Fechar</button>
+    </div>
+    
+    <!-- BARRA DE ABAS V3.1 -->
+    <div id="terminal-tabs-bar" class="terminal-tabs-bar">
+        <button class="terminal-add-btn" onclick="addTerminalTab('Terminal 1')">+</button>
+    </div>
+    
+    <!-- ÁREA DE CONTEÚDO DAS ABAS V3.1 -->
+    <div id="terminal-content-area" style="flex: 1; position: relative; background: #000; overflow: hidden;">
+        <!-- Os containers dos terminais serão injetados aqui via JS -->
+    </div>
+</div>
+
+
+<!-- Modal de Chat Funcional -->
+<div class="vm-overlay" id="chat-overlay" onclick="closeChatModal()"></div>
+<div class="vm-modal" id="chat-modal" style="max-width: 800px;">
+    <div  style="padding:8px 16px; background:#2d2d2d; border-bottom:1px solid rgba(255,255,255,0.1); display:flex; justify-content:space-between; align-items:center; user-select:none; cursor:move;">
+        <h2>💬 Chat com <span id="chat-assistant-name">Assistente</span></h2>
+        <button class="close-btn" onclick="closeChatModal()">&times;</button>
+    </div>
+    <div id="chat-messages" style="height: 400px; overflow-y: auto; background: #0a0a0a; padding: 15px; border-radius: 4px; margin-bottom: 10px;"></div>
+    <div style="display: flex; gap: 10px;">
+        <input type="text" id="chat-input" placeholder="Digite sua mensagem..." 
+               style="flex: 1; padding: 10px; border-radius: 4px; border: 1px solid #444; background: #1a1a1a; color: #fff;"
+               onkeypress="if(event.key === 'Enter') sendChatMessage()">
+        <button class="btn btn-primary" onclick="sendChatMessage()">Enviar</button>
+    </div>
+</div>
+
+
+<script>
+// === VARIÁVEIS GLOBAIS ===
+let currentAssistant = 'Ana';
+let conversationHistory = [];
+
+// === CARREGAMENTO DE ASSISTENTES ===
+async function loadAssistants() {
+    try {
+        const resp = await fetch('/api/assistants');
+        const assistants = await resp.json();
+        console.log("ASSISTENTES:", assistants.length);
+        
+        const container = document.getElementById('assistants-container');
+        container.innerHTML = '';
+        
+        assistants.forEach(agent => {
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.style.borderLeftColor = agent.color || '#4caf50';
+            card.innerHTML = `
+                <div class="card-header">
+                    <div class="card-title">${agent.display_name || agent.name}</div>
+                    <div>${agent.icon || ''}</div>
+                </div>
+                <div class="card-category">${agent.profile === 'custom' ? 'PERSONALIZADO' : 'GERAL'}</div>
+                <div class="card-desc">${(agent.description || agent.prompt || '').substring(0, 100)}...</div>
+            `;
+            card.onclick = () => openChat(agent.display_name || agent.name);
+            container.appendChild(card);
+        });
+        
+        // Card de VMs
+        const vmCard = document.createElement('div');
+        vmCard.className = 'card';
+        vmCard.style.borderLeftColor = '#0db7ed';
+        vmCard.innerHTML = `
+            <div class="card-header"><div class="card-title">Máquinas Virtuais</div><div><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle; margin-right: 4px;">
+  <rect x="2" y="2" width="20" height="20" rx="6" fill="#007ACC"/>
+  <path d="M7 7H17V9H13V17H11V9H7V7Z" fill="white"/>
+  <circle cx="17" cy="17" r="2.5" fill="#00FF88"/>
+</svg></div></div>
+        
+        <!-- Card Dashboard V5.0 -->
+            </div>
+            <div class="card-category">SISTEMA</div>
+        </div>
+
+            <div class="card-category">Virtualização</div>
+            <div class="card-desc">Gerencie containers Linux diretamente pelo ThinkinOS.</div>
+        `;
+        vmCard.onclick = openVMManager;
+        container.appendChild(vmCard);
+        
+        console.log("Total de cards:", document.querySelectorAll('.card').length);
+    } catch (e) {
+        console.error("Erro ao carregar assistentes:", e);
+    }
+}
+
+// === SISTEMA DE CHAT ===
+function openChat(assistant) {
+    console.log("Abrindo chat com:", assistant);
+    currentAssistant = assistant;
+    loadChatHistory(assistant); // V3.1: Carregar histórico
+    conversationHistory = [];
+    document.getElementById('chat-assistant-name').textContent = assistant;
+    document.getElementById('chat-modal').classList.add('active');
+    document.getElementById('chat-overlay').classList.add('active');
+    document.getElementById('chat-messages').innerHTML = '<div style="text-align: center; color: #888; padding: 20px;">Conversando com ' + assistant + '<br><small>Digite uma mensagem para começar</small></div>';
+    document.getElementById('chat-input').value = '';
+    document.getElementById('chat-input').focus();
+}
+
+function closeChatModal() {
+    document.getElementById('chat-modal').classList.remove('active');
+    document.getElementById('chat-overlay').classList.remove('active');
+}
+
+
+async function loadChatHistory(assistantName) {
+    const messagesDiv = document.getElementById('chat-messages');
+    if (!messagesDiv) return;
+    
+    messagesDiv.innerHTML = '<div style="color: #888; text-align: center; margin-top: 20px;">Carregando histórico...</div>';
+    
+    try {
+        const resp = await fetch(`/api/chat/history/${encodeURIComponent(assistantName)}`);
+        const data = await resp.json();
+        
+        messagesDiv.innerHTML = ''; // Limpar "Carregando..."
+        
+        if (data.success && data.history.length > 0) {
+            data.history.forEach(msg => {
+                const align = msg.role === 'user' ? 'right' : 'left';
+                const bg = msg.role === 'user' ? '#2196F3' : '#333';
+                const color = '#fff';
+                // Escapar HTML básico para segurança
+                const safeContent = msg.content.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                messagesDiv.innerHTML += `<div style="margin: 10px 0; text-align: ${align};"><span style="background: ${bg}; color: ${color}; padding: 8px 12px; border-radius: 8px; display: inline-block; max-width: 80%; word-wrap: break-word;">${safeContent}</span></div>`;
+            });
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        } else {
+            messagesDiv.innerHTML = `<div style="color: #888; text-align: center; margin-top: 20px;">Inicie uma nova conversa com ${assistantName}</div>`;
+        }
+    } catch (e) {
+        console.error("Erro ao carregar histórico:", e);
+        messagesDiv.innerHTML = '<div style="color: #f44336; text-align: center;">Erro ao carregar histórico</div>';
+    }
+}
+
+async function sendChatMessage() {
+    const input = document.getElementById('chat-input');
+    const message = input.value.trim();
+    if (!message) return;
+    
+    const messagesDiv = document.getElementById('chat-messages');
+    
+    // Adicionar mensagem do usuário
+    messagesDiv.innerHTML += '<div style="margin: 10px 0; text-align: right;"><span style="background: #2196F3; color: white; padding: 8px 12px; border-radius: 8px; display: inline-block;">' + message + '</span></div>';
+    input.value = '';
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    
+    // Adicionar indicador de digitação
+    messagesDiv.innerHTML += '<div id="typing-indicator" style="margin: 10px 0; color: #888;">' + currentAssistant + ' está digitando...</div>';
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    
+    try {
+        const resp = await fetch('/api/chat', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                message: message,
+                assistant: currentAssistant,
+                history: conversationHistory
+            })
+        });
+        const data = await resp.json();
+        
+        // Remover indicador
+        const typing = document.getElementById('typing-indicator');
+        if (typing) typing.remove();
+        
+        // Adicionar resposta
+        const response = data.response || data.message || 'Sem resposta';
+        messagesDiv.innerHTML += '<div style="margin: 10px 0; text-align: left;"><span style="background: #333; color: #fff; padding: 8px 12px; border-radius: 8px; display: inline-block;">' + response + '</span></div>';
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        
+        // Salvar no histórico local (para contexto da IA)
+        conversationHistory.push({role: 'user', content: message});
+        conversationHistory.push({role: 'assistant', content: response});
+        
+                fetch('/api/chat/save', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ assistant_name: currentAssistant, role: 'user', content: message })
+        }).catch(e => console.error("Erro ao salvar msg usuário:", e));
+        
+        fetch('/api/chat/save', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ assistant_name: currentAssistant, role: 'assistant', content: response })
+        }).catch(e => console.error("Erro ao salvar msg IA:", e));
+    } catch (e) {
+        const typing = document.getElementById('typing-indicator');
+        if (typing) typing.remove();
+        messagesDiv.innerHTML += '<div style="color: #f44336;">Erro ao enviar mensagem</div>';
+        console.error("Erro no chat:", e);
+    }
+}
+
+// === GERENCIADOR DE VMs ===
+function openVMManager() {
+    document.getElementById('vm-modal').classList.add('active');
+    document.getElementById('vm-overlay').classList.add('active');
+    loadVMs();
+}
+
+function closeVMManager() {
+    document.getElementById('vm-modal').classList.remove('active');
+    document.getElementById('vm-overlay').classList.remove('active');
+}
+
+async function startVM(distro) {
+    try {
+        const resp = await fetch('/api/vm/start/' + distro, { method: 'POST' });
+        const data = await resp.json();
+        alert(data.message || data.error);
+        loadVMs();
+    } catch (e) {
+        alert("Erro de conexão");
+    }
+}
+
+async function loadVMs() {
+    try {
+        console.log("Carregando VMs...");
+        const resp = await fetch('/api/vm/containers');
+        const vms = await resp.json();
+        console.log("VMs recebidas:", vms);
+        const listDiv = document.getElementById('vm-list');
+        
+        if (vms.length === 0) {
+            listDiv.innerHTML = '<p style="text-align: center; color: #888;">Nenhuma VM em execução.</p>';
+            return;
+        }
+        
+        let html = '';
+        vms.forEach(vm => {
+            const statusClass = vm.status === 'running' ? 'status-running' : 'status-exited';
+            html += `<div class="vm-row">
+                <div><strong>${vm.name}</strong><br><small style="color:#888;">${vm.image}</small></div>
+                <div class="${statusClass}">● ${vm.status}</div>
+                <div>
+                    ${vm.status === 'running' ? `<button class="btn" style="background: #00bcd4; color: white; margin-right: 5px;" onclick="openTerminal(\'${vm.id}\', \'${vm.name}\')"">💻 Terminal</button>` : ''}
+                    <button class="btn ${vm.status === 'running' ? 'btn-danger' : 'btn-primary'}" 
+                        onclick="${vm.status === 'running' ? 'stopVM' : 'startVMById'}('${vm.id}')">
+                        ${vm.status === 'running' ? '⏹ Parar' : '▶ Iniciar'}
+                    </button>
+                </div>
+            </div>`;
+        });
+        listDiv.innerHTML = html;
+    } catch (e) {
+        document.getElementById('vm-list').innerHTML = '<p style="color: #f44336;">Erro ao carregar</p>';
+    }
+}
+
+async function stopVM(id) {
+    if (!confirm('Parar esta VM?')) return;
+    try {
+        const resp = await fetch('/api/vm/stop/' + id, { method: 'POST' });
+        const data = await resp.json();
+        if (data.success) {
+            loadVMs();
+        } else {
+            alert("Erro ao parar: " + (data.error || "Desconhecido"));
+            loadVMs();
+        }
+    } catch (e) {
+        alert("Erro de conexão: " + e.message);
+    }
+}
+
+async function startVMById(id) {
+    console.log("Iniciando container:", id);
+    const listDiv = document.getElementById('vm-list');
+    listDiv.innerHTML = '<p style="text-align: center; color: #0db7ed;">⏳ Iniciando container...</p>';
+    
+    try {
+        const resp = await fetch('/api/vm/start/' + id, { method: 'POST' });
+        const data = await resp.json();
+        
+        if (data.success) {
+            console.log("✅ Container iniciado:", data.message);
+            loadVMs();
+        } else {
+            alert("Erro ao iniciar: " + (data.error || "Desconhecido"));
+            loadVMs();
+        }
+    } catch (e) {
+        console.error("Erro ao iniciar container:", e);
+        alert("Erro de conexão: " + e.message);
+        loadVMs();
+    }
+}
+
+// === TERMINAL WEB ===
+
+
+
+// === TERMINAL WEB MELHORADO V4.1 ===
+let commandHistory = [];
+let historyIndex = -1;
+let currentLine = '';
+let autocompleteSuggestions = [];
+
+
+
+
+function showComingSoon(feature) {
+    alert(feature + ' - Em desenvolvimento!\n\nEsta funcionalidade estará disponível em breve.');
+}
+
+// === INICIALIZAÇÃO ===
+window.addEventListener('DOMContentLoaded', loadAssistants);
+
+// Função para re-ajustar o terminal quando o modal abre
+function refitTerminal() {
+    if (terminal && typeof fitAddon !== 'undefined' && fitAddon) {
+        setTimeout(() => {
+            try {
+                fitAddon.fit();
+                console.log("Terminal redimensionado:", terminal.cols, "x", terminal.rows);
+            } catch (e) {
+                console.error("Erro ao redimensionar:", e);
+            }
+        }, 300);
+    }
+}
+
+</script>
+
+<script>
+// Relógio em tempo real
+function updateClock() {
+    const now = new Date();
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
+    const clock = document.getElementById('clock');
+    if (clock) {
+        clock.textContent = hours + ':' + minutes + ':' + seconds;
+    }
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// Função para re-ajustar o terminal quando o modal abre
+function refitTerminal() {
+    if (terminal && typeof fitAddon !== 'undefined' && fitAddon) {
+        setTimeout(() => {
+            try {
+                fitAddon.fit();
+                console.log("Terminal redimensionado:", terminal.cols, "x", terminal.rows);
+            } catch (e) {
+                console.error("Erro ao redimensionar:", e);
+            }
+        }, 300);
+    }
+}
+
+</script>
+<div id="temp-terminal-container"></div>
+
+<!-- Div temporário para criar o terminal -->
+<div id="temp-terminal" style="position: fixed; top: 0; left: 0; width: 1200px; height: 700px; visibility: hidden; z-index: -1;"></div>
+
+<!-- Container do terminal no body (fora do modal) -->
+<div id="terminal-body-container" style="position: fixed; top: 100px; left: 100px; width: 1200px; height: 700px; z-index: 9999; display: none; background: #000; padding: 20px; border: 2px solid #0f0;"></div>
+
+<!-- Iframe para o terminal -->
+<iframe id="terminal-iframe" style="display: none; width: 1200px; height: 700px; border: none; position: fixed; top: 0; left: 0; z-index: 9999;"></iframe>
+
+<script>
+// Injetar Card Dashboard Dinamicamente
+document.addEventListener('DOMContentLoaded', () => {
+    // Procurar a grid de cards principal
+    const grid = document.querySelector('.cards-grid') || document.querySelector('.grid') || document.querySelector('#app-grid');
+    
+    if (grid) {
+        const dashCard = document.createElement('div');
+        dashCard.className = 'card';
+        dashCard.style.cursor = 'pointer';
+        dashCard.style.border = '1px solid #00ff00';
+        dashCard.onclick = () => window.location.href = '/dashboard';
+        
+        dashCard.innerHTML = `
+            <div class="card-icon" style="font-size: 24px; margin-bottom: 10px;"></div>
+            <h3 style="margin: 0 0 5px 0; color: #00ff00;">Métricas</h3>
+        `;
+        
+        grid.appendChild(dashCard);
+        console.log("✅ Card Dashboard injetado via JS");
+    } else {
+        console.warn("⚠️ Grid de cards não encontrada para injetar Dashboard");
+    }
+});
+</script>
+
+
+
+
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(() => {
+        // Estratégia melhorada: procurar pelo container que tem MÚLTIPLOS cards diretos filhos
+        // Isso evita pegar containers internos de cards específicos
+        let bestContainer = null;
+        let maxDirectCards = 0;
+        
+        const allDivs = document.querySelectorAll('div');
+        for (const div of allDivs) {
+            // Contar apenas cards que são filhos DIRETOS desta div
+            let directCardCount = 0;
+            for (const child of div.children) {
+                if (child.classList.contains('card')) {
+                    directCardCount++;
+                }
+            }
+            
+            // Se esta div tem mais cards diretos que a anterior, e tem pelo menos 4 (grid real)
+            if (directCardCount > maxDirectCards && directCardCount >= 4) {
+                maxDirectCards = directCardCount;
+                bestContainer = div;
+            }
+        }
+        
+        // Fallback: se não achou grid perfeita, usa o body ou main
+        if (!bestContainer) {
+            bestContainer = document.querySelector('main') || document.body;
+            console.warn("⚠️ Grid não encontrada, usando fallback");
+        }
+        
+        if (bestContainer && !document.getElementById('browser-injected-card')) {
+            const browserCard = document.createElement('div');
+            browserCard.id = 'browser-injected-card';
+            browserCard.className = 'card';
+            browserCard.style.cursor = 'pointer';
+            browserCard.style.border = '1px solid #00ffff';
+            browserCard.onclick = () => launchThinkinBrowser();
+            
+            browserCard.innerHTML = `
+                <div class="card-header">
+                    <div class="card-title">🌐 Browser</div>
+                    <div></div>
+                </div>
+                <div class="card-category">NAVEGAÇÃO</div>
+                <div class="card-desc">Navegue na web com proteção inteligente.</div>
+            `;
+            
+            bestContainer.appendChild(browserCard);
+            console.log("✅ Browser injetado em:", bestContainer.className || bestContainer.id, `(com ${maxDirectCards} cards)`);
+        }
+    }, 800);
+});
+</script>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(() => {
+        // Encontrar o container principal da grid (mesma lógica do Browser)
+        let bestContainer = null;
+        let maxDirectCards = 0;
+        
+        const allDivs = document.querySelectorAll('div');
+        for (const div of allDivs) {
+            let directCardCount = 0;
+            for (const child of div.children) {
+                if (child.classList.contains('card')) {
+                    directCardCount++;
+                }
+            }
+            if (directCardCount > maxDirectCards && directCardCount >= 4) {
+                maxDirectCards = directCardCount;
+                bestContainer = div;
+            }
+        }
+        
+        if (!bestContainer) bestContainer = document.querySelector('main') || document.body;
+        
+        // Injetar Card Métricas se não existir
+        if (bestContainer && !document.getElementById('metrics-injected-card')) {
+            const metricsCard = document.createElement('div');
+            metricsCard.id = 'metrics-injected-card';
+            metricsCard.className = 'card';
+            metricsCard.style.cursor = 'pointer';
+            metricsCard.style.border = '1px solid #00ff00';
+            metricsCard.onclick = () => window.location.href = '/dashboard';
+            
+            metricsCard.innerHTML = `
+                <div class="card-header">
+                    <div class="card-title"> Métricas</div>
+                    <div></div>
+                </div>
+                <div class="card-category">SISTEMA</div>
+                <div class="card-desc">Monitorar uso de tokens e assistentes.</div>
+            `;
+            
+            bestContainer.appendChild(metricsCard);
+            console.log("✅ Card Métricas injetado via JS");
+        }
+    }, 800);
+});
+</script>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(() => {
+        // Procurar o container do Dock (barra inferior)
+        const dock = document.querySelector('.dock') || 
+                     document.querySelector('[class*="dock"]') || 
+                     document.querySelector('nav') ||
+                     document.body.querySelector('div:last-child');
+        
+        if (dock && !document.getElementById('dock-terminal-btn')) {
+            const termBtn = document.createElement('div');
+            termBtn.id = 'dock-terminal-btn';
+            termBtn.className = 'dock-item'; // Usa a mesma classe dos outros itens
+            termBtn.style.cursor = 'pointer';
+            termBtn.style.textAlign = 'center';
+            termBtn.style.padding = '5px 10px';
+            termBtn.onclick = () => openTerminal(), '_blank');
+            
+            termBtn.innerHTML = `
+                <div style="font-size: 24px;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle; margin-right: 4px;">
+  <rect x="2" y="2" width="20" height="20" rx="6" fill="#007ACC"/>
+  <path d="M7 7H17V9H13V17H11V9H7V7Z" fill="white"/>
+  <circle cx="17" cy="17" r="2.5" fill="#00FF88"/>
+</svg></div>
+                <div style="font-size: 10px; margin-top: 2px;">Terminal</div>
+            `;
+            
+            // Inserir antes do botão "Novo" (+) ou no final
+            const novoBtn = Array.from(dock.children).find(el => el.textContent.includes('Novo') || el.innerHTML.includes('+'));
+            if (novoBtn) {
+                dock.insertBefore(termBtn, novoBtn);
+            } else {
+                dock.appendChild(termBtn);
+            }
+            
+            console.log("✅ Botão Terminal injetado no Dock");
+        }
+    }, 1000);
+});
+</script>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(() => {
+        // Procurar o container do Dock
+        const dock = document.querySelector('.dock') || 
+                     document.querySelector('[class*="dock"]') || 
+                     document.querySelector('nav') ||
+                     document.body.querySelector('div:last-child');
+        
+        if (dock && !document.getElementById('dock-editor-btn')) {
+            const editBtn = document.createElement('div');
+            editBtn.id = 'dock-editor-btn';
+            editBtn.className = 'dock-item';
+            editBtn.style.cursor = 'pointer';
+            editBtn.style.textAlign = 'center';
+            editBtn.style.padding = '5px 10px';
+            
+            // Abrir editor com app.py por padrão
+            editBtn.onclick = () => window.open('/editor?file=app.py', '_blank');
+            
+            editBtn.innerHTML = `
+                <div style="font-size: 24px;">&lt;/&gt;</div>
+                <div style="font-size: 10px; margin-top: 2px;">Editor</div>
+            `;
+            
+            // Inserir antes do botão "Novo" (+) ou no final
+            const novoBtn = Array.from(dock.children).find(el => el.textContent.includes('Novo') || el.innerHTML.includes('+'));
+            if (novoBtn) {
+                dock.insertBefore(editBtn, novoBtn);
+            } else {
+                dock.appendChild(editBtn);
+            }
+            
+            console.log("✅ Botão Editor injetado no Dock");
+        }
+    }, 1200); // Pequeno delay extra para garantir carregamento completo
+});
+</script>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    if (typeof io !== 'undefined') {
+        const previewSocket = io();
+        
+        previewSocket.on('file_saved', (data) => {
+            console.log(`🔄 Arquivo salvo: ${data.file}`);
+            
+            const relevantFiles = ['templates/desktop.html', 'templates/terminal_native.html'];
+            
+            if (relevantFiles.includes(data.file)) {
+                const notif = document.createElement('div');
+                notif.style.cssText = 'position:fixed;top:20px;right:20px;background:#007acc;color:white;padding:10px 20px;border-radius:4px;z-index:9999;font-size:14px;box-shadow:0 2px 8px rgba(0,0,0,0.3);';
+                notif.textContent = `🔄 ${data.file} atualizado! Recarregando...`;
+                document.body.appendChild(notif);
+                
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            }
+        });
+        
+        console.log("✅ Live Preview listener ativo");
+    } else {
+        console.warn("⚠️ SocketIO não disponível para Live Preview");
+    }
+});
+</script>
+
+
+<script>
+// LIVE PREVIEW: Recarregar desktop quando arquivos HTML forem salvos no Editor
+document.addEventListener('DOMContentLoaded', () => {
+    console.log("🔍 [LIVE PREVIEW] Verificando SocketIO para Live Preview...");
+    
+    // Aguardar um pouco para garantir que socket.io carregou
+    setTimeout(() => {
+        if (typeof io !== 'undefined') {
+            console.log("✅ [LIVE PREVIEW] SocketIO encontrado! Conectando...");
+            const previewSocket = io();
+            
+            previewSocket.on('connect', () => {
+                console.log(" Conectado ao servidor WebSocket para Live Preview");
+            });
+            
+            previewSocket.on('file_saved', (data) => {
+                console.log(` Evento recebido: ${JSON.stringify(data)}`);
+                
+                // Lista de arquivos que afetam o desktop
+                const relevantFiles = ['templates/desktop.html', 'templates/terminal_native.html', 'static/style.css'];
+                
+                if (relevantFiles.includes(data.file)) {
+                    console.log(`🔄 Arquivo relevante salvo: ${data.file}. Recarregando...`);
+                    
+                    // Mostrar notificação sutil antes de recarregar
+                    const notif = document.createElement('div');
+                    notif.style.cssText = 'position:fixed;top:20px;right:20px;background:#007acc;color:white;padding:10px 20px;border-radius:4px;z-index:9999;font-size:14px;box-shadow:0 2px 8px rgba(0,0,0,0.3);animation:fadeIn 0.3s;';
+                    notif.textContent = `🔄 ${data.file} atualizado! Recarregando...`;
+                    document.body.appendChild(notif);
+                    
+                    // Recarregar após 1.5 segundos
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
+                }
+            });
+            
+            previewSocket.on('disconnect', () => {
+                console.log("❌ Desconectado do servidor WebSocket");
+            });
+            
+        } else {
+            console.error(" SocketIO NÃO disponível! Verifique se o script foi carregado.");
+        }
+    }, 500); // Pequeno delay para garantir carregamento
+});
+</script>
+
+
+<script>
+// HOT RELOAD INTELIGENTE: Complemento ao Live Preview existente
+(function() {
+    'use strict';
+    
+    // Aguardar SocketIO do Live Preview já estar conectado
+    setTimeout(() => {
+        if (typeof io !== 'undefined') {
+            console.log(" [HOT RELOAD] Adicionando handlers inteligentes...");
+            
+            const hotSocket = io();
+            
+            hotSocket.on('file_saved', (data) => {
+                const filename = data.file;
+                const filetype = data.type || (filename.endsWith('.css') ? 'css' : filename.endsWith('.js') ? 'js' : 'html');
+                
+                // CSS: Atualização dinâmica sem reload
+                if (filetype === 'css') {
+                    console.log(`🎨 [HOT RELOAD] CSS detectado: ${filename}`);
+                    handleCSSUpdate(filename);
+                }
+                // JS: Execução dinâmica
+                else if (filetype === 'js') {
+                    console.log(` [HOT RELOAD] JS detectado: ${filename}`);
+                    handleJSUpdate(filename);
+                }
+                // HTML: Deixar o Live Preview existente cuidar do reload
+                else if (filetype === 'html') {
+                    console.log(` [HOT RELOAD] HTML - Live Preview existente cuidará do reload`);
+                }
+            });
+        }
+    }, 1000); // Aguardar 1s para garantir que Live Preview já conectou
+    
+    function handleCSSUpdate(filename) {
+        fetch(`/${filename}?t=${Date.now()}`)
+            .then(response => response.text())
+            .then(cssText => {
+                let styleTag = document.getElementById(`hot-reload-${filename}`);
+                if (!styleTag) {
+                    styleTag = document.createElement('style');
+                    styleTag.id = `hot-reload-${filename}`;
+                    document.head.appendChild(styleTag);
+                }
+                styleTag.textContent = cssText;
+                console.log(`✅ [CSS] ${filename} atualizado (${cssText.length} bytes)`);
+            })
+            .catch(err => console.error(`❌ [CSS] Erro: ${err}`));
+    }
+    
+    function handleJSUpdate(filename) {
+        fetch(`/${filename}?t=${Date.now()}`)
+            .then(response => response.text())
+            .then(jsText => {
+                const oldScript = document.getElementById(`hot-reload-${filename}`);
+                if (oldScript) oldScript.remove();
+                
+                const newScript = document.createElement('script');
+                newScript.id = `hot-reload-${filename}`;
+                newScript.textContent = jsText;
+                document.body.appendChild(newScript);
+                console.log(`✅ [JS] ${filename} executado`);
+            })
+            .catch(err => console.error(` [JS] Erro: ${err}`));
+    }
+})();
+</script>
+
+<script>
+// === FUNÇÃO PARA LANÇAR THINKINBROWSER NATIVO ===
+function launchThinkinBrowser() {
+    console.log(' Lançando ThinkinBrowser Nativo...');
+    
+    fetch('/api/launch-thinkinbrowser')
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'launched') {
+                console.log('✅ ThinkinBrowser Nativo iniciado:', data.message);
+            } else {
+                console.error('❌ Erro ao lançar:', data.message);
+                alert('Erro ao abrir ThinkinBrowser: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('❌ Erro na requisição:', error);
+            alert('Falha ao comunicar com o servidor.');
+        });
+}
+</script>
+
+<!-- MODAL DO GERENCIADOR DE ARQUIVOS -->
+<div id="file-manager-modal" style="display:none; position:fixed; top:100px; left:100px; width:800px; height:600px; background:rgba(30, 30, 30, 0.95); border:1px solid rgba(255,255,255,0.1); border-radius:12px; box-shadow:0 20px 50px rgba(0,0,0,0.5); z-index:10000; flex-direction:column; backdrop-filter:blur(10px);">
+    <!-- Toolbar -->
+    <div id="fm-header" style="padding:12px 16px; background:rgba(45, 45, 45, 0.8); border-bottom:1px solid rgba(255,255,255,0.1); display:flex; justify-content:space-between; align-items:center; border-radius:12px 12px 0 0; user-select: none; cursor: move; user-select: none;">
+        <div style="display:flex; align-items:center; gap:12px;">
+            <span style="font-size:20px;">📁</span>
+            <span style="font-weight:bold; color:#fff;">Gerenciador de Arquivos</span>
+            <span id="fm-current-path" style="color:#aaa; font-size:14px; font-family:monospace; background:rgba(0,0,0,0.3); padding:4px 8px; border-radius:4px;">/</span>
+        </div>
+        <div style="display:flex; gap:8px;">
+            <button onclick="fmCreate('dir')" style="padding:6px 12px; background:#007acc; color:white; border:none; border-radius:4px; cursor:pointer; font-size:13px;">+ Pasta</button>
+            <button onclick="fmCreate('file')" style="padding:6px 12px; background:#28a745; color:white; border:none; border-radius:4px; cursor:pointer; font-size:13px;">+ Arquivo</button>
+            <button onclick="document.getElementById('fm-upload-input').click()" style="padding:6px 12px; background:#6f42c1; color:white; border:none; border-radius:4px; cursor:pointer; font-size:13px;">⬆ Upload</button>
+            <input type="file" id="fm-upload-input" style="display:none;" multiple onchange="fmUpload(this)">
+            <button onclick="closeFileManager()" style="padding:6px 12px; background:#cc3333; color:white; border:none; border-radius:4px; cursor:pointer; font-size:13px;">✕ Fechar</button>
+        </div>
+    </div>
+    
+    <!-- Lista de Arquivos -->
+    <div id="fm-breadcrumb" style="padding: 10px 16px; background: rgba(0,0,0,0.5); border-bottom: 1px solid rgba(255,255,255,0.1); font-family: monospace; font-size: 14px; display: flex; align-items: center;">
+    <span id="bc-content"></span>
+</div>
+<div id="fm-file-list" style="flex:1; overflow-y:auto; padding:16px; color:#fff; cursor: default; user-select: text;">
+        <div style="text-align:center; color:#888; margin-top:50px;">Carregando...</div>
+    </div>
+</div>
+</div>
+
+<script>
+// === GERENCIADOR DE ARQUIVOS (FILE MANAGER) ===
+let fmCurrentPath = '/';
+
+function openFileManager() {
+    document.getElementById('file-manager-modal').style.display = 'flex';
+    setTimeout(() => { setupDrag('file-manager-modal', 'fm-header'); }, 50);
+    
+    
+    fmCurrentPath = '/';
+    fmLoadFiles(fmCurrentPath);
+}
+
+function closeFileManager() {
+    document.getElementById('file-manager-modal').style.display = 'none';
+}
+
+function fmLoadFiles(path) {
+    fmCurrentPath = path;
+    setTimeout(function() { if(typeof updateBreadcrumb === 'function') updateBreadcrumb(path); }, 100);
+    document.getElementById('fm-current-path').textContent = path || '/';
+    
+    // Atualizar Breadcrumb
+    const listContainer = document.getElementById('fm-file-list');
+    listContainer.innerHTML = '<div style="text-align:center; color:#888; margin-top:50px;">Carregando...</div>';
+    
+    fetch(`/api/fs/list?path=${encodeURIComponent(path)}`)
+        .then(res => res.json())
+        .then(data => {
+            if (data.error) {
+                listContainer.innerHTML = `<div style="color:#ff6b6b; text-align:center;">Erro: ${data.error}</div>`;
+                return;
+            }
+            
+            if (data.items.length === 0) {
+                listContainer.innerHTML = '<div style="color:#888; text-align:center; margin-top:50px;">Pasta vazia</div>';
+                return;
+            }
+            
+            let html = '<table style="width:100%; border-collapse:collapse;">';
+            html += '<tr style="text-align:left; color:#aaa; border-bottom:1px solid rgba(255,255,255,0.1);"><th style="padding:8px;">Nome</th><th style="padding:8px;">Tamanho</th><th style="padding:8px;">Ações</th></tr>';
+            
+            // Botão para voltar à pasta pai (se não estiver na raiz)
+            if (path !== '/') {
+                const parentPath = path.split('/').slice(0, -1).join('/') || '/';
+                html += `<tr style="border-bottom:1px solid rgba(255,255,255,0.05); cursor:pointer;" ondblclick="fmLoadFiles('${parentPath}')">
+                    <td style="padding:10px;"><span style="color:#ffd700;">📁</span> <strong>..</strong></td>
+                    <td style="padding:10px; color:#888;">-</td>
+                    <td style="padding:10px;"></td>
+                </tr>`;
+            }
+            
+            data.items.forEach(item => {
+                const icon = item.is_dir ? '📁' : '📄';
+                const color = item.is_dir ? '#ffd700' : '#fff';
+                const size = item.is_dir ? '-' : (item.size / 1024).toFixed(1) + ' KB';
+                
+                html += `<tr style="border-bottom:1px solid rgba(255,255,255,0.05); transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='transparent'">
+                    <td style="padding:10px; cursor:pointer;" ondblclick="${item.is_dir ? `fmLoadFiles('${item.path}')` : `openFileInEditor('${item.path}')`}">
+                        <span style="color:${color}; margin-right:8px;">${icon}</span> ${item.name}
+                    </td>
+                    <td style="padding:10px; color:#888;">${size}</td>
+                    <td style="padding:10px;">
+                        <button onclick="fmDelete('${item.path}', ${item.is_dir})" style="background:#cc3333; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:12px;">Excluir</button>
+                        ${!item.is_dir ? `<button onclick="fmDownload('${item.path}')" style="background:#007acc; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:12px; margin-left:4px;">Baixar</button>` : ''}
+                    </td>
+                </tr>`;
+            });
+            html += '</table>';
+            listContainer.innerHTML = html;
+        })
+        .catch(err => {
+            listContainer.innerHTML = `<div style="color:#ff6b6b; text-align:center;">Erro de rede: ${err}</div>`;
+        });
+}
+
+function fmCreate(type) {
+    const name = prompt(`Nome da ${type === 'dir' ? 'pasta' : 'arquivo'}:`);
+    if (!name) return;
+    
+    fetch('/api/fs/create', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ path: fmCurrentPath, name: name, is_dir: type === 'dir' })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            fmLoadFiles(fmCurrentPath);
+        } else {
+            alert('Erro: ' + data.error);
+        }
+    });
+}
+
+function fmDelete(path, isDir) {
+    const msg = isDir ? 'Tem certeza que deseja excluir esta pasta e todo o seu conteúdo?' : 'Tem certeza que deseja excluir este arquivo?';
+    if (!confirm(msg)) return;
+    
+    fetch('/api/fs/delete', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ path: path })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            fmLoadFiles(fmCurrentPath);
+        } else {
+            alert('Erro: ' + data.error);
+        }
+    });
+}
+
+function fmUpload(input) {
+    const files = input.files;
+    if (!files || files.length === 0) return;
+    
+    const fileCount = files.length;
+    const fileLabel = fileCount === 1 ? 'arquivo' : 'arquivos';
+    
+    // Feedback visual inicial
+    const listContainer = document.getElementById('fm-file-list');
+    const originalContent = listContainer.innerHTML;
+    listContainer.innerHTML = `<div style="text-align:center; color:#4dabf7; margin-top:50px; font-size:16px;">
+        <div style="font-size:48px; margin-bottom:20px;">⬆️</div>
+        <div>Enviando ${fileCount} ${fileLabel}...</div>
+        <div id="upload-progress" style="margin-top:10px; color:#888;">0 de ${fileCount}</div>
+    </div>`;
+    
+    let uploadedCount = 0;
+    let errorCount = 0;
+    
+    // Processar cada arquivo
+    Array.from(files).forEach((file, index) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('path', fmCurrentPath);
+        
+        fetch('/api/fs/upload', {
+            method: 'POST',
+            body: formData
+        })
+        .then(resp => resp.json())
+        .then(data => {
+            uploadedCount++;
+            const progressEl = document.getElementById('upload-progress');
+            if (progressEl) {
+                progressEl.textContent = `${uploadedCount} de ${fileCount}`;
+            }
+            
+            // Se for o último arquivo, recarregar a lista
+            if (uploadedCount + errorCount === fileCount) {
+                setTimeout(() => {
+                    fmLoadFiles(fmCurrentPath);
+                }, 500);
+            }
+        })
+        .catch(err => {
+            errorCount++;
+            console.error(`Erro ao enviar ${file.name}:`, err);
+            
+            if (uploadedCount + errorCount === fileCount) {
+                setTimeout(() => {
+                    fmLoadFiles(fmCurrentPath);
+                }, 500);
+            }
+        });
+    });
+    
+    // Limpar o input para permitir reenvio do mesmo arquivo
+    input.value = '';
+}
+
+function fmDownload(path) {
+    window.open(`/api/fs/download?path=${encodeURIComponent(path)}`, '_blank');
+}
+
+function openFileInEditor(path) {
+    // Se a função do editor existir, chama ela. Senão, abre em nova aba como fallback
+    if (typeof openEditor === 'function') {
+        closeFileManager();
+        openEditor(path);
+    } else {
+        window.open(`/editor?file=${encodeURIComponent(path)}`, '_blank');
+    }
+}
+</script>
+
+<script>
+// === TERMINAL COMPLETO (XTerm.js + Backend API) ===
+let term = null;
+let fitAddon = null;
+let currentSessionId = null;
+let pollInterval = null;
+
+
+
+
+
+function startPolling() {
+    if (pollInterval) clearInterval(pollInterval);
+    pollInterval = setInterval(() => {
+        if (!currentSessionId || document.getElementById('terminal-modal').style.display === 'none') return;
+        
+        fetch('/api/terminal/read', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ session_id: currentSessionId })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success && data.output) {
+                term.write(data.output);
+            }
+        })
+        .catch(err => console.error('Erro ao ler terminal:', err));
+    }, 100); // Polling a cada 100ms para responsividade
+}
+
+function resizeTerminal(sessionId, cols, rows) {
+    fetch('/api/terminal/resize', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ session_id: sessionId, cols: cols, rows: rows })
+    });
+}
+
+// Corrigir botão do Dock "Terminal"
+document.addEventListener('DOMContentLoaded', () => {
+    const buttons = document.querySelectorAll('button, div, a');
+    buttons.forEach(btn => {
+        if (btn.textContent.includes('Terminal') && btn.getAttribute('onclick') && btn.getAttribute('onclick').includes('Em desenvolvimento')) {
+            btn.setAttribute('onclick', 'openTerminal()');
+            console.log('✅ Botão Terminal corrigido automaticamente.');
+        }
+    });
+});
+</script>
+
+
+<script>
+
+
+
+<script>
+// === THINKINOS WINDOW MANAGER V4.0 (LIMPO) ===
+let wmZIndex = 10000;
+
+function wmBringToFront(element) {
+    if (!element) return;
+    wmZIndex++;
+    element.style.zIndex = wmZIndex;
+}
+
+function wmMakeDraggable(modalId, handleId) {
+    const modal = document.getElementById(modalId);
+    const handle = document.getElementById(handleId);
+    
+    if (!modal || !handle) return;
+    if (handle.dataset.wmInit === "true") return; // Já inicializado
+
+    modal.style.position = 'fixed';
+    modal.style.transform = 'none';
+    if (!modal.style.top || modal.style.top === '50%') {
+        modal.style.top = '80px';
+        modal.style.left = '80px';
+    }
+
+    let isDragging = false;
+    let startX, startY, initialLeft, initialTop;
+
+    handle.style.cursor = 'move';
+    handle.style.userSelect = 'none';
+
+    handle.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        startX = e.clientX;
+        startY = e.clientY;
+        initialLeft = modal.offsetLeft;
+        initialTop = modal.offsetTop;
+        wmBringToFront(modal);
+        e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+        modal.style.left = (initialLeft + dx) + 'px';
+        modal.style.top = Math.max(40, initialTop + dy) + 'px'; // Não subir mais que 40px
+    });
+
+    document.addEventListener('mouseup', () => {
+        isDragging = false;
+    });
+
+    modal.addEventListener('mousedown', () => wmBringToFront(modal));
+    handle.dataset.wmInit = "true";
+    console.log('✅ Arraste ativado para:', modalId);
+}
+
+function initDraggableWindows() {
+    wmMakeDraggable('file-manager-modal', 'fm-header');
+    wmMakeDraggable('terminal-modal', 'term-header');
+}
+
+// Inicializar quando o DOM estiver pronto
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initDraggableWindows);
+} else {
+    initDraggableWindows();
+}
+
+// Tornar global para ser chamado pelos modais
+
+
+    const breadcrumb = document.getElementById('fm-breadcrumb');
+    if (!breadcrumb) return;
+    
+    if (!path || path === '/') {
+        return;
+    }
+    
+    const parts = path.split('/').filter(p => p);
+    
+    let currentPath = '';
+    parts.forEach((part, index) => {
+        currentPath += '/' + part;
+        const isLast = index === parts.length - 1;
+        if (isLast) {
+            html += ` <span style="color:#fff;">› ${part}</span>`;
+        } else {
+        }
+    });
+    
+    breadcrumb.innerHTML = html;
+}
+
+    fmLoadFiles(path);
+}
+
+
+
+
+</script>
+
+
+
+
+
+
+
+<!-- === V3.1: TERMINAL MULTI-ABA (BLOCO ISOLADO E BLINDADO) === -->
+<script>
+window.terminalTabs = [];
+window.activeTerminalId = null;
+window.tabCounter = 1;
+window.currentContainerId = null;
+
+;
+
+;
+
+;
+</script>
+
+<!-- === V3.1: TERMINAL MULTI-ABA (INJEÇÃO FINAL BLINDADA) === -->
+<script>
+// Garantir que as variáveis existam
+window.terminalTabs = window.terminalTabs || [];
+window.tabCounter = window.tabCounter || 1;
+window.activeTerminalId = null;
+
+;
+
+;
+
+;
+
+;
+
+;
+
+console.log("✅ Script V3.1 do Terminal carregado com sucesso no final do arquivo!");
+</script>
+
+
+
+<script>
+// === V3.1 TERMINAL (VERSÃO FINAL À PROVA DE BALAS) ===
+console.log("🚀 V3.1 Terminal Script Iniciando...");
+
+window.terminalTabs = [];
+window.tabCounter = 1;
+
+// Definindo de DUAS formas para garantir que o onclick encontre
+function openTerminal(containerId, containerName) {
+    window._openTerminalImpl(containerId, containerName);
+}
+window.openTerminal = openTerminal;
+
+function closeTerminalModal() {
+    window._closeTerminalModalImpl();
+}
+window.closeTerminalModal = closeTerminalModal;
+
+window._openTerminalImpl = function(containerId, containerName) {
+    console.log("🔌 openTerminal chamado:", containerId, containerName);
+    const modal = document.getElementById("terminal-modal");
+    const overlay = document.getElementById("terminal-overlay");
+    if (modal) modal.style.display = "flex";
+    if (overlay) overlay.style.display = "block";
+    
+    if (window.terminalTabs.length === 0) {
+        setTimeout(function() { window.addTerminalTab(containerName || "Terminal 1"); }, 100);
+    }
+};
+
+window.addTerminalTab = function(name) {
+    console.log("➕ addTerminalTab:", name);
+    const tabId = "tab-" + window.tabCounter++;
+    const tabsBar = document.getElementById("terminal-tabs-bar");
+    const contentArea = document.getElementById("terminal-content-area");
+    if (!tabsBar || !contentArea) { console.error("❌ Estrutura do terminal não encontrada"); return; }
+    
+    const tabEl = document.createElement("div");
+    tabEl.className = "terminal-tab";
+    tabEl.id = "btn-" + tabId;
+    tabEl.innerHTML = "<span>" + name + "</span> <span class='terminal-tab-close' onclick='event.stopPropagation(); window.closeTerminalTab("" + tabId + "")'>×</span>";
+    tabEl.onclick = function() { window.switchTerminalTab(tabId); };
+    tabsBar.appendChild(tabEl);
+    
+    const wrapper = document.createElement("div");
+    wrapper.className = "terminal-container-wrapper";
+    wrapper.id = "term-container-" + tabId;
+    wrapper.style.cssText = "position:absolute; top:0; left:0; right:0; bottom:0; display:none; padding: 15px; background: #000; color: #0f0; font-family: monospace; font-size: 14px;";
+    wrapper.innerHTML = "<div style='padding:20px; text-align:center;'><div style='font-size:40px; margin-bottom:10px;'>💻</div><div style='color:#00ff00; font-weight:bold; margin-bottom:10px;'>✅ Terminal " + name + " Inicializado</div><div>luperesil@thinkinos:~$ <span style='animation:blink 1s infinite'>_</span></div></div><style>@keyframes blink{0%,49%{opacity:1}50%,100%{opacity:0}}</style>";
+    contentArea.appendChild(wrapper);
+    window.switchTerminalTab(tabId);
+};
+
+window.switchTerminalTab = function(tabId) {
+    document.querySelectorAll(".terminal-tab").forEach(function(el) { el.classList.remove("active"); });
+    document.querySelectorAll(".terminal-container-wrapper").forEach(function(el) { el.classList.remove("active"); });
+    const activeBtn = document.getElementById("btn-" + tabId);
+    if (activeBtn) activeBtn.classList.add("active");
+    const wrapper = document.getElementById("term-container-" + tabId);
+    if (wrapper) { wrapper.style.display = "block"; wrapper.classList.add("active"); }
+};
+
+window.closeTerminalTab = function(tabId) {
+    const tabIndex = window.terminalTabs.findIndex(function(t) { return t.id === tabId; });
+    if (tabIndex === -1) return;
+    const btnEl = document.getElementById("btn-" + tabId);
+    if (btnEl) btnEl.remove();
+    const wrapperEl = document.getElementById("term-container-" + tabId);
+    if (wrapperEl) wrapperEl.remove();
+    window.terminalTabs.splice(tabIndex, 1);
+    if (window.terminalTabs.length > 0) {
+        window.switchTerminalTab(window.terminalTabs[Math.max(0, tabIndex - 1)].id);
+    } else {
+        window.closeTerminalModal();
+    }
+};
+
+window._closeTerminalModalImpl = function() {
+    console.log("❌ closeTerminalModal chamado");
+    window.terminalTabs = [];
+    window.tabCounter = 1;
+    const tabsBar = document.getElementById("terminal-tabs-bar");
+    if (tabsBar) tabsBar.innerHTML = '<button class="terminal-add-btn" onclick="window.addTerminalTab(\'Terminal 1\')">+</button>';
+    const contentArea = document.getElementById("terminal-content-area");
+    if (contentArea) contentArea.innerHTML = "";
+    const modal = document.getElementById("terminal-modal");
+    const overlay = document.getElementById("terminal-overlay");
+    if (modal) modal.style.display = "none";
+    if (overlay) overlay.style.display = "none";
+};
+
+console.log("✅✅✅ V3.1 Terminal Script Carregado com SUCESSO TOTAL! ✅✅✅");
+    </script>
+</script>
+</body>
+
+</html>

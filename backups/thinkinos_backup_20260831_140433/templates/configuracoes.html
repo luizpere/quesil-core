@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configurações - ThinkinOS</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #e0e0e0;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #00bcd4;
+            margin-bottom: 30px;
+            font-size: 2em;
+        }
+        .card {
+            background: rgba(30, 30, 30, 0.8);
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .card h2 {
+            color: #6200ea;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+        .card p {
+            color: #aaa;
+            margin-bottom: 15px;
+            line-height: 1.6;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #00bcd4;
+            font-weight: bold;
+        }
+        input[type="password"], input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            background: #2d2d2d;
+            border: 1px solid #444;
+            border-radius: 8px;
+            color: white;
+            font-size: 14px;
+        }
+        input:focus {
+            outline: none;
+            border-color: #6200ea;
+        }
+        .status {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.85em;
+            margin-left: 10px;
+        }
+        .status.configured { background: #4caf50; color: white; }
+        .status.pending { background: #ff9800; color: white; }
+        button {
+            background: #6200ea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+        button:hover { background: #7c1dff; }
+        .btn-voltar {
+            background: #444;
+            margin-right: 10px;
+        }
+        .btn-voltar:hover { background: #555; }
+        .info-box {
+            background: rgba(0, 188, 212, 0.1);
+            border-left: 3px solid #00bcd4;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .info-box a { color: #00bcd4; }
+        .success-msg {
+            background: rgba(76, 175, 80, 0.2);
+            border-left: 3px solid #4caf50;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>⚙️ Configurações de IA</h1>
+        
+        <div class="info-box">
+            💡 Configure as chaves de API dos provedores que deseja usar. 
+            A Groq já está configurada por padrão. As outras são opcionais.
+        </div>
+        
+        <div class="success-msg" id="successMsg">
+            ✅ Configurações salvas com sucesso!
+        </div>
+        
+        <div class="card">
+            <h2>🤖 Groq <span class="status configured" id="status-groq">Configurada</span></h2>
+            <p>Modelos: Llama 3.3, Mixtral, Gemma. <strong>Rápido e gratuito!</strong></p>
+            <div class="form-group">
+                <label>Chave da API Groq</label>
+                <input type="password" id="groq_api_key" placeholder="gsk_...">
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>🟢 OpenAI <span class="status pending" id="status-openai">Pendente</span></h2>
+            <p>Modelos: GPT-4o, GPT-4o-mini, o1. <a href="https://platform.openai.com/api-keys" target="_blank">Obter chave</a></p>
+            <div class="form-group">
+                <label>Chave da API OpenAI</label>
+                <input type="password" id="openai_api_key" placeholder="sk-...">
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2> Anthropic <span class="status pending" id="status-anthropic">Pendente</span></h2>
+            <p>Modelos: Claude 3.5 Sonnet, Claude 3 Opus. <a href="https://console.anthropic.com/settings/keys" target="_blank">Obter chave</a></p>
+            <div class="form-group">
+                <label>Chave da API Anthropic</label>
+                <input type="password" id="anthropic_api_key" placeholder="sk-ant-...">
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>🔵 Google AI <span class="status pending" id="status-google">Pendente</span></h2>
+            <p>Modelos: Gemini 1.5 Pro, Gemini 1.5 Flash. <a href="https://aistudio.google.com/app/apikey" target="_blank">Obter chave</a></p>
+            <div class="form-group">
+                <label>Chave da API Google</label>
+                <input type="password" id="google_api_key" placeholder="AIza...">
+            </div>
+        </div>
+        
+        <!-- NOVA SEÇÃO: GERENCIAMENTO DE ASSISTENTES -->
+        <div class="card">
+            <h2>🤖 Gerenciar Assistentes</h2>
+            <p>Visualize e gerencie os assistentes ativos no sistema.</p>
+            <div id="assistants-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; margin-top: 15px;">
+                <!-- Preenchido via JS -->
+                <p style="color: #888; font-size: 14px;">Carregando assistentes...</p>
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 10px; margin-top: 30px;">
+            <button class="btn-voltar" onclick="window.location.href='/desktop'">← Voltar ao Desktop</button>
+            <button onclick="salvarConfig()">💾 Salvar Configurações de API</button>
+        </div>
+    </div>
+    
+    <script>
+        // Carregar configurações atuais
+        fetch('/api/config')
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('groq_api_key').value = data.groq_api_key || '';
+                document.getElementById('openai_api_key').value = data.openai_api_key || '';
+                document.getElementById('anthropic_api_key').value = data.anthropic_api_key || '';
+                document.getElementById('google_api_key').value = data.google_api_key || '';
+                
+                // Atualizar status
+                updateStatus('groq', data.groq_api_key_configured);
+                updateStatus('openai', data.openai_api_key_configured);
+                updateStatus('anthropic', data.anthropic_api_key_configured);
+                updateStatus('google', data.google_api_key_configured);
+            });
+        
+        function updateStatus(provider, configured) {
+            const el = document.getElementById('status-' + provider);
+            if (el) {
+                el.className = 'status ' + (configured ? 'configured' : 'pending');
+                el.textContent = configured ? 'Configurada' : 'Pendente';
+            }
+        }
+        
+        function salvarConfig() {
+            const data = {
+                groq_api_key: document.getElementById('groq_api_key').value,
+                openai_api_key: document.getElementById('openai_api_key').value,
+                anthropic_api_key: document.getElementById('anthropic_api_key').value,
+                google_api_key: document.getElementById('google_api_key').value,
+            };
+            
+            fetch('/api/config', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            })
+            .then(res => res.json())
+            .then(result => {
+                if (result.success) {
+                    const msg = document.getElementById('successMsg');
+                    msg.style.display = 'block';
+                    setTimeout(() => msg.style.display = 'none', 3000);
+                    
+                    // Recarregar para atualizar status
+                    setTimeout(() => location.reload(), 1000);
+                }
+            });
+        }
+    
+        // Carregar lista de assistentes ativos
+        fetch('/api/assistants')
+            .then(res => res.json())
+            .then(assistants => {
+                const listEl = document.getElementById('assistants-list');
+                if (assistants && assistants.length > 0) {
+                    listEl.innerHTML = assistants.map(a => `
+                        <div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: space-between;">
+                            <div>
+                                <div style="font-weight: bold; color: #00bcd4;">${a.display_name || a.name}</div>
+                                <div style="font-size: 12px; color: #aaa; margin-top: 4px;">${a.specialty || 'Assistente'}</div>
+                            </div>
+                            <button onclick='openEditModal(${JSON.stringify(a)})' style="background: #ff9800; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: bold; flex-shrink: 0;">✏️ Editar</button>
+                        </div>
+                    `).join('');
+                } else {
+                    listEl.innerHTML = '<p style="color: #888;">Nenhum assistente ativo encontrado.</p>';
+                }
+            });
+    
+    
+    // Funções de Edição
+    function openEditModal(assistant) {
+        document.getElementById('edit-name-id').value = assistant.name;
+        document.getElementById('edit-display').value = assistant.display_name || assistant.name;
+        document.getElementById('edit-specialty').value = assistant.specialty || '';
+        document.getElementById('edit-color').value = assistant.color || '#8b5cf6';
+        document.getElementById('edit-prompt').value = assistant.prompt || '';
+        document.getElementById('edit-modal').style.display = 'flex';
+    }
+    
+    function closeEditModal() {
+        document.getElementById('edit-modal').style.display = 'none';
+    }
+
+    async function saveEditAssistant() {
+        const data = {
+            name: document.getElementById('edit-name-id').value,
+            display_name: document.getElementById('edit-display').value,
+            specialty: document.getElementById('edit-specialty').value,
+            color: document.getElementById('edit-color').value,
+            prompt: document.getElementById('edit-prompt').value
+        };
+
+        try {
+            const res = await fetch('/api/assistants/update', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            });
+            const result = await res.json();
+            
+            if(result.success) {
+                alert('✅ ' + result.message);
+                closeEditModal();
+                location.reload();
+            } else {
+                alert('❌ Erro: ' + result.error);
+            }
+        } catch(e) {
+            alert('❌ Erro de conexão.');
+        }
+    }
+
+    </script>
+
+        <!-- Modal de Edição -->
+        <div id="edit-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; justify-content: center; align-items: center;">
+            <div style="background: #1e1e2e; padding: 30px; border-radius: 12px; width: 90%; max-width: 500px; border: 1px solid rgba(255,255,255,0.1);">
+                <h3 style="color: #ff9800; margin-top: 0;">✏️ Editar Assistente</h3>
+                <input type="hidden" id="edit-name-id">
+                <div style="margin-bottom: 15px;">
+                    <label style="color: #aaa; font-size: 12px;">Nome de Exibição</label>
+                    <input type="text" id="edit-display" style="width: 100%; padding: 10px; background: #2d2d2d; border: 1px solid #444; color: white; border-radius: 6px;">
+                </div>
+                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                    <div style="flex: 1;">
+                        <label style="color: #aaa; font-size: 12px;">Especialidade</label>
+                        <input type="text" id="edit-specialty" style="width: 100%; padding: 10px; background: #2d2d2d; border: 1px solid #444; color: white; border-radius: 6px;">
+                    </div>
+                    <div style="width: 80px;">
+                        <label style="color: #aaa; font-size: 12px;">Cor</label>
+                        <input type="color" id="edit-color" style="width: 100%; height: 38px; background: transparent; border: none; cursor: pointer;">
+                    </div>
+                </div>
+                <div style="margin-bottom: 20px;">
+                    <label style="color: #aaa; font-size: 12px;">Prompt do Sistema (Personalidade)</label>
+                    <textarea id="edit-prompt" rows="5" style="width: 100%; padding: 10px; background: #2d2d2d; border: 1px solid #444; color: white; border-radius: 6px; resize: vertical; font-family: monospace; font-size: 12px;"></textarea>
+                </div>
+                <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                    <button onclick="closeEditModal()" style="background: #444; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer;">Cancelar</button>
+                    <button onclick="saveEditAssistant()" style="background: #ff9800; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold;">💾 Salvar Alterações</button>
+                </div>
+            </div>
+        </div>
+
+    </body>
+</html>

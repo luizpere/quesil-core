@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ThinkinOS - Wiki e Ajuda</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%);
+            color: #e0e0e0;
+            line-height: 1.6;
+            padding: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        h1 {
+            color: #6200ea;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        .subtitle {
+            text-align: center;
+            color: #00bcd4;
+            margin-bottom: 40px;
+            font-size: 1.1em;
+        }
+        h2 {
+            color: #00bcd4;
+            margin: 30px 0 15px 0;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #6200ea;
+        }
+        h3 {
+            color: #4fc3f7;
+            margin: 20px 0 10px 0;
+        }
+        .feature-box {
+            background: rgba(98, 0, 234, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 15px 0;
+            border-left: 4px solid #6200ea;
+        }
+        .feature-box h3 {
+            margin-top: 0;
+        }
+        ul {
+            margin-left: 20px;
+        }
+        li {
+            margin: 10px 0;
+        }
+        .command {
+            background: #1a1a2e;
+            padding: 8px 15px;
+            border-radius: 5px;
+            font-family: monospace;
+            color: #00ff00;
+            display: inline-block;
+            margin: 5px 0;
+        }
+        .btn {
+            display: inline-block;
+            background: linear-gradient(135deg, #6200ea, #00bcd4);
+            color: white;
+            padding: 12px 30px;
+            border-radius: 25px;
+            text-decoration: none;
+            margin: 20px 10px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(98, 0, 234, 0.6);
+        }
+        .copyright {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            color: #888;
+            font-size: 0.9em;
+        }
+        .emoji {
+            font-size: 1.2em;
+            margin-right: 5px;
+        }
+        code {
+            background: #1a1a2e;
+            padding: 2px 8px;
+            border-radius: 4px;
+            color: #4fc3f7;
+        }
+        
+        /* RESPONSIVO */
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            .container { padding: 20px; }
+            h1 { font-size: 1.8em; }
+            h2 { font-size: 1.4em; }
+            h3 { font-size: 1.1em; }
+            .btn {
+                display: block;
+                margin: 10px auto;
+                text-align: center;
+            }
+            .feature-box { padding: 15px; }
+            .command {
+                font-size: 0.85em;
+                padding: 6px 10px;
+            }
+        }
+        
+        @media (min-width: 769px) and (max-width: 1024px) {
+            .container { padding: 30px; }
+            h1 { font-size: 2.2em; }
+        }
+        
+        @media (min-width: 1025px) {
+            .container { padding: 50px; }
+            h1 { font-size: 2.8em; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧠 ThinkinOS Platform</h1>
+        <p class="subtitle">Assistente de IA com Memória e Interface Inteligente</p>
+
+        <div style="text-align: center;">
+            <a href="/" class="btn">← Voltar para o Chat</a>
+        </div>
+
+        <h2><span class="emoji">📖</span>Sobre o ThinkinOS</h2>
+        <p>O ThinkinOS é uma plataforma avançada de assistente de Inteligência Artificial que combina processamento de linguagem natural com memória de longo prazo e interface intuitiva e personalizável.</p>
+
+        <h2><span class="emoji">✨</span>Principais Funcionalidades</h2>
+
+        <div class="feature-box">
+            <h3><span class="emoji">🧠</span>Memória de Longo Prazo</h3>
+            <p>A IA lembra informações sobre você entre as conversas. Você pode adicionar fatos sobre si mesmo e a IA usará essas informações para personalizar as respostas.</p>
+            <ul>
+                <li><strong>Como usar:</strong> Clique no botão <code>🧠 Memórias</code></li>
+                <li><strong>Adicionar:</strong> Digite uma informação e clique em "Salvar"</li>
+                <li><strong>Remover:</strong> Clique no ícone <code>🗑️</code> ao lado da memória</li>
+            </ul>
+        </div>
+
+        <div class="feature-box">
+            <h3><span class="emoji">🎨</span>Temas Personalizáveis</h3>
+            <p>Personalize a aparência do sistema com 6 temas diferentes para combinar com seu estilo.</p>
+            <ul>
+                <li><strong>Dark:</strong> Tema escuro padrão (preto/cinza)</li>
+                <li><strong>Light:</strong> Tema claro (branco/cinza)</li>
+                <li><strong>Blue:</strong> Tema azul</li>
+                <li><strong>Green:</strong> Tema verde</li>
+                <li><strong>Purple:</strong> Tema roxo</li>
+                <li><strong>Neon:</strong> Tema neon com bordas cyan brilhantes</li>
+            </ul>
+            <p><strong>Como usar:</strong> Clique nas bolinhas coloridas no menu lateral para alternar entre os temas.</p>
+        </div>
+
+        <div class="feature-box">
+            <h3><span class="emoji">🔍</span>Busca de Mensagens</h3>
+            <p>Encontre rapidamente mensagens antigas nas suas conversas.</p>
+            <ul>
+                <li><strong>Como usar:</strong> Digite no campo "Buscar mensagens..." no menu lateral</li>
+                <li>O sistema filtrará automaticamente as mensagens que contêm o termo buscado</li>
+            </ul>
+        </div>
+
+        <div class="feature-box">
+            <h3><span class="emoji">🗑️</span>Gerenciamento de Conversas</h3>
+            <p>Controle total sobre suas conversas e dados.</p>
+            <ul>
+                <li><strong>Apagar conversa com assistente:</strong> Clique no ícone <code>🗑️</code> ao lado do nome do assistente</li>
+                <li><strong>Apagar memória:</strong> Clique no ícone <code>🗑️</code> ao lado da memória no modal de Memórias</li>
+            </ul>
+        </div>
+
+        <div class="feature-box">
+            <h3><span class="emoji">📲</span>App Nativo (PWA)</h3>
+            <p>Instale o ThinkinOS como um aplicativo nativo no seu celular.</p>
+            <ul>
+                <li><strong>Android:</strong> Menu do Chrome → "Adicionar à tela inicial"</li>
+                <li><strong>iOS:</strong> Compartilhar → "Adicionar à Tela de Início"</li>
+                <li>O app abre em tela cheia, sem barra de navegador</li>
+            </ul>
+        </div>
+
+        <h2><span class="emoji">🤖</span>Assistentes Disponíveis</h2>
+        <p>O ThinkinOS conta com diversos assistentes especializados:</p>
+        <ul>
+            <li><strong>Lena</strong> - Criatividade e inovação</li>
+            <li><strong>Pedro</strong> - Análise e lógica</li>
+            <li><strong>Carlos</strong> - Tecnologia e programação</li>
+            <li><strong>ThinkinIA</strong> - Arquiteto em Software</li>
+            <li><strong>Ana</strong> - Produtividade e organização</li>
+            <li><strong>Júlia</strong> - Escrita e idiomas</li>
+            <li><strong>Rafael</strong> - Dados e negócios</li>
+            <li><strong>Qwen</strong> - Raciocínio lógico e análise</li>
+            <li>E muitos outros especialistas!</li>
+        </ul>
+
+        <h2><span class="emoji">💡</span>Dicas de Uso</h2>
+        <ul>
+            <li>Adicione informações sobre você nas memórias para respostas mais personalizadas</li>
+            <li>Use temas diferentes para diferentes momentos do dia</li>
+            <li>Utilize a busca para encontrar conversas antigas rapidamente</li>
+            <li>Apague conversas antigas para manter o sistema organizado</li>
+            <li>Instale como app no celular para acesso rápido</li>
+        </ul>
+
+        <h2><span class="emoji">🔧</span>Requisitos Técnicos</h2>
+        <ul>
+            <li><strong>Navegador:</strong> Chrome, Edge, Firefox ou Safari (versões recentes)</li>
+            <li><strong>Internet:</strong> Conexão estável necessária</li>
+            <li><strong>Armazenamento:</strong> Espaço para cache do navegador</li>
+        </ul>
+
+        <div class="copyright">
+            <p><strong>ThinkinOS Platform</strong></p>
+            <p>Desenvolvido por <strong>Luiz Pereira</strong></p>
+            <p>© 2026 - Todos os direitos reservados</p>
+            <p style="margin-top: 10px; font-size: 0.85em;">
+                Powered by Groq AI • Python • Flask • JavaScript
+            </p>
+        </div>
+
+        <div style="text-align: center; margin-top: 30px;">
+            <a href="/" class="btn">← Voltar para o Chat</a>
+        </div>
+    </div>
+
+        
+    <!-- Botão Voltar ao Desktop (Inferior Direito) -->
+    <a href="/desktop" class="btn-voltar-desktop" style="position:fixed; bottom:30px; right:30px; background:linear-gradient(135deg, #6200ea, #00bcd4); color:white; padding:15px 25px; border-radius:30px; text-decoration:none; font-weight:bold; box-shadow:0 6px 20px rgba(98,0,234,0.5); z-index:999; transition:all 0.3s; display:flex; align-items:center; gap:10px; font-size:1.1em;" onmouseover="this.style.transform='translateY(-5px) scale(1.05)'; this.style.boxShadow='0 8px 25px rgba(98,0,234,0.7)'" onmouseout="this.style.transform='translateY(0) scale(1)'; this.style.boxShadow='0 6px 20px rgba(98,0,234,0.5)'">
+        🖥️ <span>Desktop</span>
+    </a>
+
+</body>
+</html>

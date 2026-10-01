@@ -1,0 +1,1887 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <meta name="version" content="1789321864">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ThinkinOS v2.0</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            background: #0a0a0a; 
+            color: #fff; 
+            font-family: 'Segoe UI', sans-serif; 
+            min-height: 100vh;
+            padding-bottom: 100px;
+        }
+        .header { 
+            padding: 20px; 
+            border-bottom: 1px solid #333;
+            position: relative;
+        }
+        .logout-btn { 
+            position: absolute; 
+            top: 20px; 
+            right: 20px; 
+            background: #f44336; 
+            color: white; 
+            padding: 10px 20px; 
+            border: none; 
+            border-radius: 4px; 
+            cursor: pointer; 
+        }
+        .grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); 
+            gap: 20px; 
+            padding: 20px; 
+        }
+        .card { 
+            background: #1a1a1a; 
+            border-radius: 8px; 
+            padding: 20px; 
+            border-left: 4px solid #4caf50; 
+            cursor: pointer; 
+            transition: transform 0.2s; 
+        }
+        .card:hover { transform: translateY(-5px); }
+        .card-header { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            margin-bottom: 10px; 
+        }
+        .card-title { font-size: 1.5em; font-weight: bold; }
+        .card-category { color: #4caf50; font-size: 0.9em; margin-bottom: 10px; }
+        .card-desc { color: #888; font-size: 0.95em; line-height: 1.5; }
+        
+        /* DOCK HORIZONTAL */
+        .dock {
+            position: fixed !important;
+            bottom: 20px !important;
+            left: 50% !important;
+            transform: translateX(-50%) !important;
+            background: rgba(30, 30, 30, 0.95) !important;
+            border-radius: 16px !important;
+            padding: 10px 20px !important;
+            display: flex !important;
+            flex-direction: row !important;
+            gap: 10px !important;
+            z-index: 100 !important;
+            border: 1px solid #444 !important;
+        }
+        .dock-item {
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            cursor: pointer !important;
+            padding: 8px 12px !important;
+            border-radius: 8px !important;
+            color: #fff !important;
+            text-decoration: none !important;
+        }
+        .dock-item:hover { background: rgba(255,255,255,0.15) !important; }
+        .dock-icon { font-size: 1.8em !important; }
+        .dock-label { font-size: 0.75em !important; margin-top: 4px !important; }
+        
+        /* MODAL VM */
+        .vm-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7);
+            z-index: 1000;
+        }
+        .vm-overlay.active { display: block; }
+        .vm-modal {
+            display: none;
+            position: fixed;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            background: #1a1a1a;
+            border-radius: 12px;
+            padding: 20px;
+            max-width: 900px; max-height: 80vh; overflow-y: auto;
+            width: 90%;
+            z-index: 1001;
+            border: 1px solid #444;
+        }
+        .vm-modal.active { display: block; }
+        .vm-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #333;
+        }
+        .close-btn { background: none; border: none; color: #fff; font-size: 2em; cursor: pointer; }
+        .vm-actions { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+        .vm-list { background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; min-height: 100px; }
+        .vm-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #333;
+        }
+        .status-running { color: #4caf50; }
+        .status-exited { color: #f44336; }
+        .btn { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; margin: 5px; }
+        .btn-primary { background: #2196F3; color: white; }
+        .btn-danger { background: #f44336; color: white; }
+    
+/* Glassmorphism Effects */
+.vm-modal {
+    background: rgba(30, 30, 40, 0.95) !important;
+    /* backdrop-filter: blur */(20px) !important;
+    -webkit-/* backdrop-filter: blur */(20px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 
+                inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+}
+
+#chat-modal {
+    background: #14141e !important;
+    /* backdrop-filter: blur */(20px) !important;
+    -webkit-/* backdrop-filter: blur */(20px) !important;
+    border: 1px solid rgba(100, 150, 255, 0.2) !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6),
+                0 0 60px rgba(100, 150, 255, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+}
+
+.vm-overlay {
+    background: #000000 !important;
+    /* backdrop-filter: blur */(4px) !important;
+    -webkit-/* backdrop-filter: blur */(4px) !important;
+}
+
+/* Chat Messages com Glassmorphism */
+#chat-messages {
+    background: rgba(10, 10, 20, 0.6) !important;
+    /* backdrop-filter: blur */(10px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.05) !important;
+    box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Input do Chat */
+#chat-input {
+    background: rgba(30, 30, 40, 0.8) !important;
+    /* backdrop-filter: blur */(10px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Botões com Glassmorphism */
+.btn-primary {
+    background: linear-gradient(135deg, rgba(33, 150, 243, 0.8), rgba(33, 150, 243, 0.6)) !important;
+    /* backdrop-filter: blur */(10px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    box-shadow: 0 4px 15px rgba(33, 150, 243, 0.3) !important;
+    /* transition removida */ !important;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, rgba(33, 150, 243, 0.9), rgba(33, 150, 243, 0.7)) !important;
+    box-shadow: 0 6px 20px rgba(33, 150, 243, 0.4) !important;
+    /* transform removida */ !important;
+}
+
+/* VM List com Glassmorphism */
+.vm-list {
+    background: #000000 !important;
+    /* backdrop-filter: blur */(10px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.05) !important;
+}
+
+.vm-row {
+    background: rgba(255, 255, 255, 0.02) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+    transition: background 0.2s ease !important;
+}
+
+.vm-row:hover {
+    background: rgba(255, 255, 255, 0.05) !important;
+}
+
+/* Terminal Container */
+#terminal-container {
+    background: #000000 !important;
+    /* backdrop-filter: blur */(5px) !important;
+    box-shadow: inset 0 2px 20px rgba(0, 0, 0, 0.5) !important;
+    min-height: 500px !important;
+    width: 100% !important;
+    padding: 10px !important;
+    border-radius: 4px !important;
+    box-sizing: border-box !important;
+}
+
+.xterm {
+    padding: 10px !important;
+    height: 100% !important;
+}
+
+.xterm-viewport {
+    overflow-y: auto !important;
+}
+
+/* Modal Header */
+.vm-header {
+    background: rgba(255, 255, 255, 0.03) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+</style>
+
+    <!-- xterm.js para Terminal Web -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.min.js">
+// === TERMINAL WEB ===
+let terminal = null;
+let socket = null;
+let currentContainerId = null;
+
+function openTerminal(containerId, containerName) {
+    console.log("Abrindo terminal para:", containerId, containerName);
+    currentContainerId = containerId;
+    document.getElementById('terminal-container-name').textContent = containerName;
+    document.getElementById('terminal-modal').classList.add('active');
+    document.getElementById('terminal-overlay').classList.add('active');
+    
+    // Inicializar xterm.js
+    if (!terminal) {
+        terminal = new Terminal({
+            cursorBlink: true,
+            fontSize: 14,
+            fontFamily: '"Courier New", Courier, monospace',
+            theme: { background: '#000', foreground: '#0f0', cursor: '#0f0' }
+        });
+        window.fitAddon = new FitAddon.FitAddon();
+        terminal.loadAddon(fitAddon);
+        terminal.open(document.getElementById('terminal-container'));
+        fitAddon.fit();
+        
+        let currentLine = '';
+        
+        // Capturar input do teclado - acumular até Enter
+        terminal.onKey(e => {
+            const ev = e.domEvent;
+            
+            if (ev.key === 'Enter') {
+                // Enviar comando completo
+                console.log("Enviando comando:", currentLine);
+                terminal.write('\r\n');
+                if (socket && socket.connected && currentLine.trim()) {
+                    socket.emit('terminal_input', { 
+                        container_id: currentContainerId, 
+                        command: currentLine 
+                    });
+                }
+                currentLine = '';
+            } else if (ev.key === 'Backspace') {
+                if (currentLine.length > 0) {
+                    currentLine = currentLine.slice(0, -1);
+                    terminal.write('\b \b');
+                }
+            } else if (e.key.length === 1) {
+                currentLine += e.key;
+                terminal.write(e.key);
+            }
+        });
+    }
+    
+    // Conectar Socket.IO
+    socket = io();
+    
+    socket.on('connect', () => {
+        console.log("Socket.IO conectado");
+        terminal.write('\r\n\x1b[32mConectado ao container ' + containerId + '\x1b[0m\r\n');
+        terminal.write('# ');
+    });
+    
+    socket.on('terminal_output', (data) => {
+        console.log("Recebido do servidor:", data.output);
+        terminal.write(data.output);
+        if (!data.output.endsWith('\n')) {
+            terminal.write('\r\n# ');
+        } else {
+            terminal.write('# ');
+        }
+    });
+    
+    socket.on('disconnect', () => {
+        terminal.write('\r\n\x1b[31mConexão perdida.\x1b[0m\r\n');
+    });
+}
+
+function closeTerminal() {
+    console.log("Fechando terminal");
+    if (socket) {
+        socket.disconnect();
+        socket = null;
+    }
+    if (terminal) {
+        terminal.dispose();
+        terminal = null;
+    }
+    document.getElementById('terminal-modal').classList.remove('active');
+    document.getElementById('terminal-overlay').classList.remove('active');
+}
+
+
+function showComingSoon(feature) {
+    alert(feature + ' - Em desenvolvimento!\n\nEsta funcionalidade estará disponível em breve.');
+}
+
+
+// Função para re-ajustar o terminal quando o modal abre
+function refitTerminal() {
+    if (terminal && typeof fitAddon !== 'undefined' && fitAddon) {
+        setTimeout(() => {
+            try {
+                fitAddon.fit();
+                console.log("Terminal redimensionado:", terminal.cols, "x", terminal.rows);
+            } catch (e) {
+                console.error("Erro ao redimensionar:", e);
+            }
+        }, 300);
+    }
+}
+
+</script>
+    <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.min.js">
+// === TERMINAL WEB ===
+let terminal = null;
+let socket = null;
+let currentContainerId = null;
+
+function openTerminal(containerId, containerName) {
+    console.log("Abrindo terminal para:", containerId, containerName);
+    currentContainerId = containerId;
+    document.getElementById('terminal-container-name').textContent = containerName;
+    document.getElementById('terminal-modal').classList.add('active');
+    document.getElementById('terminal-overlay').classList.add('active');
+    
+    // Inicializar xterm.js
+    if (!terminal) {
+        terminal = new Terminal({
+            cursorBlink: true,
+            fontSize: 14,
+            fontFamily: '"Courier New", Courier, monospace',
+            theme: { background: '#000', foreground: '#0f0', cursor: '#0f0' }
+        });
+        window.fitAddon = new FitAddon.FitAddon();
+        terminal.loadAddon(fitAddon);
+        terminal.open(document.getElementById('terminal-container'));
+        fitAddon.fit();
+        
+        let currentLine = '';
+        
+        // Capturar input do teclado - acumular até Enter
+        terminal.onKey(e => {
+            const ev = e.domEvent;
+            
+            if (ev.key === 'Enter') {
+                // Enviar comando completo
+                console.log("Enviando comando:", currentLine);
+                terminal.write('\r\n');
+                if (socket && socket.connected && currentLine.trim()) {
+                    socket.emit('terminal_input', { 
+                        container_id: currentContainerId, 
+                        command: currentLine 
+                    });
+                }
+                currentLine = '';
+            } else if (ev.key === 'Backspace') {
+                if (currentLine.length > 0) {
+                    currentLine = currentLine.slice(0, -1);
+                    terminal.write('\b \b');
+                }
+            } else if (e.key.length === 1) {
+                currentLine += e.key;
+                terminal.write(e.key);
+            }
+        });
+    }
+    
+    // Conectar Socket.IO
+    socket = io();
+    
+    socket.on('connect', () => {
+        console.log("Socket.IO conectado");
+        terminal.write('\r\n\x1b[32mConectado ao container ' + containerId + '\x1b[0m\r\n');
+        terminal.write('# ');
+    });
+    
+    socket.on('terminal_output', (data) => {
+        console.log("Recebido do servidor:", data.output);
+        terminal.write(data.output);
+        if (!data.output.endsWith('\n')) {
+            terminal.write('\r\n# ');
+        } else {
+            terminal.write('# ');
+        }
+    });
+    
+    socket.on('disconnect', () => {
+        terminal.write('\r\n\x1b[31mConexão perdida.\x1b[0m\r\n');
+    });
+}
+
+function closeTerminal() {
+    console.log("Fechando terminal");
+    if (socket) {
+        socket.disconnect();
+        socket = null;
+    }
+    if (terminal) {
+        terminal.dispose();
+        terminal = null;
+    }
+    document.getElementById('terminal-modal').classList.remove('active');
+    document.getElementById('terminal-overlay').classList.remove('active');
+}
+
+
+function showComingSoon(feature) {
+    alert(feature + ' - Em desenvolvimento!\n\nEsta funcionalidade estará disponível em breve.');
+}
+
+
+// Função para re-ajustar o terminal quando o modal abre
+function refitTerminal() {
+    if (terminal && typeof fitAddon !== 'undefined' && fitAddon) {
+        setTimeout(() => {
+            try {
+                fitAddon.fit();
+                console.log("Terminal redimensionado:", terminal.cols, "x", terminal.rows);
+            } catch (e) {
+                console.error("Erro ao redimensionar:", e);
+            }
+        }, 300);
+    }
+}
+
+</script>
+    <!-- Socket.IO -->
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js">
+// === TERMINAL WEB ===
+let terminal = null;
+let socket = null;
+let currentContainerId = null;
+
+function openTerminal(containerId, containerName) {
+    console.log("Abrindo terminal para:", containerId, containerName);
+    currentContainerId = containerId;
+    document.getElementById('terminal-container-name').textContent = containerName;
+    document.getElementById('terminal-modal').classList.add('active');
+    document.getElementById('terminal-overlay').classList.add('active');
+    
+    // Inicializar xterm.js
+    if (!terminal) {
+        terminal = new Terminal({
+            cursorBlink: true,
+            fontSize: 14,
+            fontFamily: '"Courier New", Courier, monospace',
+            theme: { background: '#000', foreground: '#0f0', cursor: '#0f0' }
+        });
+        window.fitAddon = new FitAddon.FitAddon();
+        terminal.loadAddon(fitAddon);
+        terminal.open(document.getElementById('terminal-container'));
+        fitAddon.fit();
+        
+        let currentLine = '';
+        
+        // Capturar input do teclado - acumular até Enter
+        terminal.onKey(e => {
+            const ev = e.domEvent;
+            
+            if (ev.key === 'Enter') {
+                // Enviar comando completo
+                console.log("Enviando comando:", currentLine);
+                terminal.write('\r\n');
+                if (socket && socket.connected && currentLine.trim()) {
+                    socket.emit('terminal_input', { 
+                        container_id: currentContainerId, 
+                        command: currentLine 
+                    });
+                }
+                currentLine = '';
+            } else if (ev.key === 'Backspace') {
+                if (currentLine.length > 0) {
+                    currentLine = currentLine.slice(0, -1);
+                    terminal.write('\b \b');
+                }
+            } else if (e.key.length === 1) {
+                currentLine += e.key;
+                terminal.write(e.key);
+            }
+        });
+    }
+    
+    // Conectar Socket.IO
+    socket = io();
+    
+    socket.on('connect', () => {
+        console.log("Socket.IO conectado");
+        terminal.write('\r\n\x1b[32mConectado ao container ' + containerId + '\x1b[0m\r\n');
+        terminal.write('# ');
+    });
+    
+    socket.on('terminal_output', (data) => {
+        console.log("Recebido do servidor:", data.output);
+        terminal.write(data.output);
+        if (!data.output.endsWith('\n')) {
+            terminal.write('\r\n# ');
+        } else {
+            terminal.write('# ');
+        }
+    });
+    
+    socket.on('disconnect', () => {
+        terminal.write('\r\n\x1b[31mConexão perdida.\x1b[0m\r\n');
+    });
+}
+
+function closeTerminal() {
+    console.log("Fechando terminal");
+    if (socket) {
+        socket.disconnect();
+        socket = null;
+    }
+    if (terminal) {
+        terminal.dispose();
+        terminal = null;
+    }
+    document.getElementById('terminal-modal').classList.remove('active');
+    document.getElementById('terminal-overlay').classList.remove('active');
+}
+
+
+function showComingSoon(feature) {
+    alert(feature + ' - Em desenvolvimento!\n\nEsta funcionalidade estará disponível em breve.');
+}
+
+
+// Função para re-ajustar o terminal quando o modal abre
+function refitTerminal() {
+    if (terminal && typeof fitAddon !== 'undefined' && fitAddon) {
+        setTimeout(() => {
+            try {
+                fitAddon.fit();
+                console.log("Terminal redimensionado:", terminal.cols, "x", terminal.rows);
+            } catch (e) {
+                console.error("Erro ao redimensionar:", e);
+            }
+        }, 300);
+    }
+}
+
+</script>
+
+</head>
+<body>
+    <div class="header">
+        <h1>ThinkinOS <span style="color: #4caf50;">v2.0</span></h1>
+        <div style="position: absolute; top: 20px; right: 120px; color: #fff; font-size: 1.1em; font-family: 'Courier New', monospace;" id="clock">00:00:00</div>
+        <button class="logout-btn" onclick="location.href='/logout'">Sair</button>
+    </div>
+    
+    <div id="assistants-container" class="grid"></div>
+
+    <!-- DOCK -->
+    <div class="dock">
+        <a class="dock-item" href="/desktop"><span class="dock-icon">🏠</span><span class="dock-label">Início</span></a>
+        <a class="dock-item" onclick="window.openFM()"><span class="dock-icon">📁</span><span class="dock-label">Arquivos</span></a>
+        <a class="dock-item" onclick="openChat('Ana')"><span class="dock-icon">💬</span><span class="dock-label">Chat</span></a>
+        <a class="dock-item" href="/perfil"><span class="dock-icon">👤</span><span class="dock-label">Perfil</span></a>
+        <a class="dock-item" onclick="showComingSoon('Gestão')"><span class="dock-icon">⚙️</span><span class="dock-label">Gestão</span></a>
+        <a class="dock-item" onclick="showComingSoon('Novo Assistente')"><span class="dock-icon">➕</span><span class="dock-label">Novo</span></a>
+    </div>
+
+    <!-- VM MODAL -->
+    <div class="vm-overlay" id="vm-overlay" onclick="closeVMManager()"></div>
+    <div class="vm-modal" id="vm-modal">
+        <div class="vm-header">
+            <h2> Gerenciador de Máquinas Virtuais</h2>
+            <button class="close-btn" onclick="closeVMManager()">&times;</button>
+        </div>
+        <div class="vm-actions">
+            <button class="btn btn-primary" onclick="startVM('alpine')">▶ Ligar Alpine</button>
+            <button class="btn btn-primary" onclick="startVM('ubuntu')" style="background: #E95420;">▶ Ligar Ubuntu</button>
+            <button class="btn" onclick="loadVMs()" style="background: #555; color: white;">🔄 Atualizar</button>
+        </div>
+        <div class="vm-list" id="vm-list"><p style="text-align: center; color: #888;">Carregando...</p></div>
+    </div>
+
+    
+
+<!-- Modal do Terminal Web -->
+<div class="vm-overlay" id="terminal-overlay" onclick="closeTerminal()"></div>
+<div class="vm-modal" id="terminal-modal" style="max-width: 1000px;">
+    <div class="vm-header">
+        <h2>💻 Terminal - <span id="terminal-container-name">Container</span></h2>
+        <button class="close-btn" onclick="closeTerminal()">&times;</button>
+    </div>
+    <div id="terminal-container" style="height: 500px; background: #000; padding: 10px; border-radius: 4px;"></div>
+</div>
+
+
+<!-- Modal de Chat Funcional -->
+<div class="vm-overlay" id="chat-overlay" onclick="closeChatModal()"></div>
+<div class="vm-modal" id="chat-modal" style="max-width: 800px;">
+    <div class="vm-header">
+        <h2>💬 Chat com <span id="chat-assistant-name">Assistente</span></h2>
+        <button class="close-btn" onclick="closeChatModal()">&times;</button>
+    </div>
+    <div id="chat-messages" style="height: 400px; overflow-y: auto; background: #0a0a0a; padding: 15px; border-radius: 4px; margin-bottom: 10px;"></div>
+    <div style="display: flex; gap: 10px;">
+        <input type="text" id="chat-input" placeholder="Digite sua mensagem..." 
+               style="flex: 1; padding: 10px; border-radius: 4px; border: 1px solid #444; background: #1a1a1a; color: #fff;"
+               onkeypress="if(event.key === 'Enter') sendChatMessage()">
+        <button class="btn btn-primary" onclick="sendChatMessage()">Enviar</button>
+    </div>
+</div>
+
+
+<script>
+// === VARIÁVEIS GLOBAIS ===
+let currentAssistant = 'Ana';
+let conversationHistory = [];
+
+// === CARREGAMENTO DE ASSISTENTES ===
+async function loadAssistants() {
+    try {
+        const resp = await fetch('/api/assistants');
+        const assistants = await resp.json();
+        console.log("ASSISTENTES:", assistants.length);
+        
+        const container = document.getElementById('assistants-container');
+        container.innerHTML = '';
+        
+        assistants.forEach(agent => {
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.style.borderLeftColor = agent.color || '#4caf50';
+            card.innerHTML = `
+                <div class="card-header">
+                    <div class="card-title">${agent.display_name || agent.name}</div>
+                    <div>${agent.icon || ''}</div>
+                </div>
+                <div class="card-category">${agent.profile === 'custom' ? 'PERSONALIZADO' : 'GERAL'}</div>
+                <div class="card-desc">${(agent.description || agent.prompt || '').substring(0, 100)}...</div>
+            `;
+            card.onclick = () => openChat(agent.display_name || agent.name);
+            container.appendChild(card);
+        });
+        
+        // Card de VMs
+        const vmCard = document.createElement('div');
+        vmCard.className = 'card';
+        vmCard.style.borderLeftColor = '#0db7ed';
+        vmCard.innerHTML = `
+            <div class="card-header"><div class="card-title">Máquinas Virtuais</div><div>🐧</div></div>
+        
+        <!-- Card Dashboard V5.0 -->
+            </div>
+            <div class="card-category">SISTEMA</div>
+        </div>
+
+            <div class="card-category">Virtualização</div>
+            <div class="card-desc">Gerencie containers Linux diretamente pelo ThinkinOS.</div>
+        `;
+        vmCard.onclick = openVMManager;
+        container.appendChild(vmCard);
+        
+        console.log("Total de cards:", document.querySelectorAll('.card').length);
+    } catch (e) {
+        console.error("Erro ao carregar assistentes:", e);
+    }
+}
+
+// === SISTEMA DE CHAT ===
+function openChat(assistant) {
+    console.log("Abrindo chat com:", assistant);
+    currentAssistant = assistant;
+    conversationHistory = [];
+    document.getElementById('chat-assistant-name').textContent = assistant;
+    document.getElementById('chat-modal').classList.add('active');
+    document.getElementById('chat-overlay').classList.add('active');
+    document.getElementById('chat-messages').innerHTML = '<div style="text-align: center; color: #888; padding: 20px;">Conversando com ' + assistant + '<br><small>Digite uma mensagem para começar</small></div>';
+    document.getElementById('chat-input').value = '';
+    document.getElementById('chat-input').focus();
+}
+
+function closeChatModal() {
+    document.getElementById('chat-modal').classList.remove('active');
+    document.getElementById('chat-overlay').classList.remove('active');
+}
+
+async function sendChatMessage() {
+    const input = document.getElementById('chat-input');
+    const message = input.value.trim();
+    if (!message) return;
+    
+    const messagesDiv = document.getElementById('chat-messages');
+    
+    // Adicionar mensagem do usuário
+    messagesDiv.innerHTML += '<div style="margin: 10px 0; text-align: right;"><span style="background: #2196F3; color: white; padding: 8px 12px; border-radius: 8px; display: inline-block;">' + message + '</span></div>';
+    input.value = '';
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    
+    // Adicionar indicador de digitação
+    messagesDiv.innerHTML += '<div id="typing-indicator" style="margin: 10px 0; color: #888;">' + currentAssistant + ' está digitando...</div>';
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    
+    try {
+        const resp = await fetch('/api/chat', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                message: message,
+                assistant: currentAssistant,
+                history: conversationHistory
+            })
+        });
+        const data = await resp.json();
+        
+        // Remover indicador
+        const typing = document.getElementById('typing-indicator');
+        if (typing) typing.remove();
+        
+        // Adicionar resposta
+        const response = data.response || data.message || 'Sem resposta';
+        messagesDiv.innerHTML += '<div style="margin: 10px 0; text-align: left;"><span style="background: #333; color: #fff; padding: 8px 12px; border-radius: 8px; display: inline-block;">' + response + '</span></div>';
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        
+        // Salvar no histórico
+        conversationHistory.push({role: 'user', content: message});
+        conversationHistory.push({role: 'assistant', content: response});
+    } catch (e) {
+        const typing = document.getElementById('typing-indicator');
+        if (typing) typing.remove();
+        messagesDiv.innerHTML += '<div style="color: #f44336;">Erro ao enviar mensagem</div>';
+        console.error("Erro no chat:", e);
+    }
+}
+
+// === GERENCIADOR DE VMs ===
+function openVMManager() {
+    document.getElementById('vm-modal').classList.add('active');
+    document.getElementById('vm-overlay').classList.add('active');
+    loadVMs();
+}
+
+function closeVMManager() {
+    document.getElementById('vm-modal').classList.remove('active');
+    document.getElementById('vm-overlay').classList.remove('active');
+}
+
+async function startVM(distro) {
+    try {
+        const resp = await fetch('/api/vm/start/' + distro, { method: 'POST' });
+        const data = await resp.json();
+        alert(data.message || data.error);
+        loadVMs();
+    } catch (e) {
+        alert("Erro de conexão");
+    }
+}
+
+async function loadVMs() {
+    try {
+        console.log("Carregando VMs...");
+        const resp = await fetch('/api/vm/containers');
+        const vms = await resp.json();
+        console.log("VMs recebidas:", vms);
+        const listDiv = document.getElementById('vm-list');
+        
+        if (vms.length === 0) {
+            listDiv.innerHTML = '<p style="text-align: center; color: #888;">Nenhuma VM em execução.</p>';
+            return;
+        }
+        
+        let html = '';
+        vms.forEach(vm => {
+            const statusClass = vm.status === 'running' ? 'status-running' : 'status-exited';
+            html += `<div class="vm-row">
+                <div><strong>${vm.name}</strong><br><small style="color:#888;">${vm.image}</small></div>
+                <div class="${statusClass}">● ${vm.status}</div>
+                <div>
+                    ${vm.status === 'running' ? `<button class="btn" style="background: #00bcd4; color: white; margin-right: 5px;" onclick="openTerminal('${vm.id}', '${vm.name}')">💻 Terminal</button>` : ''}
+                    <button class="btn ${vm.status === 'running' ? 'btn-danger' : 'btn-primary'}" 
+                        onclick="${vm.status === 'running' ? 'stopVM' : 'startVMById'}('${vm.id}')">
+                        ${vm.status === 'running' ? '⏹ Parar' : '▶ Iniciar'}
+                    </button>
+                </div>
+            </div>`;
+        });
+        listDiv.innerHTML = html;
+    } catch (e) {
+        document.getElementById('vm-list').innerHTML = '<p style="color: #f44336;">Erro ao carregar</p>';
+    }
+}
+
+async function stopVM(id) {
+    if (!confirm('Parar esta VM?')) return;
+    try {
+        const resp = await fetch('/api/vm/stop/' + id, { method: 'POST' });
+        const data = await resp.json();
+        if (data.success) {
+            loadVMs();
+        } else {
+            alert("Erro ao parar: " + (data.error || "Desconhecido"));
+            loadVMs();
+        }
+    } catch (e) {
+        alert("Erro de conexão: " + e.message);
+    }
+}
+
+async function startVMById(id) {
+    console.log("Iniciando container:", id);
+    const listDiv = document.getElementById('vm-list');
+    listDiv.innerHTML = '<p style="text-align: center; color: #0db7ed;">⏳ Iniciando container...</p>';
+    
+    try {
+        const resp = await fetch('/api/vm/start/' + id, { method: 'POST' });
+        const data = await resp.json();
+        
+        if (data.success) {
+            console.log("✅ Container iniciado:", data.message);
+            loadVMs();
+        } else {
+            alert("Erro ao iniciar: " + (data.error || "Desconhecido"));
+            loadVMs();
+        }
+    } catch (e) {
+        console.error("Erro ao iniciar container:", e);
+        alert("Erro de conexão: " + e.message);
+        loadVMs();
+    }
+}
+
+// === TERMINAL WEB ===
+let terminal = null;
+let socket = null;
+let currentContainerId = null;
+
+// === TERMINAL WEB MELHORADO V4.1 ===
+let commandHistory = [];
+let historyIndex = -1;
+let currentLine = '';
+let autocompleteSuggestions = [];
+
+function openTerminal(containerId, containerName) {
+    console.log("Abrindo terminal melhorado para:", containerId, containerName);
+    currentContainerId = containerId;
+    document.getElementById('terminal-container-name').textContent = containerName;
+    document.getElementById('terminal-modal').classList.add('active');
+    document.getElementById('terminal-overlay').classList.add('active');
+    
+    // Aguardar o modal ficar visível antes de inicializar
+    setTimeout(() => {
+    if (!terminal) {
+        terminal = new Terminal({
+            cursorBlink: true,
+            fontSize: 14,
+            fontFamily: '"Courier New", Courier, monospace',
+            theme: {
+                background: '#000000',
+                foreground: '#00ff00',
+                cursor: '#00ff00',
+                cursorAccent: '#000000',
+                selection: 'rgba(0, 255, 0, 0.3)',
+                black: '#000000',
+                red: '#ff5555',
+                green: '#50fa7b',
+                yellow: '#f1fa8c',
+                blue: '#bd93f9',
+                magenta: '#ff79c6',
+                cyan: '#8be9fd',
+                white: '#bbbbbb',
+                brightBlack: '#555555',
+                brightRed: '#ff6e67',
+                brightGreen: '#69ff94',
+                brightYellow: '#ffffa5',
+                brightBlue: '#d6acff',
+                brightMagenta: '#ff92df',
+                brightCyan: '#a4ffff',
+                brightWhite: '#ffffff'
+            },
+            scrollback: 10000,
+            tabStopWidth: 4
+        });
+        
+        window.fitAddon = new FitAddon.FitAddon();
+        terminal.loadAddon(fitAddon);
+        terminal.open(document.getElementById('terminal-container'));
+        
+        // Ajustar tamanho inicial e em resize
+        setTimeout(() => {
+            fitAddon.fit();
+            console.log("Terminal ajustado");
+        }, 100);
+        
+        window.addEventListener('resize', () => {
+            fitAddon.fit();
+        });
+        
+        // Capturar teclas com histórico e autocomplete
+        terminal.onKey(e => {
+            const ev = e.domEvent;
+            const key = ev.key;
+            
+            if (key === 'Enter') {
+                // Enviar comando
+                terminal.write('\r\n');
+                if (currentLine.trim()) {
+                    // Adicionar ao histórico
+                    if (commandHistory.length === 0 || commandHistory[commandHistory.length - 1] !== currentLine) {
+                        commandHistory.push(currentLine);
+                    }
+                    if (commandHistory.length > 100) commandHistory.shift();
+                    historyIndex = -1;
+                    
+                    // Enviar para servidor
+                    console.log("Enviando comando:", currentLine);
+                    if (socket && socket.connected) {
+                        socket.emit('terminal_input', { 
+                            container_id: currentContainerId, 
+                            command: currentLine 
+                        });
+                    }
+                }
+                currentLine = '';
+            } else if (key === 'ArrowUp') {
+                // Histórico anterior
+                if (historyIndex < commandHistory.length - 1) {
+                    historyIndex++;
+                    currentLine = commandHistory[commandHistory.length - 1 - historyIndex];
+                    // Limpar linha atual e escrever nova
+                    terminal.write('\r\x1b[K');
+                    terminal.write('# ' + currentLine);
+                }
+            } else if (key === 'ArrowDown') {
+                // Histórico próximo
+                if (historyIndex > -1) {
+                    historyIndex--;
+                    currentLine = historyIndex === -1 ? '' : commandHistory[commandHistory.length - 1 - historyIndex];
+                    terminal.write('\r\x1b[K');
+                    terminal.write('# ' + currentLine);
+                }
+            } else if (key === 'Tab') {
+                // Autocomplete (simplificado)
+                ev.preventDefault();
+                if (currentLine.trim()) {
+                    // Comandos comuns para autocomplete
+                    const commonCommands = ['ls', 'cd', 'pwd', 'cat', 'echo', 'mkdir', 'rm', 'cp', 'mv', 'grep', 'find', 'chmod', 'chown', 'ps', 'top', 'free', 'df', 'du', 'whoami', 'uname', 'apk', 'apt', 'yum'];
+                    const matches = commonCommands.filter(cmd => cmd.startsWith(currentLine.trim()));
+                    if (matches.length === 1) {
+                        currentLine = matches[0] + ' ';
+                        terminal.write('\x1b[K ' + matches[0].substring(currentLine.length) + ' ');
+                    } else if (matches.length > 1) {
+                        terminal.write('\r\n');
+                        matches.forEach(m => terminal.write(m + '  '));
+                        terminal.write('\r\n# ' + currentLine);
+                    }
+                }
+            } else if (key === 'Backspace') {
+                if (currentLine.length > 0) {
+                    currentLine = currentLine.slice(0, -1);
+                    terminal.write('\b \b');
+                }
+            } else if (key === 'c' && ev.ctrlKey) {
+                // Ctrl+C - cancelar
+                terminal.write('^C\r\n# ');
+                currentLine = '';
+            } else if (key === 'l' && ev.ctrlKey) {
+                // Ctrl+L - limpar tela
+                terminal.clear();
+                terminal.write('# ');
+            } else if (key.length === 1 && !ev.ctrlKey && !ev.altKey) {
+                currentLine += key;
+                terminal.write(key);
+            }
+        });
+    }
+    
+    // Conectar Socket.IO
+    socket = io();
+    
+    socket.on('connect', () => {
+        console.log("Socket.IO conectado");
+        terminal.write('\r\n\x1b[32m╔════════════════════════════════════════╗\r\n');
+        terminal.write('\x1b[32m║  Conectado ao container ' + containerId.padEnd(20, ' ') + '  ║\r\n');
+        terminal.write('\x1b[32m╚════════════════════════════════════════╝\r\n\x1b[0m');
+        terminal.write('\x1b[33mDigite \x1b[36mhelp\x1b[33m para ver comandos disponíveis\r\n\r\n');
+        terminal.write('# ');
+    });
+    
+    socket.on('terminal_output', (data) => {
+        console.log("Recebido:", data.output);
+        terminal.write(data.output);
+        if (!data.output.endsWith('\n')) {
+            terminal.write('\r\n# ');
+        } else {
+            terminal.write('# ');
+        }
+    });
+    
+    socket.on('disconnect', () => {
+        terminal.write('\r\n\x1b[31m\n[Conexão perdida com o container]\x1b[0m\r\n');
+    });
+    
+    // Chamar refit após tudo estar pronto
+    refitTerminal();
+    }, 100); // fim do setTimeout
+}
+
+function closeTerminal() {
+    console.log("Fechando terminal");
+    if (socket) {
+        socket.disconnect();
+        socket = null;
+    }
+    if (terminal) {
+        terminal.dispose();
+        terminal = null;
+    }
+    document.getElementById('terminal-modal').classList.remove('active');
+    document.getElementById('terminal-overlay').classList.remove('active');
+}
+
+// === FUNÇÕES AUXILIARES ===
+function showComingSoon(feature) {
+    alert(feature + ' - Em desenvolvimento!\n\nEsta funcionalidade estará disponível em breve.');
+}
+
+// === INICIALIZAÇÃO ===
+window.addEventListener('DOMContentLoaded', loadAssistants);
+
+// Função para re-ajustar o terminal quando o modal abre
+function refitTerminal() {
+    if (terminal && typeof fitAddon !== 'undefined' && fitAddon) {
+        setTimeout(() => {
+            try {
+                fitAddon.fit();
+                console.log("Terminal redimensionado:", terminal.cols, "x", terminal.rows);
+            } catch (e) {
+                console.error("Erro ao redimensionar:", e);
+            }
+        }, 300);
+    }
+}
+
+</script>
+
+<script>
+// Relógio em tempo real
+function updateClock() {
+    const now = new Date();
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
+    const clock = document.getElementById('clock');
+    if (clock) {
+        clock.textContent = hours + ':' + minutes + ':' + seconds;
+    }
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// Função para re-ajustar o terminal quando o modal abre
+function refitTerminal() {
+    if (terminal && typeof fitAddon !== 'undefined' && fitAddon) {
+        setTimeout(() => {
+            try {
+                fitAddon.fit();
+                console.log("Terminal redimensionado:", terminal.cols, "x", terminal.rows);
+            } catch (e) {
+                console.error("Erro ao redimensionar:", e);
+            }
+        }, 300);
+    }
+}
+
+</script>
+<div id="temp-terminal-container"></div>
+
+<!-- Div temporário para criar o terminal -->
+<div id="temp-terminal" style="position: fixed; top: 0; left: 0; width: 1200px; height: 700px; visibility: hidden; z-index: -1;"></div>
+
+<!-- Container do terminal no body (fora do modal) -->
+<div id="terminal-body-container" style="position: fixed; top: 100px; left: 100px; width: 1200px; height: 700px; z-index: 9999; display: none; background: #000; padding: 20px; border: 2px solid #0f0;"></div>
+
+<!-- Iframe para o terminal -->
+<iframe id="terminal-iframe" style="display: none; width: 1200px; height: 700px; border: none; position: fixed; top: 0; left: 0; z-index: 9999;"></iframe>
+
+<script>
+// Injetar Card Dashboard Dinamicamente
+document.addEventListener('DOMContentLoaded', () => {
+    // Procurar a grid de cards principal
+    const grid = document.querySelector('.cards-grid') || document.querySelector('.grid') || document.querySelector('#app-grid');
+    
+    if (grid) {
+        const dashCard = document.createElement('div');
+        dashCard.className = 'card';
+        dashCard.style.cursor = 'pointer';
+        dashCard.style.border = '1px solid #00ff00';
+        dashCard.onclick = () => window.location.href = '/dashboard';
+        
+        dashCard.innerHTML = `
+            <div class="card-icon" style="font-size: 24px; margin-bottom: 10px;"></div>
+            <h3 style="margin: 0 0 5px 0; color: #00ff00;">Métricas</h3>
+        `;
+        
+        grid.appendChild(dashCard);
+        console.log("✅ Card Dashboard injetado via JS");
+    } else {
+        console.warn("⚠️ Grid de cards não encontrada para injetar Dashboard");
+    }
+});
+</script>
+
+
+
+
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(() => {
+        // Estratégia melhorada: procurar pelo container que tem MÚLTIPLOS cards diretos filhos
+        // Isso evita pegar containers internos de cards específicos
+        let bestContainer = null;
+        let maxDirectCards = 0;
+        
+        const allDivs = document.querySelectorAll('div');
+        for (const div of allDivs) {
+            // Contar apenas cards que são filhos DIRETOS desta div
+            let directCardCount = 0;
+            for (const child of div.children) {
+                if (child.classList.contains('card')) {
+                    directCardCount++;
+                }
+            }
+            
+            // Se esta div tem mais cards diretos que a anterior, e tem pelo menos 4 (grid real)
+            if (directCardCount > maxDirectCards && directCardCount >= 4) {
+                maxDirectCards = directCardCount;
+                bestContainer = div;
+            }
+        }
+        
+        // Fallback: se não achou grid perfeita, usa o body ou main
+        if (!bestContainer) {
+            bestContainer = document.querySelector('main') || document.body;
+            console.warn("⚠️ Grid não encontrada, usando fallback");
+        }
+        
+        if (bestContainer && !document.getElementById('browser-injected-card')) {
+            const browserCard = document.createElement('div');
+            browserCard.id = 'browser-injected-card';
+            browserCard.className = 'card';
+            browserCard.style.cursor = 'pointer';
+            browserCard.style.border = '1px solid #00ffff';
+            browserCard.onclick = () => launchThinkinBrowser();
+            
+            browserCard.innerHTML = `
+                <div class="card-header">
+                    <div class="card-title">🌐 Browser</div>
+                    <div></div>
+                </div>
+                <div class="card-category">NAVEGAÇÃO</div>
+                <div class="card-desc">Navegue na web com proteção inteligente.</div>
+            `;
+            
+            bestContainer.appendChild(browserCard);
+            console.log("✅ Browser injetado em:", bestContainer.className || bestContainer.id, `(com ${maxDirectCards} cards)`);
+        }
+    }, 800);
+});
+</script>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(() => {
+        // Encontrar o container principal da grid (mesma lógica do Browser)
+        let bestContainer = null;
+        let maxDirectCards = 0;
+        
+        const allDivs = document.querySelectorAll('div');
+        for (const div of allDivs) {
+            let directCardCount = 0;
+            for (const child of div.children) {
+                if (child.classList.contains('card')) {
+                    directCardCount++;
+                }
+            }
+            if (directCardCount > maxDirectCards && directCardCount >= 4) {
+                maxDirectCards = directCardCount;
+                bestContainer = div;
+            }
+        }
+        
+        if (!bestContainer) bestContainer = document.querySelector('main') || document.body;
+        
+        // Injetar Card Métricas se não existir
+        if (bestContainer && !document.getElementById('metrics-injected-card')) {
+            const metricsCard = document.createElement('div');
+            metricsCard.id = 'metrics-injected-card';
+            metricsCard.className = 'card';
+            metricsCard.style.cursor = 'pointer';
+            metricsCard.style.border = '1px solid #00ff00';
+            metricsCard.onclick = () => window.location.href = '/dashboard';
+            
+            metricsCard.innerHTML = `
+                <div class="card-header">
+                    <div class="card-title"> Métricas</div>
+                    <div></div>
+                </div>
+                <div class="card-category">SISTEMA</div>
+                <div class="card-desc">Monitorar uso de tokens e assistentes.</div>
+            `;
+            
+            bestContainer.appendChild(metricsCard);
+            console.log("✅ Card Métricas injetado via JS");
+        }
+    }, 800);
+});
+</script>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(() => {
+        // Procurar o container do Dock (barra inferior)
+        const dock = document.querySelector('.dock') || 
+                     document.querySelector('[class*="dock"]') || 
+                     document.querySelector('nav') ||
+                     document.body.querySelector('div:last-child');
+        
+        if (dock && !document.getElementById('dock-terminal-btn')) {
+            const termBtn = document.createElement('div');
+            termBtn.id = 'dock-terminal-btn';
+            termBtn.className = 'dock-item'; // Usa a mesma classe dos outros itens
+            termBtn.style.cursor = 'pointer';
+            termBtn.style.textAlign = 'center';
+            termBtn.style.padding = '5px 10px';
+            termBtn.onclick = () => window.open('/terminal-native', '_blank');
+            
+            termBtn.innerHTML = `
+                <div style="font-size: 24px;">🐧</div>
+                <div style="font-size: 10px; margin-top: 2px;">Terminal</div>
+            `;
+            
+            // Inserir antes do botão "Novo" (+) ou no final
+            const novoBtn = Array.from(dock.children).find(el => el.textContent.includes('Novo') || el.innerHTML.includes('+'));
+            if (novoBtn) {
+                dock.insertBefore(termBtn, novoBtn);
+            } else {
+                dock.appendChild(termBtn);
+            }
+            
+            console.log("✅ Botão Terminal injetado no Dock");
+        }
+    }, 1000);
+});
+</script>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(() => {
+        // Procurar o container do Dock
+        const dock = document.querySelector('.dock') || 
+                     document.querySelector('[class*="dock"]') || 
+                     document.querySelector('nav') ||
+                     document.body.querySelector('div:last-child');
+        
+        if (dock && !document.getElementById('dock-editor-btn')) {
+            const editBtn = document.createElement('div');
+            editBtn.id = 'dock-editor-btn';
+            editBtn.className = 'dock-item';
+            editBtn.style.cursor = 'pointer';
+            editBtn.style.textAlign = 'center';
+            editBtn.style.padding = '5px 10px';
+            
+            // Abrir editor com app.py por padrão
+            editBtn.onclick = () => window.open('/editor?file=app.py', '_blank');
+            
+            editBtn.innerHTML = `
+                <div style="font-size: 24px;">&lt;/&gt;</div>
+                <div style="font-size: 10px; margin-top: 2px;">Editor</div>
+            `;
+            
+            // Inserir antes do botão "Novo" (+) ou no final
+            const novoBtn = Array.from(dock.children).find(el => el.textContent.includes('Novo') || el.innerHTML.includes('+'));
+            if (novoBtn) {
+                dock.insertBefore(editBtn, novoBtn);
+            } else {
+                dock.appendChild(editBtn);
+            }
+            
+            console.log("✅ Botão Editor injetado no Dock");
+        }
+    }, 1200); // Pequeno delay extra para garantir carregamento completo
+});
+</script>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    if (typeof io !== 'undefined') {
+        const previewSocket = io();
+        
+        previewSocket.on('file_saved', (data) => {
+            console.log(`🔄 Arquivo salvo: ${data.file}`);
+            
+            const relevantFiles = ['templates/desktop.html', 'templates/terminal_native.html'];
+            
+            if (relevantFiles.includes(data.file)) {
+                const notif = document.createElement('div');
+                notif.style.cssText = 'position:fixed;top:20px;right:20px;background:#007acc;color:white;padding:10px 20px;border-radius:4px;z-index:9999;font-size:14px;box-shadow:0 2px 8px rgba(0,0,0,0.3);';
+                notif.textContent = `🔄 ${data.file} atualizado! Recarregando...`;
+                document.body.appendChild(notif);
+                
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            }
+        });
+        
+        console.log("✅ Live Preview listener ativo");
+    } else {
+        console.warn("⚠️ SocketIO não disponível para Live Preview");
+    }
+});
+</script>
+
+
+<script>
+// LIVE PREVIEW: Recarregar desktop quando arquivos HTML forem salvos no Editor
+document.addEventListener('DOMContentLoaded', () => {
+    console.log("🔍 [LIVE PREVIEW] Verificando SocketIO para Live Preview...");
+    
+    // Aguardar um pouco para garantir que socket.io carregou
+    setTimeout(() => {
+        if (typeof io !== 'undefined') {
+            console.log("✅ [LIVE PREVIEW] SocketIO encontrado! Conectando...");
+            const previewSocket = io();
+            
+            previewSocket.on('connect', () => {
+                console.log(" Conectado ao servidor WebSocket para Live Preview");
+            });
+            
+            previewSocket.on('file_saved', (data) => {
+                console.log(` Evento recebido: ${JSON.stringify(data)}`);
+                
+                // Lista de arquivos que afetam o desktop
+                const relevantFiles = ['templates/desktop.html', 'templates/terminal_native.html', 'static/style.css'];
+                
+                if (relevantFiles.includes(data.file)) {
+                    console.log(`🔄 Arquivo relevante salvo: ${data.file}. Recarregando...`);
+                    
+                    // Mostrar notificação sutil antes de recarregar
+                    const notif = document.createElement('div');
+                    notif.style.cssText = 'position:fixed;top:20px;right:20px;background:#007acc;color:white;padding:10px 20px;border-radius:4px;z-index:9999;font-size:14px;box-shadow:0 2px 8px rgba(0,0,0,0.3);animation:fadeIn 0.3s;';
+                    notif.textContent = `🔄 ${data.file} atualizado! Recarregando...`;
+                    document.body.appendChild(notif);
+                    
+                    // Recarregar após 1.5 segundos
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
+                }
+            });
+            
+            previewSocket.on('disconnect', () => {
+                console.log("❌ Desconectado do servidor WebSocket");
+            });
+            
+        } else {
+            console.error(" SocketIO NÃO disponível! Verifique se o script foi carregado.");
+        }
+    }, 500); // Pequeno delay para garantir carregamento
+});
+</script>
+
+
+<script>
+// HOT RELOAD INTELIGENTE: Complemento ao Live Preview existente
+(function() {
+    'use strict';
+    
+    // Aguardar SocketIO do Live Preview já estar conectado
+    setTimeout(() => {
+        if (typeof io !== 'undefined') {
+            console.log(" [HOT RELOAD] Adicionando handlers inteligentes...");
+            
+            const hotSocket = io();
+            
+            hotSocket.on('file_saved', (data) => {
+                const filename = data.file;
+                const filetype = data.type || (filename.endsWith('.css') ? 'css' : filename.endsWith('.js') ? 'js' : 'html');
+                
+                // CSS: Atualização dinâmica sem reload
+                if (filetype === 'css') {
+                    console.log(`🎨 [HOT RELOAD] CSS detectado: ${filename}`);
+                    handleCSSUpdate(filename);
+                }
+                // JS: Execução dinâmica
+                else if (filetype === 'js') {
+                    console.log(` [HOT RELOAD] JS detectado: ${filename}`);
+                    handleJSUpdate(filename);
+                }
+                // HTML: Deixar o Live Preview existente cuidar do reload
+                else if (filetype === 'html') {
+                    console.log(` [HOT RELOAD] HTML - Live Preview existente cuidará do reload`);
+                }
+            });
+        }
+    }, 1000); // Aguardar 1s para garantir que Live Preview já conectou
+    
+    function handleCSSUpdate(filename) {
+        fetch(`/${filename}?t=${Date.now()}`)
+            .then(response => response.text())
+            .then(cssText => {
+                let styleTag = document.getElementById(`hot-reload-${filename}`);
+                if (!styleTag) {
+                    styleTag = document.createElement('style');
+                    styleTag.id = `hot-reload-${filename}`;
+                    document.head.appendChild(styleTag);
+                }
+                styleTag.textContent = cssText;
+                console.log(`✅ [CSS] ${filename} atualizado (${cssText.length} bytes)`);
+            })
+            .catch(err => console.error(`❌ [CSS] Erro: ${err}`));
+    }
+    
+    function handleJSUpdate(filename) {
+        fetch(`/${filename}?t=${Date.now()}`)
+            .then(response => response.text())
+            .then(jsText => {
+                const oldScript = document.getElementById(`hot-reload-${filename}`);
+                if (oldScript) oldScript.remove();
+                
+                const newScript = document.createElement('script');
+                newScript.id = `hot-reload-${filename}`;
+                newScript.textContent = jsText;
+                document.body.appendChild(newScript);
+                console.log(`✅ [JS] ${filename} executado`);
+            })
+            .catch(err => console.error(` [JS] Erro: ${err}`));
+    }
+})();
+</script>
+
+<script>
+// === FUNÇÃO PARA LANÇAR THINKINBROWSER NATIVO ===
+function launchThinkinBrowser() {
+    console.log(' Lançando ThinkinBrowser Nativo...');
+    
+    fetch('/api/launch-thinkinbrowser')
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'launched') {
+                console.log('✅ ThinkinBrowser Nativo iniciado:', data.message);
+            } else {
+                console.error('❌ Erro ao lançar:', data.message);
+                alert('Erro ao abrir ThinkinBrowser: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('❌ Erro na requisição:', error);
+            alert('Falha ao comunicar com o servidor.');
+        });
+}
+</script>
+
+
+<!-- === FILE MANAGER v7.0 - VERSÃO SEGURA E MINIMALISTA === -->
+<style>
+.fm-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.8);
+    z-index: 9999;
+}
+.fm-overlay.active { display: block; }
+
+.fm-modal {
+    display: none;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: #1a1a1a;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 1000px;
+    height: 80vh;
+    z-index: 10000;
+    flex-direction: column;
+}
+.fm-modal.active { display: flex; }
+
+.fm-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    background: #2d2d2d;
+    border-radius: 12px 12px 0 0;
+}
+.fm-header h2 { margin: 0; color: #e0e0e0; }
+.fm-header button {
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 28px;
+    cursor: pointer;
+}
+
+.fm-toolbar {
+    display: flex;
+    gap: 10px;
+    padding: 15px 20px;
+    background: #252525;
+}
+.fm-toolbar button {
+    background: #4dabf7;
+    color: #fff;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+.fm-toolbar button.secondary {
+    background: #e0e0e0;
+    color: #333;
+}
+
+.fm-upload-area {
+    border: 2px dashed #4dabf7;
+    border-radius: 8px;
+    padding: 40px;
+    text-align: center;
+    margin: 20px;
+    cursor: pointer;
+}
+
+.fm-file-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 15px;
+    padding: 20px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.fm-file-item {
+    background: #2a2a2a;
+    border: 2px solid #4dabf7;
+    border-radius: 8px;
+    padding: 15px;
+    text-align: center;
+    cursor: pointer;
+    height: 200px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+}
+.fm-file-item:hover {
+    background: #3a3a3a;
+    transform: translateY(-3px);
+    box-shadow: 0 8px 16px rgba(77,171,247,0.3);
+}
+
+.fm-viewer {
+    display: none;
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: #1a1a1a;
+    z-index: 1000;
+    flex-direction: column;
+}
+.fm-viewer.active { display: flex; }
+.fm-viewer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    background: #2d2d2d;
+}
+.fm-viewer-header button {
+    background: #4dabf7;
+    color: #fff;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    margin-left: 10px;
+}
+.fm-viewer-header .fm-btn-close { background: #cc3333; }
+.fm-viewer-content {
+    flex: 1;
+    overflow: auto;
+    background: #0d0d0d;
+}
+.fm-viewer-content iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+}
+</style>
+
+<div class="fm-overlay" id="fm-overlay"></div>
+<div class="fm-modal" id="fm-modal">
+    <div class="fm-header">
+        <h2>📁 Gerenciador de Arquivos</h2>
+        <button onclick="closeFM()">&times;</button>
+    </div>
+    <div class="fm-toolbar">
+        <button onclick="document.getElementById('fm-upload').click()">⬆️ Upload</button>
+        <button class="secondary" onclick="newFolder()">📁 Nova Pasta</button>
+        <button class="secondary" onclick="newFile()"> Novo Arquivo</button>
+        <button class="secondary" onclick="loadFM()">🔄 Atualizar</button>
+        <input type="file" id="fm-upload" multiple style="display:none;" onchange="uploadFM(this.files)">
+    </div>
+    <div class="fm-upload-area" id="fm-upload-area">
+        <div style="color:#e0e0e0;">Arraste arquivos aqui</div>
+    </div>
+    <div class="fm-file-list" id="fm-file-list"></div>
+    <div class="fm-viewer" id="fm-viewer">
+        <div class="fm-viewer-header">
+            <h3 id="fm-viewer-title">Visualizando</h3>
+            <button id="fm-viewer-dl">⬇️ Download</button>
+            <button class="fm-btn-close" id="fm-viewer-close">✕ Fechar</button>
+        </div>
+        <div class="fm-viewer-content" id="fm-viewer-content"></div>
+    </div>
+</div>
+
+<script>
+// === FILE MANAGER v7.0 - MINIMALISTA ===
+console.log("📦 [FM v7.0] Iniciando...");
+
+// Funções globais explícitas
+window.openFM = function() {
+    console.log(" [FM] Abrindo...");
+    var modal = document.getElementById('fm-modal');
+    var overlay = document.getElementById('fm-overlay');
+    if (modal) {
+        modal.style.display = 'flex';
+        modal.classList.add('active');
+    }
+    if (overlay) {
+        overlay.style.display = 'block';
+        overlay.classList.add('active');
+    }
+    window.loadFM();
+};
+
+window.closeFM = function() {
+    console.log("🔒 [FM] Fechando...");
+    var modal = document.getElementById('fm-modal');
+    var overlay = document.getElementById('fm-overlay');
+    if (modal) {
+        modal.style.display = 'none';
+        modal.classList.remove('active');
+    }
+    if (overlay) {
+        overlay.style.display = 'none';
+        overlay.classList.remove('active');
+    }
+    window.closeViewerFM();
+};
+
+window.loadFM = function() {
+    console.log("📁 [FM] Carregando arquivos...");
+    var list = document.getElementById('fm-file-list');
+    if (!list) return;
+    
+    fetch('/api/files/list')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        list.innerHTML = '';
+        var files = data.files || data || [];
+        console.log("📄 [FM] Total:", files.length);
+        
+        if (files.length === 0) {
+            list.innerHTML = '<div style="color:#888;text-align:center;padding:40px;grid-column:1/-1;">Nenhum arquivo</div>';
+            return;
+        }
+        
+        files.forEach(function(file) {
+            var filename = typeof file === 'string' ? file : (file.name || file.filename);
+            var isDir = file.is_dir || false;
+            var ext = (filename.split('.').pop() || '').toLowerCase();
+            var icons = {'pdf':'📕','jpg':'🖼️','png':'🖼️','txt':'📄','folder':'📁'};
+            var icon = isDir ? '' : (icons[ext] || '');
+            
+            var card = document.createElement('div');
+            card.className = 'fm-file-item';
+            card.innerHTML = '<div style="font-size:48px;color:#4dabf7;">' + icon + '</div>' +
+                           '<div style="color:#fff;font-size:12px;">' + filename + '</div>' +
+                           '<div><button style="background:#51cf66;color:#fff;border:none;padding:8px;border-radius:4px;cursor:pointer;">⬇️</button> ' +
+                           '<button style="background:#ff6b6b;color:#fff;border:none;padding:8px;border-radius:4px;cursor:pointer;">️</button></div>';
+            
+            card.onclick = function(e) {
+                if (e.target.tagName !== 'BUTTON') {
+                    window.openViewerFM(filename, isDir);
+                }
+            };
+            
+            var btns = card.querySelectorAll('button');
+            btns[0].onclick = function(e) {
+                e.stopPropagation();
+                window.open('/api/files/download/' + encodeURIComponent(filename), '_blank');
+            };
+            btns[1].onclick = function(e) {
+                e.stopPropagation();
+                if (confirm('Deletar?')) {
+                    fetch('/api/files/delete/' + encodeURIComponent(filename), {method:'DELETE'})
+                    .then(function() { window.loadFM(); });
+                }
+            };
+            
+            list.appendChild(card);
+        });
+        console.log("✅ [FM] Renderizado");
+    });
+};
+
+window.openViewerFM = function(filename, isDir) {
+    console.log("👁️ [FM] Abrindo viewer:", filename);
+    if (isDir) { alert('Pastas não podem ser visualizadas'); return; }
+    
+    document.querySelector('.fm-toolbar').style.display = 'none';
+    document.getElementById('fm-upload-area').style.display = 'none';
+    document.getElementById('fm-file-list').style.display = 'none';
+    
+    var viewer = document.getElementById('fm-viewer');
+    var content = document.getElementById('fm-viewer-content');
+    
+    if (viewer && content) {
+        viewer.style.display = 'flex';
+        viewer.classList.add('active');
+        document.getElementById('fm-viewer-title').textContent = filename;
+        
+        var ext = filename.split('.').pop().toLowerCase();
+        var url = '/api/files/view/' + encodeURIComponent(filename);
+        
+        if (ext === 'pdf') {
+            content.innerHTML = '<iframe src="' + url + '" type="application/pdf"></iframe>';
+        } else if (['jpg','jpeg','png','gif'].includes(ext)) {
+            content.innerHTML = '<img src="' + url + '" style="max-width:100%;display:block;margin:auto;">';
+        } else {
+            content.innerHTML = '<div style="color:#888;text-align:center;padding:40px;">Visualização não disponível</div>';
+        }
+        
+        document.getElementById('fm-viewer-close').onclick = window.closeViewerFM;
+        document.getElementById('fm-viewer-dl').onclick = function() {
+            window.open('/api/files/download/' + encodeURIComponent(filename), '_blank');
+        };
+    }
+};
+
+window.closeViewerFM = function() {
+    console.log("🔒 [FM] Fechando viewer...");
+    var viewer = document.getElementById('fm-viewer');
+    var content = document.getElementById('fm-viewer-content');
+    
+    if (viewer) {
+        viewer.style.display = 'none';
+        viewer.classList.remove('active');
+    }
+    if (content) content.innerHTML = '';
+    
+    document.querySelector('.fm-toolbar').style.display = 'flex';
+    document.getElementById('fm-upload-area').style.display = 'flex';
+    document.getElementById('fm-file-list').style.display = 'grid';
+};
+
+window.uploadFM = function(files) {
+    if (!files || !files.length) return;
+    var uploaded = 0;
+    
+    function uploadNext(i) {
+        if (i >= files.length) {
+            alert(uploaded + ' arquivo(s) enviado(s)');
+            window.loadFM();
+            return;
+        }
+        var fd = new FormData();
+        fd.append('file', files[i]);
+        fetch('/api/files/upload', {method:'POST', body:fd})
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.success || data.status === 'success') uploaded++;
+            uploadNext(i+1);
+        });
+    }
+    uploadNext(0);
+};
+
+window.newFolder = function() {
+    var name = prompt('Nome da pasta:');
+    if (name) {
+        fetch('/api/files/create', {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({filename:name+'/.folder',content:'folder'})
+        }).then(function() { window.loadFM(); });
+    }
+};
+
+window.newFile = function() {
+    var name = prompt('Nome do arquivo:');
+    if (name) {
+        fetch('/api/files/create', {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({filename:name,content:''})
+        }).then(function() { window.loadFM(); });
+    }
+};
+
+// Drag and drop
+document.addEventListener('DOMContentLoaded', function() {
+    var area = document.getElementById('fm-upload-area');
+    if (area) {
+        area.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            area.style.background = 'rgba(77,171,247,0.2)';
+        });
+        area.addEventListener('dragleave', function() {
+            area.style.background = '';
+        });
+        area.addEventListener('drop', function(e) {
+            e.preventDefault();
+            area.style.background = '';
+            var files = e.dataTransfer.files;
+            if (files.length) window.uploadFM(files);
+        });
+    }
+    
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') window.closeFM();
+    });
+    
+    console.log("✅ [FM v7.0] Pronto!");
+});
+</script>
+
+</body>
+</html>
+
+

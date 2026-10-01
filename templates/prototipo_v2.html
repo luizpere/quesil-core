@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ThinkinOS 2.0 - Protótipo Visual</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            background: #000;
+        }
+        
+        /* BOOT SCREEN */
+        .boot-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            animation: fadeOut 0.5s ease-out 3s forwards;
+        }
+        
+        @keyframes fadeOut {
+            to { opacity: 0; visibility: hidden; }
+        }
+        
+        .boot-logo {
+            font-size: 8em;
+            margin-bottom: 20px;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        
+        .boot-text {
+            color: white;
+            font-size: 2.5em;
+            font-weight: bold;
+            margin-bottom: 40px;
+            letter-spacing: 3px;
+        }
+        
+        .boot-loading {
+            width: 300px;
+            height: 6px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        
+        .boot-loading-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #00bcd4, #6200ea);
+            border-radius: 3px;
+            animation: loading 2.5s ease-out forwards;
+        }
+        
+        @keyframes loading {
+            to { width: 100%; }
+        }
+        
+        .boot-status {
+            color: rgba(255,255,255,0.8);
+            margin-top: 20px;
+            font-size: 0.9em;
+        }
+        
+        /* DESKTOP */
+        .desktop {
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            position: relative;
+        }
+        
+        /* DESKTOP HEADER */
+        .desktop-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 50px;
+            background: rgba(30,30,30,0.95);
+            backdrop-filter: blur(10px);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+            z-index: 100;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .header-logo {
+            font-size: 1.5em;
+        }
+        
+        .header-title {
+            color: white;
+            font-size: 1.3em;
+            font-weight: bold;
+        }
+        
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            color: white;
+        }
+        
+        .notification-bell {
+            font-size: 1.5em;
+            cursor: pointer;
+            position: relative;
+        }
+        
+        .notification-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: #ff4444;
+            color: white;
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            font-size: 0.6em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+        
+        .datetime {
+            font-size: 0.95em;
+        }
+        
+        /* DESKTOP GRID */
+        .desktop-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 20px;
+            padding: 80px 40px 100px 40px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .app-icon {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+            color: white;
+            aspect-ratio: 1;
+        }
+        
+        .app-icon:hover {
+            background: rgba(255,255,255,0.2);
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        }
+        
+        .app-icon .icon {
+            font-size: 3em;
+            margin-bottom: 10px;
+        }
+        
+        .app-icon .name {
+            font-size: 0.9em;
+            text-align: center;
+        }
+        
+        /* TASKBAR */
+        .taskbar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 50px;
+            background: rgba(30,30,30,0.98);
+            backdrop-filter: blur(15px);
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
+            z-index: 100;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .taskbar-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .start-button {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #6200ea, #00bcd4);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 1.5em;
+        }
+        
+        .start-button:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 15px rgba(98,0,234,0.5);
+        }
+        
+        .taskbar-apps {
+            display: flex;
+            gap: 5px;
+            margin-left: 20px;
+        }
+        
+        .taskbar-app {
+            width: 40px;
+            height: 40px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 1.3em;
+            position: relative;
+        }
+        
+        .taskbar-app:hover {
+            background: rgba(255,255,255,0.2);
+        }
+        
+        .taskbar-app.active::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 20px;
+            height: 3px;
+            background: #6200ea;
+            border-radius: 2px;
+        }
+        
+        .taskbar-right {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            color: white;
+            font-size: 0.9em;
+        }
+        
+        .taskbar-icon {
+            cursor: pointer;
+            font-size: 1.2em;
+        }
+        
+        /* START MENU */
+        .start-menu {
+            position: fixed;
+            bottom: 50px;
+            left: 10px;
+            width: 600px;
+            height: 500px;
+            background: rgba(30,30,30,0.98);
+            backdrop-filter: blur(20px);
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            display: none;
+            z-index: 99;
+            overflow: hidden;
+        }
+        
+        .start-menu.active {
+            display: flex;
+        }
+        
+        .start-menu-left {
+            width: 250px;
+            background: rgba(0,0,0,0.3);
+            padding: 20px;
+            overflow-y: auto;
+        }
+        
+        .start-menu-right {
+            flex: 1;
+            padding: 20px;
+        }
+        
+        .start-menu h3 {
+            color: #00bcd4;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+        }
+        
+        .start-menu-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            color: white;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: background 0.2s;
+            margin-bottom: 5px;
+        }
+        
+        .start-menu-item:hover {
+            background: rgba(98,0,234,0.3);
+        }
+        
+        .start-menu-item .icon {
+            font-size: 1.5em;
+        }
+        
+        .start-menu-tiles {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+        
+        .start-menu-tile {
+            aspect-ratio: 1;
+            background: rgba(98,0,234,0.3);
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .start-menu-tile:hover {
+            background: rgba(98,0,234,0.5);
+            transform: scale(1.05);
+        }
+        
+        .start-menu-tile .icon {
+            font-size: 2em;
+            margin-bottom: 5px;
+        }
+        
+        .start-menu-tile .name {
+            font-size: 0.8em;
+        }
+        
+        /* WINDOW */
+        .window {
+            position: absolute;
+            width: 800px;
+            height: 600px;
+            background: rgba(30,30,30,0.98);
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+            z-index: 50;
+        }
+        
+        .window.active {
+            display: flex;
+        }
+        
+        .window-header {
+            height: 40px;
+            background: rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 15px;
+            cursor: move;
+        }
+        
+        .window-title {
+            color: white;
+            font-weight: bold;
+        }
+        
+        .window-controls {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .window-control {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        
+        .window-control.close { background: #ff4444; }
+        .window-control.minimize { background: #ffaa00; }
+        .window-control.maximize { background: #00aa00; }
+        
+        .window-content {
+            flex: 1;
+            padding: 20px;
+            color: white;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <!-- BOOT SCREEN -->
+    <div class="boot-screen">
+        <div class="boot-logo">️</div>
+        <div class="boot-text">ThinkinOS</div>
+        <div class="boot-loading">
+            <div class="boot-loading-bar"></div>
+        </div>
+        <div class="boot-status">Carregando sistema...</div>
+    </div>
+    
+    <!-- DESKTOP -->
+    <div class="desktop">
+        <!-- HEADER -->
+        <div class="desktop-header">
+            <div class="header-left">
+                <div class="header-logo">🖥️</div>
+                <div class="header-title">ThinkinOS Desktop</div>
+            </div>
+            <div class="header-right">
+                <div class="notification-bell">
+                    🔔
+                    <div class="notification-badge">3</div>
+                </div>
+                <div class="datetime">ter., 07 de jul. • 16:03</div>
+            </div>
+        </div>
+        
+        <!-- DESKTOP GRID -->
+        <div class="desktop-grid">
+            <div class="app-icon" onclick="openWindow('chat')">
+                <div class="icon">💬</div>
+                <div class="name">Chat</div>
+            </div>
+            <div class="app-icon" onclick="openWindow('memories')">
+                <div class="icon"></div>
+                <div class="name">Memórias</div>
+            </div>
+            <div class="app-icon" onclick="openWindow('dashboard')">
+                <div class="icon"></div>
+                <div class="name">Dashboard</div>
+            </div>
+            <div class="app-icon" onclick="openWindow('wiki')">
+                <div class="icon">📖</div>
+                <div class="name">Wiki</div>
+            </div>
+            <div class="app-icon" onclick="openWindow('docs')">
+                <div class="icon">📚</div>
+                <div class="name">Docs</div>
+            </div>
+            <div class="app-icon" onclick="openWindow('config')">
+                <div class="icon">⚙️</div>
+                <div class="name">Config</div>
+            </div>
+        </div>
+        
+        <!-- TASKBAR -->
+        <div class="taskbar">
+            <div class="taskbar-left">
+                <div class="start-button" onclick="toggleStartMenu()">🎯</div>
+                <div class="taskbar-apps">
+                    <div class="taskbar-app active" onclick="openWindow('chat')" title="Chat">💬</div>
+                    <div class="taskbar-app" onclick="openWindow('memories')" title="Memórias">🧠</div>
+                    <div class="taskbar-app" onclick="openWindow('dashboard')" title="Dashboard">📊</div>
+                </div>
+            </div>
+            <div class="taskbar-right">
+                <div class="taskbar-icon">📶</div>
+                <div class="taskbar-icon">🔊</div>
+                <div class="datetime">16:03</div>
+            </div>
+        </div>
+        
+        <!-- START MENU -->
+        <div class="start-menu" id="startMenu">
+            <div class="start-menu-left">
+                <h3>Adicionados recentemente</h3>
+                <div class="start-menu-item" onclick="openWindow('chat')">
+                    <div class="icon">💬</div>
+                    <div>Chat com IA</div>
+                </div>
+                <div class="start-menu-item" onclick="openWindow('memories')">
+                    <div class="icon">🧠</div>
+                    <div>Memórias</div>
+                </div>
+                <div class="start-menu-item" onclick="openWindow('dashboard')">
+                    <div class="icon">📊</div>
+                    <div>Dashboard</div>
+                </div>
+                
+                <h3 style="margin-top: 20px;">Todos os Apps</h3>
+                <div class="start-menu-item" onclick="openWindow('wiki')">
+                    <div class="icon">📖</div>
+                    <div>Wiki</div>
+                </div>
+                <div class="start-menu-item" onclick="openWindow('docs')">
+                    <div class="icon"></div>
+                    <div>Documentação</div>
+                </div>
+                <div class="start-menu-item" onclick="openWindow('config')">
+                    <div class="icon">️</div>
+                    <div>Configurações</div>
+                </div>
+            </div>
+            <div class="start-menu-right">
+                <h3>Produtividade</h3>
+                <div class="start-menu-tiles">
+                    <div class="start-menu-tile" onclick="openWindow('chat')">
+                        <div class="icon">💬</div>
+                        <div class="name">Chat</div>
+                    </div>
+                    <div class="start-menu-tile" onclick="openWindow('memories')">
+                        <div class="icon">🧠</div>
+                        <div class="name">Memórias</div>
+                    </div>
+                    <div class="start-menu-tile" onclick="openWindow('dashboard')">
+                        <div class="icon">📊</div>
+                        <div class="name">Dashboard</div>
+                    </div>
+                    <div class="start-menu-tile" onclick="openWindow('wiki')">
+                        <div class="icon">📖</div>
+                        <div class="name">Wiki</div>
+                    </div>
+                    <div class="start-menu-tile" onclick="openWindow('docs')">
+                        <div class="icon">📚</div>
+                        <div class="name">Docs</div>
+                    </div>
+                    <div class="start-menu-tile" onclick="openWindow('config')">
+                        <div class="icon">️</div>
+                        <div class="name">Config</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- WINDOW: CHAT -->
+        <div class="window" id="window-chat" style="top: 100px; left: 200px;">
+            <div class="window-header">
+                <div class="window-title">💬 Chat com IA</div>
+                <div class="window-controls">
+                    <div class="window-control minimize"></div>
+                    <div class="window-control maximize"></div>
+                    <div class="window-control close" onclick="closeWindow('chat')"></div>
+                </div>
+            </div>
+            <div class="window-content">
+                <h2 style="color: #00bcd4; margin-bottom: 20px;">Chat com Assistente</h2>
+                <p style="margin-bottom: 15px;">Selecione um assistente para começar...</p>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 30px;">
+                    <div style="background: rgba(98,0,234,0.2); padding: 20px; border-radius: 12px; text-align: center; cursor: pointer;">
+                        <div style="font-size: 3em; margin-bottom: 10px;">👩</div>
+                        <div style="color: white; font-weight: bold;">Lena</div>
+                        <div style="color: #888; font-size: 0.85em; margin-top: 5px;">Criatividade</div>
+                    </div>
+                    <div style="background: rgba(98,0,234,0.2); padding: 20px; border-radius: 12px; text-align: center; cursor: pointer;">
+                        <div style="font-size: 3em; margin-bottom: 10px;">👨</div>
+                        <div style="color: white; font-weight: bold;">Pedro</div>
+                        <div style="color: #888; font-size: 0.85em; margin-top: 5px;">Análise</div>
+                    </div>
+                    <div style="background: rgba(98,0,234,0.2); padding: 20px; border-radius: 12px; text-align: center; cursor: pointer;">
+                        <div style="font-size: 3em; margin-bottom: 10px;">👨‍💻</div>
+                        <div style="color: white; font-weight: bold;">Carlos</div>
+                        <div style="color: #888; font-size: 0.85em; margin-top: 5px;">Programação</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- WINDOW: MEMÓRIAS -->
+        <div class="window" id="window-memories" style="top: 150px; left: 250px;">
+            <div class="window-header">
+                <div class="window-title"> Memórias</div>
+                <div class="window-controls">
+                    <div class="window-control minimize"></div>
+                    <div class="window-control maximize"></div>
+                    <div class="window-control close" onclick="closeWindow('memories')"></div>
+                </div>
+            </div>
+            <div class="window-content">
+                <h2 style="color: #00bcd4; margin-bottom: 20px;">Minhas Memórias</h2>
+                <div style="background: rgba(98,0,234,0.1); padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 3px solid #6200ea;">
+                    <div style="color: white; margin-bottom: 5px;">Sou Luiz Pereira</div>
+                    <div style="color: #888; font-size: 0.85em;">📅 2026-07-06 15:32:10</div>
+                </div>
+                <div style="background: rgba(98,0,234,0.1); padding: 15px; border-radius: 8px; border-left: 3px solid #6200ea;">
+                    <div style="color: white; margin-bottom: 5px;">ThinkinOS é incrível!</div>
+                    <div style="color: #888; font-size: 0.85em;">📅 2026-07-07 16:00:00</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Fechar boot screen após animação
+        setTimeout(() => {
+            document.querySelector('.boot-screen').style.display = 'none';
+        }, 3500);
+        
+        // Toggle Start Menu
+        function toggleStartMenu() {
+            const menu = document.getElementById('startMenu');
+            menu.classList.toggle('active');
+        }
+        
+        // Fechar start menu ao clicar fora
+        document.addEventListener('click', function(e) {
+            const menu = document.getElementById('startMenu');
+            const startButton = document.querySelector('.start-button');
+            if (!menu.contains(e.target) && !startButton.contains(e.target)) {
+                menu.classList.remove('active');
+            }
+        });
+        
+        // Abrir janela
+        function openWindow(app) {
+            const window = document.getElementById('window-' + app);
+            if (window) {
+                window.classList.add('active');
+                document.getElementById('startMenu').classList.remove('active');
+            } else {
+                alert('App "' + app + '" será implementado na próxima fase!');
+            }
+        }
+        
+        // Fechar janela
+        function closeWindow(app) {
+            const window = document.getElementById('window-' + app);
+            if (window) {
+                window.classList.remove('active');
+            }
+        }
+        
+        // Tornar janelas arrastáveis (simplificado)
+        document.querySelectorAll('.window-header').forEach(header => {
+            let isDragging = false;
+            let currentX, currentY, initialX, initialY;
+            const window = header.parentElement;
+            
+            header.addEventListener('mousedown', dragStart);
+            document.addEventListener('mousemove', drag);
+            document.addEventListener('mouseup', dragEnd);
+            
+            function dragStart(e) {
+                initialX = e.clientX - window.offsetLeft;
+                initialY = e.clientY - window.offsetTop;
+                isDragging = true;
+            }
+            
+            function drag(e) {
+                if (isDragging) {
+                    e.preventDefault();
+                    currentX = e.clientX - initialX;
+                    currentY = e.clientY - initialY;
+                    window.style.left = currentX + 'px';
+                    window.style.top = currentY + 'px';
+                }
+            }
+            
+            function dragEnd() {
+                isDragging = false;
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste Function Calling - ThinkinOS</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #1a1a2e;
+            color: white;
+        }
+        .chat-box {
+            background: #16213e;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        input, button {
+            padding: 10px;
+            margin: 5px;
+            border-radius: 5px;
+            border: none;
+        }
+        input {
+            flex: 1;
+            background: #0f3460;
+            color: white;
+        }
+        button {
+            background: #6200ea;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #7c4dff;
+        }
+        .response {
+            background: #0f3460;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+        .action {
+            color: #00bcd4;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Teste Function Calling - ThinkinOS</h1>
+    
+    <div class="chat-box">
+        <h3>Envie um comando:</h3>
+        <div style="display: flex; gap: 10px;">
+            <input type="text" id="mensagem" placeholder="Ex: Abre o Dashboard, Abre o Perfil..." style="flex: 1;">
+            <button onclick="testar()">Enviar</button>
+        </div>
+        <div id="resposta"></div>
+    </div>
+    
+    <div class="chat-box">
+        <h3>Exemplos para testar:</h3>
+        <ul>
+            <li>"Abre o Dashboard"</li>
+            <li>"Abre o Perfil"</li>
+            <li>"Abre o Histórico"</li>
+            <li>"Abre o Chat com Lena"</li>
+            <li>"Olá, tudo bem?" (resposta normal)</li>
+        </ul>
+    </div>
+    
+    <script>
+        async function testar() {
+            const mensagem = document.getElementById('mensagem').value;
+            const respostaDiv = document.getElementById('resposta');
+            
+            if (!mensagem) {
+                respostaDiv.innerHTML = '<p style="color: #ff6b6b;">Digite uma mensagem!</p>';
+                return;
+            }
+            
+            respostaDiv.innerHTML = '<p>⏳ Processando...</p>';
+            
+            try {
+                const response = await fetch('/api/chat-with-tools', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        mensagem: mensagem,
+                        assistente: 'lena'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                let html = '<div class="response">';
+                html += '<p><strong>Resposta:</strong> ' + (data.mensagem || data.texto || 'Sem resposta') + '</p>';
+                
+                if (data.acao) {
+                    html += '<p class="action">🚀 Ação detectada: ' + JSON.stringify(data.acao) + '</p>';
+                    
+                    // Executar a ação
+                    if (data.acao.action === 'open_app') {
+                        html += '<p style="color: #4caf50;">✅ Executando: abrirApp("' + data.acao.app + '")</p>';
+                        // Aqui você chamaria abrirApp() se estivesse no desktop
+                    }
+                }
+                
+                html += '</div>';
+                respostaDiv.innerHTML = html;
+                
+            } catch (error) {
+                respostaDiv.innerHTML = '<p style="color: #ff6b6b;">Erro: ' + error.message + '</p>';
+            }
+        }
+        
+        // Permitir enviar com Enter
+        document.getElementById('mensagem').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                testar();
+            }
+        });
+    </script>
+</body>
+</html>

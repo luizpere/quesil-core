@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📚 Documentação - ThinkinOS</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #1e1e1e 0%, #2d2d2d 100%);
+            color: white;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 12px;
+            border-left: 4px solid #6200ea;
+        }
+        .header h1 { color: #00bcd4; font-size: 2.5em; }
+        .btn-voltar {
+            padding: 10px 20px;
+            background: #6200ea;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+        .btn-voltar:hover { background: #7c1dff; transform: translateY(-2px); }
+        
+        .docs-grid {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            gap: 30px;
+        }
+        
+        .sidebar {
+            background: rgba(255,255,255,0.05);
+            border-radius: 12px;
+            padding: 20px;
+            height: fit-content;
+            position: sticky;
+            top: 20px;
+        }
+        .sidebar h3 {
+            color: #00bcd4;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+        }
+        .sidebar ul { list-style: none; }
+        .sidebar li { margin: 10px 0; }
+        .sidebar a {
+            color: #e0e0e0;
+            text-decoration: none;
+            padding: 8px 12px;
+            border-radius: 6px;
+            display: block;
+            transition: all 0.3s;
+        }
+        .sidebar a:hover {
+            background: rgba(98,0,234,0.3);
+            color: white;
+            transform: translateX(5px);
+        }
+        
+        .content {
+            background: rgba(255,255,255,0.05);
+            border-radius: 12px;
+            padding: 30px;
+        }
+        
+        .section {
+            margin-bottom: 40px;
+            padding-bottom: 30px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .section:last-child { border-bottom: none; }
+        .section h2 {
+            color: #00bcd4;
+            font-size: 1.8em;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .section h3 {
+            color: #6200ea;
+            font-size: 1.3em;
+            margin: 20px 0 10px 0;
+        }
+        .section p {
+            color: #e0e0e0;
+            line-height: 1.8;
+            margin-bottom: 15px;
+        }
+        .section ul, .section ol {
+            color: #e0e0e0;
+            line-height: 1.8;
+            margin-left: 30px;
+            margin-bottom: 15px;
+        }
+        .section li { margin: 8px 0; }
+        
+        .feature-card {
+            background: rgba(98,0,234,0.1);
+            border-left: 3px solid #6200ea;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+        .feature-card h4 {
+            color: #00bcd4;
+            margin-bottom: 8px;
+        }
+        
+        .shortcut-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        .shortcut-table th {
+            background: rgba(98,0,234,0.3);
+            padding: 12px;
+            text-align: left;
+            color: #00bcd4;
+        }
+        .shortcut-table td {
+            padding: 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .shortcut-table kbd {
+            background: #6200ea;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 0.9em;
+        }
+        
+        .theme-preview {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin: 15px 0;
+        }
+        .theme-item {
+            aspect-ratio: 1;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+        
+        code {
+            background: rgba(0,0,0,0.3);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            color: #00bcd4;
+        }
+        
+        pre {
+            background: rgba(0,0,0,0.5);
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 15px 0;
+        }
+        pre code {
+            background: none;
+            padding: 0;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.85em;
+            font-weight: bold;
+            margin: 0 5px;
+        }
+        .badge-new { background: #4caf50; }
+        .badge-stable { background: #2196f3; }
+        .badge-beta { background: #ff9800; }
+        
+        @media (max-width: 768px) {
+            .docs-grid { grid-template-columns: 1fr; }
+            .sidebar { position: static; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📚 Documentação ThinkinOS</h1>
+            <a href="/desktop" class="btn-voltar">← Voltar ao Desktop</a>
+        </div>
+        
+        <div class="docs-grid">
+            <div class="sidebar">
+                <h3>📑 Índice</h3>
+                <ul>
+                    <li><a href="#sobre">🎯 Sobre</a></li>
+                    <li><a href="#instalacao">📥 Instalação</a></li>
+                    <li><a href="#assistente">🤖 Assistentes</a></li>
+                    <li><a href="#provedores">🌐 Multi-Provedores</a></li>
+                    <li><a href="#temas">🎨 Temas</a></li>
+                    <li><a href="#atalhos">⌨️ Atalhos</a></li>
+                    <li><a href="#memorias">🧠 Memórias</a></li>
+                    <li><a href="#chat">💬 Chat</a></li>
+                    <li><a href="#desktop">🖥️ Desktop</a></li>
+                    <li><a href="#api">🔌 API</a></li>
+                    <li><a href="#faq">❓ FAQ</a></li>
+                </ul>
+            </div>
+            
+            <div class="content">
+                <div id="sobre" class="section">
+                    <h2>🎯 Sobre o ThinkinOS</h2>
+                    <p>O <strong>ThinkinOS</strong> é uma plataforma inovadora que combina a potência de assistentes de IA com uma interface de sistema operacional completa.</p>
+                    
+                    <div class="feature-card">
+                        <h4>✨ Principais Recursos</h4>
+                        <ul>
+                            <li>🖥️ Desktop Virtual com ícones e aplicativos</li>
+                            <li>🤖 Múltiplos Assistentes especializados</li>
+                            <li>🎨 8 Temas Visuais personalizáveis</li>
+                            <li>⌨️ Atalhos de Teclado para produtividade</li>
+                            <li>🧠 Sistema de Memórias persistente</li>
+                            <li>🔌 Multi-Provedores de IA</li>
+                            <li>📊 Dashboard Analítico</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div id="instalacao" class="section">
+                    <h2>📥 Instalação</h2>
+                    
+                    <h3>Pré-requisitos</h3>
+                    <ul>
+                        <li>Python 3.10 ou superior</li>
+                        <li>pip (gerenciador de pacotes Python)</li>
+                        <li>Git</li>
+                    </ul>
+                    
+                    <h3>Passo a Passo</h3>
+                    <ol>
+                        <li>
+                            <strong>Clone o repositório</strong>
+                            <pre><code>git clone https://github.com/luizpereiratj/thinkinos-platform.git
+cd thinkinos-platform</code></pre>
+                        </li>
+                        <li>
+                            <strong>Crie o ambiente virtual</strong>
+                            <pre><code>python3 -m venv venv
+source venv/bin/activate</code></pre>
+                        </li>
+                        <li>
+                            <strong>Instale as dependências</strong>
+                            <pre><code>pip install -r requirements.txt</code></pre>
+                        </li>
+                        <li>
+                            <strong>Execute a aplicação</strong>
+                            <pre><code>python app.py</code></pre>
+                        </li>
+                        <li>
+                            <strong>Acesse no navegador</strong>
+                            <pre><code>http://localhost:5000</code></pre>
+                        </li>
+                    </ol>
+                </div>
+                
+                <div id="assistente" class="section">
+                    <h2>🤖 Assistentes de IA</h2>
+                    <p>O ThinkinOS possui múltiplos assistentes especializados:</p>
+                    
+                    <div class="feature-card">
+                        <h4>👩 Lena <span class="badge badge-stable">Estável</span></h4>
+                        <p>Assistente geral e amigável. Ideal para conversas do dia a dia.</p>
+                    </div>
+                    
+                    <div class="feature-card">
+                        <h4>👨 Pedro <span class="badge badge-stable">Estável</span></h4>
+                        <p>Especialista em análise e lógica. Perfeito para problemas complexos.</p>
+                    </div>
+                    
+                    <div class="feature-card">
+                        <h4>👨‍💻 Carlos <span class="badge badge-stable">Estável</span></h4>
+                        <p>Focado em tecnologia e programação. Especialista em código.</p>
+                    </div>
+                    
+                    <div class="feature-card">
+                        <h4>👩‍🏫 Ana <span class="badge badge-stable">Estável</span></h4>
+                        <p>Mentora de produtividade. Ajuda com organização e planejamento.</p>
+                    </div>
+                    
+                    <div class="feature-card">
+                        <h4>🤖 ThinkinIA <span class="badge badge-new">Novo</span></h4>
+                        <p>O Arquiteto de Software (Llama 3.3 70B). Especialista em arquitetura.</p>
+                    </div>
+                </div>
+                
+                <div id="provedores" class="section">
+                    <h2>🌐 Multi-Provedores de IA</h2>
+                    <p>Suporta múltiplos provedores de IA:</p>
+                    
+                    <div class="feature-card">
+                        <h4>🚀 Groq <span class="badge badge-stable">Padrão</span></h4>
+                        <p>Rápido e gratuito. Usa modelos Llama com inferência ultra-rápida.</p>
+                    </div>
+                    
+                    <div class="feature-card">
+                        <h4>🟢 OpenAI <span class="badge badge-beta">Premium</span></h4>
+                        <p>GPT-4 e modelos avançados. Requer chave de API paga.</p>
+                    </div>
+                    
+                    <div class="feature-card">
+                        <h4>🟠 Anthropic <span class="badge badge-beta">Premium</span></h4>
+                        <p>Claude com raciocínio avançado. Requer chave de API paga.</p>
+                    </div>
+                    
+                    <div class="feature-card">
+                        <h4>🔵 Google <span class="badge badge-beta">Premium</span></h4>
+                        <p>Gemini e modelos Google AI. Requer chave de API.</p>
+                    </div>
+                    
+                    <h3>Como Configurar</h3>
+                    <ol>
+                        <li>Acesse <code>/configuracoes</code></li>
+                        <li>Cole sua chave de API no campo correspondente</li>
+                        <li>Clique em "Salvar Configurações"</li>
+                        <li>No chat, clique no botão do provedor desejado</li>
+                    </ol>
+                </div>
+                
+                <div id="temas" class="section">
+                    <h2>🎨 Sistema de Temas</h2>
+                    <p>Personalize com 8 temas suaves:</p>
+                    
+                    <div class="theme-preview">
+                        <div class="theme-item" style="background: linear-gradient(135deg, #667eea, #764ba2);">Padrão</div>
+                        <div class="theme-item" style="background: linear-gradient(135deg, #2d3748, #1a202c);">Escuro</div>
+                        <div class="theme-item" style="background: linear-gradient(135deg, #a8edea, #fed6e3);">Azul Claro</div>
+                        <div class="theme-item" style="background: linear-gradient(135deg, #d4fc79, #96e6a1);">Verde</div>
+                        <div class="theme-item" style="background: linear-gradient(135deg, #fbc2eb, #a6c1ee);">Rosa</div>
+                        <div class="theme-item" style="background: linear-gradient(135deg, #ffd89b, #19547b);">Laranja</div>
+                        <div class="theme-item" style="background: linear-gradient(135deg, #e0eafc, #cfdef3);">Cinza</div>
+                        <div class="theme-item" style="background: linear-gradient(135deg, #00c6ff, #0072ff);">Oceano</div>
+                    </div>
+                    
+                    <h3>Como Mudar o Tema</h3>
+                    <ol>
+                        <li>Clique no botão 🎨 no canto inferior direito do Desktop</li>
+                        <li>Escolha um dos 8 temas disponíveis</li>
+                        <li>O tema é aplicado instantaneamente e salvo automaticamente</li>
+                    </ol>
+                </div>
+                
+                <div id="atalhos" class="section">
+                    <h2>⌨️ Atalhos de Teclado</h2>
+                    <p>Aumente sua produtividade:</p>
+                    
+                    <table class="shortcut-table">
+                        <thead>
+                            <tr>
+                                <th>Atalho</th>
+                                <th>Ação</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><kbd>Ctrl</kbd> + <kbd>L</kbd></td>
+                                <td>Abrir/Fechar Histórico</td>
+                            </tr>
+                            <tr>
+                                <td><kbd>Ctrl</kbd> + <kbd>K</kbd></td>
+                                <td>Nova Conversa</td>
+                            </tr>
+                            <tr>
+                                <td><kbd>Ctrl</kbd> + <kbd>E</kbd></td>
+                                <td>Exportar Conversa (Markdown)</td>
+                            </tr>
+                            <tr>
+                                <td><kbd>Ctrl</kbd> + <kbd>/</kbd></td>
+                                <td>Mostrar Lista de Atalhos</td>
+                            </tr>
+                            <tr>
+                                <td><kbd>Esc</kbd></td>
+                                <td>Fechar Modais/Sidebar</td>
+                            </tr>
+                            <tr>
+                                <td><kbd>Enter</kbd></td>
+                                <td>Enviar Mensagem</td>
+                            </tr>
+                            <tr>
+                                <td><kbd>Shift</kbd> + <kbd>Enter</kbd></td>
+                                <td>Nova Linha</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div id="memorias" class="section">
+                    <h2>🧠 Sistema de Memórias</h2>
+                    <p>Sistema de memórias para armazenar informações importantes:</p>
+                    
+                    <div class="feature-card">
+                        <h4>📝 O que são Memórias?</h4>
+                        <p>Memórias são notas pessoais que ficam salvas permanentemente no sistema.</p>
+                    </div>
+                    
+                    <h3>Como Usar</h3>
+                    <ol>
+                        <li>Acesse <code>/memories</code> ou clique no ícone 🧠 no Desktop</li>
+                        <li>Digite sua memória no campo de texto</li>
+                        <li>Clique em "💾 Salvar Memória" ou pressione <kbd>Ctrl</kbd> + <kbd>Enter</kbd></li>
+                        <li>Para excluir, clique no botão 🗑️ ao lado da memória</li>
+                    </ol>
+                </div>
+                
+                <div id="chat" class="section">
+                    <h2>💬 Chat Inteligente</h2>
+                    <p>Experiência completa de conversa com IA:</p>
+                    
+                    <div class="feature-card">
+                        <h4>✨ Recursos do Chat</h4>
+                        <ul>
+                            <li><strong>Streaming em tempo real:</strong> Veja as respostas sendo geradas</li>
+                            <li><strong>Histórico completo:</strong> Todas as conversas são salvas</li>
+                            <li><strong>Exportação:</strong> Exporte conversas em Markdown</li>
+                            <li><strong>Identificação visual:</strong> Cada assistente tem cor própria</li>
+                            <li><strong>Parar geração:</strong> Botão para interromper a resposta</li>
+                            <li><strong>Markdown:</strong> Respostas formatadas</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div id="desktop" class="section">
+                    <h2>🖥️ Desktop Virtual</h2>
+                    <p>Simula um sistema operacional completo:</p>
+                    
+                    <div class="feature-card">
+                        <h4>🎯 Componentes do Desktop</h4>
+                        <ul>
+                            <li><strong>Ícones de aplicativos:</strong> Acesse assistentes, dashboard, memórias</li>
+                            <li><strong>Widget de provedores:</strong> Veja e mude o provedor ativo</li>
+                            <li><strong>Seletor de temas:</strong> Botão 🎨 para personalizar</li>
+                            <li><strong>Menu de contexto:</strong> Clique direito para ações rápidas</li>
+                            <li><strong>Notificações:</strong> Sistema de toast notifications</li>
+                            <li><strong>Taskbar:</strong> Barra inferior com atalhos</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div id="api" class="section">
+                    <h2>🔌 API do ThinkinOS</h2>
+                    <p>API REST completa para integração:</p>
+                    
+                    <h3>Endpoints Principais</h3>
+                    <ul>
+                        <li><code>GET /api/historico</code> - Lista todas as conversas</li>
+                        <li><code>GET /api/conversa/{id}</code> - Busca conversa específica</li>
+                        <li><code>POST /api/chat</code> - Envia mensagem para IA</li>
+                        <li><code>GET /api/memories</code> - Lista memórias</li>
+                        <li><code>POST /api/memories</code> - Adiciona memória</li>
+                        <li><code>DELETE /api/memories/{id}</code> - Exclui memória</li>
+                        <li><code>GET /api/config</code> - Busca configurações</li>
+                        <li><code>POST /api/config</code> - Atualiza configurações</li>
+                        <li><code>GET /api/tema</code> - Busca tema atual</li>
+                        <li><code>POST /api/tema</code> - Atualiza tema</li>
+                    </ul>
+                </div>
+                
+                <div id="faq" class="section">
+                    <h2>❓ Perguntas Frequentes</h2>
+                    
+                    <h3>Como mudar o provedor de IA?</h3>
+                    <p>No chat, clique no botão do provedor desejado. O provedor é salvo e usado nas próximas mensagens.</p>
+                    
+                    <h3>Como exportar uma conversa?</h3>
+                    <p>Pressione <kbd>Ctrl</kbd> + <kbd>E</kbd>. A conversa será baixada em Markdown.</p>
+                    
+                    <h3>Como mudar o tema?</h3>
+                    <p>Clique no botão 🎨 no canto inferior direito do Desktop.</p>
+                    
+                    <h3>As conversas são salvas?</h3>
+                    <p>Sim! Todas as conversas são salvas automaticamente no banco de dados.</p>
+                    
+                    <h3>Posso usar sem chave de API?</h3>
+                    <p>Sim! O Groq já vem configurado e é gratuito. Para outros provedores, adicione sua chave em /configuracoes.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        document.querySelectorAll('.sidebar a').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            });
+        });
+    </script>
+</body>
+</html>

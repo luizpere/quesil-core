@@ -1,0 +1,10 @@
+def eh_palindromo(texto):
+    texto = texto.lower() replace ("" , "" )
+    return texto == texto [:: -1]
+
+
+    print(eh_palindromo("arara"))  # True
+    print(eh_palindromo("python")) # False
+
+# Teste:
+print(eh_palindromo('Ame o poema')) # Deve retornar True

@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>IDE - ThinkinOS</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background: #1e1e1e; color: #d4d4d4;
+            font-family: 'Segoe UI', sans-serif;
+            height: 100vh; display: flex; flex-direction: column;
+            overflow: hidden;
+        }
+        .header {
+            background: #2d2d30; padding: 10px 20px;
+            display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 1px solid #3e3e42;
+        }
+        .header h2 { font-size: 14px; font-weight: 600; color: #fff; }
+        .btn {
+            background: #0e639c; border: none; color: white;
+            padding: 6px 14px; border-radius: 4px; cursor: pointer;
+            font-size: 12px; margin-left: 8px; transition: background 0.2s;
+        }
+        .btn:hover { background: #1177bb; }
+        .btn-close { background: #ff5f56; }
+        .btn-close:hover { background: #ff7875; }
+
+        .container { display: flex; flex: 1; overflow: hidden; }
+
+        .file-explorer {
+            width: 250px; background: #252526; border-right: 1px solid #3e3e42;
+            overflow-y: auto; padding: 10px;
+        }
+        .file-explorer h3 {
+            font-size: 11px; text-transform: uppercase; color: #858585;
+            margin-bottom: 10px; letter-spacing: 1px;
+        }
+        .file-item {
+            padding: 6px 10px; cursor: pointer; border-radius: 4px;
+            font-size: 13px; color: #cccccc; margin-bottom: 2px;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .file-item:hover { background: #2a2d2e; }
+        .file-item.active { background: #37373d; color: #fff; }
+        .file-icon { font-size: 14px; }
+
+        .editor-area { flex: 1; display: flex; flex-direction: column; }
+        .editor-tabs {
+            background: #2d2d30; border-bottom: 1px solid #3e3e42;
+            display: flex; overflow-x: auto;
+        }
+        .editor-tab {
+            padding: 8px 15px; background: #2d2d30; color: #969696;
+            border-right: 1px solid #3e3e42; cursor: pointer;
+            font-size: 12px; white-space: nowrap; display: flex; align-items: center; gap: 8px;
+        }
+        .editor-tab.active { background: #1e1e1e; color: #fff; border-top: 2px solid #007acc; }
+        .editor-tab .close-tab {
+            margin-left: 8px; opacity: 0.6; cursor: pointer;
+        }
+        .editor-tab .close-tab:hover { opacity: 1; color: #ff5f56; }
+
+        #editor { flex: 1; }
+
+        .preview-area {
+            width: 50%; display: none; flex-direction: column;
+            border-left: 1px solid #3e3e42; background: #ffffff;
+        }
+        .preview-header {
+            background: #2d2d30; color: #fff; padding: 8px 15px; font-size: 12px; font-weight: 600;
+            display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #3e3e42;
+        }
+        .preview-frame { flex: 1; border: none; width: 100%; height: 100%; background: #fff; }
+
+        .status-bar {
+            background: #007acc; color: white; padding: 4px 15px;
+            font-size: 12px; display: flex; justify-content: space-between;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h2>💻 IDE - ThinkinOS</h2>
+        <div>
+            <button class="btn" onclick="saveCurrentFile()">💾 Salvar</button>
+            <button class="btn" onclick="runFile()">▶️ Executar</button>
+            <a href="/desktop" class="btn btn-close" style="text-decoration:none;">✕ Fechar</a>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="file-explorer">
+            <h3>📁 Workspace</h3>
+            <div id="file-list">Carregando...</div>
+        </div>
+
+        <div class="editor-area">
+            <div class="editor-tabs" id="editor-tabs"></div>
+            <div id="editor"></div>
+        </div>
+
+        <div class="preview-area" id="preview-area">
+            <div class="preview-header">
+                <span>👁️ Live Preview</span>
+                <button class="btn" onclick="updatePreview()" style="padding: 4px 10px; font-size: 11px; background: #238636;">🔄 Atualizar</button>
+            </div>
+            <iframe id="preview-frame" class="preview-frame" sandbox="allow-scripts allow-same-origin"></iframe>
+        </div>
+    </div>
+
+    <div class="status-bar">
+        <span id="status-file">Nenhum arquivo aberto</span>
+        <span id="status-lang">Python</span>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/loader.min.js"></script>
+    <script>
+        let editor;
+        let currentFile = null;
+        let openTabs = [];
+        let previewArea, previewFrame;
+
+        require.config({ paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs' }});
+        require(['vs/editor/editor.main'], function() {
+            editor = monaco.editor.create(document.getElementById('editor'), {
+                value: '# Bem-vindo à IDE ThinkinOS!\n\n# Selecione um arquivo na barra lateral para começar.',
+                language: 'python',
+                theme: 'vs-dark',
+                automaticLayout: true,
+                fontSize: 14,
+                minimap: { enabled: true },
+                scrollBeyondLastLine: false,
+                wordWrap: 'on'
+            });
+
+            previewArea = document.getElementById('preview-area');
+            previewFrame = document.getElementById('preview-frame');
+            console.log('✅ Monaco e Preview inicializados');
+        });
+
+        function updatePreview() {
+            if (!currentFile || !previewFrame || !editor) return;
+            let content = editor.getValue();
+            if (currentFile.endsWith('.css')) {
+                content = '<style>' + content + '</style><h2>Preview de CSS</h2>';
+            } else if (currentFile.endsWith('.js')) {
+                content = '<script>' + content + '<\/script><h2>Preview de JS</h2>';
+            }
+            previewFrame.srcdoc = content;
+        }
+
+        function loadFiles() {
+            console.log('🔍 Carregando arquivos...');
+            fetch('/api/workspace/files')
+                .then(res => res.json())
+                .then(data => {
+                    console.log('📦 Dados:', data);
+                    const fileList = document.getElementById('file-list');
+                    if (data.success && data.files && data.files.length > 0) {
+                        fileList.innerHTML = data.files.map(f => 
+                            `<div class="file-item" onclick="openFile('${f.path}', '${f.name}')">
+                                <span class="file-icon">${getFileIcon(f.name)}</span>
+                                <span>${f.name}</span>
+                            </div>`
+                        ).join('');
+                        console.log('✅ ' + data.files.length + ' arquivos carregados');
+                    } else {
+                        fileList.innerHTML = '<p style="color:#858585;font-size:12px;">Nenhum arquivo</p>';
+                    }
+                })
+                .catch(e => {
+                    console.error('❌ Erro:', e);
+                    document.getElementById('file-list').innerHTML = '<p style="color:#f48771;">Erro ao carregar</p>';
+                });
+        }
+
+        function getFileIcon(filename) {
+            if (filename.endsWith('.py')) return '🐍';
+            if (filename.endsWith('.js')) return '📜';
+            if (filename.endsWith('.html')) return '🌐';
+            if (filename.endsWith('.css')) return '🎨';
+            if (filename.endsWith('.json')) return '📋';
+            if (filename.endsWith('.md')) return '📝';
+            return '📄';
+        }
+
+        function openFile(path, name) {
+            fetch('/api/workspace/file?path=' + encodeURIComponent(path))
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        currentFile = path;
+                        editor.setValue(data.content);
+                        let lang = 'plaintext';
+                        if (path.endsWith('.py')) lang = 'python';
+                        else if (path.endsWith('.js')) lang = 'javascript';
+                        else if (path.endsWith('.html')) lang = 'html';
+                        else if (path.endsWith('.css')) lang = 'css';
+                        else if (path.endsWith('.json')) lang = 'json';
+                        monaco.editor.setModelLanguage(editor.getModel(), lang);
+                        document.getElementById('status-file').textContent = path;
+                        document.getElementById('status-lang').textContent = lang.toUpperCase();
+                        if (previewArea) {
+                            if (path.endsWith('.html') || path.endsWith('.css') || path.endsWith('.js')) {
+                                previewArea.style.display = 'flex';
+                                setTimeout(updatePreview, 300);
+                            } else {
+                                previewArea.style.display = 'none';
+                            }
+                        }
+                        if (!openTabs.includes(path)) {
+                            openTabs.push(path);
+                            updateTabs();
+                        }
+                        document.querySelectorAll('.file-item').forEach(el => {
+                            el.classList.remove('active');
+                            if (el.getAttribute('onclick').includes(path)) el.classList.add('active');
+                        });
+                    } else {
+                        alert('Erro: ' + data.error);
+                    }
+                })
+                .catch(e => alert('Erro ao abrir: ' + e.message));
+        }
+
+        function updateTabs() {
+            document.getElementById('editor-tabs').innerHTML = openTabs.map(path => {
+                const name = path.split('/').pop();
+                const isActive = path === currentFile ? 'active' : '';
+                return `<div class="editor-tab ${isActive}" onclick="switchTab('${path}')">
+                    <span>${getFileIcon(name)} ${name}</span>
+                    <span class="close-tab" onclick="closeTab(event, '${path}')">×</span>
+                </div>`;
+            }).join('');
+        }
+
+        function switchTab(path) { openFile(path, path.split('/').pop()); }
+
+        function closeTab(event, path) {
+            event.stopPropagation();
+            openTabs = openTabs.filter(p => p !== path);
+            if (currentFile === path) {
+                currentFile = openTabs.length > 0 ? openTabs[openTabs.length - 1] : null;
+                if (currentFile) openFile(currentFile, currentFile.split('/').pop());
+                else {
+                    editor.setValue('# Selecione um arquivo');
+                    document.getElementById('status-file').textContent = 'Nenhum arquivo aberto';
+                }
+            }
+            updateTabs();
+        }
+
+        function saveCurrentFile() {
+            if (!currentFile) { alert('Nenhum arquivo aberto!'); return; }
+            fetch('/api/workspace/file', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ path: currentFile, content: editor.getValue() })
+            }).then(res => res.json()).then(data => {
+                alert(data.success ? '✅ Salvo!' : 'Erro: ' + data.error);
+            }).catch(e => alert('Erro: ' + e.message));
+        }
+
+        function runFile() {
+            if (!currentFile || !currentFile.endsWith('.py')) {
+                alert('Selecione um arquivo Python!'); return;
+            }
+            fetch('/api/workspace/terminal', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ command: 'python3 ' + currentFile })
+            }).then(res => res.json()).then(data => {
+                alert(data.success ? '✅ Executado!\n\n' + data.output : 'Erro: ' + data.error);
+            }).catch(e => alert('Erro: ' + e.message));
+        }
+
+        window.addEventListener('load', loadFiles);
+    </script>
+</body>
+</html>

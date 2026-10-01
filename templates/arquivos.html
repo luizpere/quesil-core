@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📁 Arquivos - ThinkinOS</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .window {
+            background: rgba(20, 20, 30, 0.95);
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            overflow: hidden;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .titlebar {
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .titlebar h1 {
+            color: white;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .close-btn {
+            background: #ff5f56;
+            border: none;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 16px;
+            transition: transform 0.2s;
+        }
+        .close-btn:hover { transform: scale(1.1); }
+        .toolbar {
+            padding: 15px 20px;
+            background: rgba(255,255,255,0.05);
+            display: flex;
+            gap: 10px;
+        }
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        .btn-secondary {
+            background: rgba(255,255,255,0.1);
+            color: white;
+        }
+        .btn-secondary:hover {
+            background: rgba(255,255,255,0.2);
+        }
+        .content {
+            padding: 20px;
+            min-height: 400px;
+        }
+        .files-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 20px;
+        }
+        .file-item {
+            background: rgba(255,255,255,0.05);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+        .file-item:hover {
+            background: rgba(255,255,255,0.1);
+            transform: translateY(-5px);
+            border-color: #667eea;
+        }
+        .file-icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+        .file-name {
+            color: white;
+            font-size: 14px;
+            word-break: break-all;
+        }
+        .file-size {
+            color: rgba(255,255,255,0.6);
+            font-size: 12px;
+            margin-top: 5px;
+        }
+        .loading {
+            text-align: center;
+            color: white;
+            padding: 40px;
+            font-size: 18px;
+        }
+        .empty-state {
+            text-align: center;
+            color: rgba(255,255,255,0.6);
+            padding: 60px 20px;
+        }
+        .empty-state-icon {
+            font-size: 80px;
+            margin-bottom: 20px;
+        }
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background: #1a1a2e;
+            padding: 30px;
+            border-radius: 15px;
+            min-width: 400px;
+        }
+        .modal-content h2 {
+            color: white;
+            margin-bottom: 20px;
+        }
+        .modal-content input,
+        .modal-content textarea {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            border: none;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.1);
+            color: white;
+            font-family: inherit;
+        }
+        .modal-content input::placeholder,
+        .modal-content textarea::placeholder {
+            color: rgba(255,255,255,0.5);
+        }
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+    
+        .file-actions {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            display: flex;
+            gap: 5px;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .file-item:hover .file-actions {
+            opacity: 1;
+        }
+        .action-btn {
+            background: rgba(0,0,0,0.6);
+            border: none;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+        .action-btn:hover { background: rgba(255,0,0,0.8); }
+        .action-btn.edit:hover { background: rgba(0,123,255,0.8); }
+        .file-item { position: relative; } /* Necessário para o absolute funcionar */
+
+    </style>
+</head>
+<body>
+    <div class="window">
+        <div class="titlebar">
+            <h1>📁 Meus Arquivos</h1>
+            <button class="close-btn" onclick="window.location.href='/desktop'">×</button>
+        </div>
+        <div class="toolbar">
+            <button class="btn btn-primary" onclick="openNewFileModal()">
+                📄 Novo Arquivo
+            </button>
+            <button class="btn btn-secondary" onclick="openNewFolderModal()">
+                📁 Nova Pasta
+            </button>
+            <button class="btn btn-secondary" onclick="loadFiles()">
+                🔄 Atualizar
+            </button>
+            <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">
+                📤 Importar
+            </button>
+            <input type="file" id="fileInput" style="display:none" onchange="uploadFile(this)">
+        </div>
+        <div class="content">
+            <div id="filesContainer" class="files-grid">
+                <div class="loading">Carregando arquivos...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Novo Arquivo -->
+    <div id="newFileModal" class="modal">
+        <div class="modal-content">
+            <h2>📄 Criar Novo Arquivo</h2>
+            <input type="text" id="fileName" placeholder="Nome do arquivo (ex: documento.txt)">
+            <textarea id="fileContent" rows="5" placeholder="Conteúdo do arquivo..."></textarea>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeModal('newFileModal')">Cancelar</button>
+                <button class="btn btn-primary" onclick="createFile()">Criar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Nova Pasta -->
+    <div id="newFolderModal" class="modal">
+        <div class="modal-content">
+            <h2>📁 Criar Nova Pasta</h2>
+            <input type="text" id="folderName" placeholder="Nome da pasta">
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeModal('newFolderModal')">Cancelar</button>
+                <button class="btn btn-primary" onclick="createFolder()">Criar</button>
+            </div>
+        </div>
+    </div>
+
+    
+    <!-- Modal Editar Arquivo -->
+    <div id="editFileModal" class="modal">
+        <div class="modal-content">
+            <h2>✏️ Editar Arquivo</h2>
+            <input type="text" id="editFileName" readonly style="background: rgba(255,255,255,0.1);">
+            <textarea id="editFileContent" rows="10" placeholder="Conteúdo do arquivo..."></textarea>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeModal('editFileModal')">Cancelar</button>
+                <button class="btn btn-primary" onclick="saveEdit()">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Carregar arquivos ao iniciar
+        document.addEventListener('DOMContentLoaded', loadFiles);
+
+        async function loadFiles() {
+            const container = document.getElementById('filesContainer');
+            container.innerHTML = '<div class="loading">🔄 Carregando arquivos...</div>';
+            
+            try {
+                const response = await fetch('/api/files/list');
+                const data = await response.json();
+                const files = data.files || [];
+                
+                if (files.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">📂</div>
+                            <h3>Nenhum arquivo encontrado</h3>
+                            <p>Clique em "Novo Arquivo" para criar seu primeiro arquivo!</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                container.innerHTML = files.map(file => `
+                    <div class="file-item" onclick="openFile('${file.name}')">
+                        <div class="file-actions" onclick="event.stopPropagation()">
+                            <button class="action-btn edit" onclick="openEditModal('${file.name}')" title="Editar">✏️</button>
+                            <button class="action-btn" onclick="downloadFile('${file.name}')" title="Baixar">⬇️</button>
+                            <button class="action-btn" onclick="deleteFile('${file.name}')" title="Excluir">🗑️</button>
+                        </div>
+                        <div class="file-icon">${file.is_dir ? '📁' : '📄'}</div>
+                        <div class="file-name">${file.name}</div>
+                        <div class="file-size">${file.is_dir ? 'Pasta' : formatSize(file.size)}</div>
+                    </div>
+                `).join('');
+                
+            } catch (error) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon"></div>
+                        <h3>Erro ao carregar arquivos</h3>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        function formatSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        }
+
+        function openNewFileModal() {
+            document.getElementById('newFileModal').style.display = 'flex';
+            document.getElementById('fileName').focus();
+        }
+
+        function openNewFolderModal() {
+            document.getElementById('newFolderModal').style.display = 'flex';
+            document.getElementById('folderName').focus();
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+            // Limpar campos
+            if (modalId === 'newFileModal') {
+                document.getElementById('fileName').value = '';
+                document.getElementById('fileContent').value = '';
+            } else {
+                document.getElementById('folderName').value = '';
+            }
+        }
+
+        async function createFile() {
+            const name = document.getElementById('fileName').value.trim();
+            const content = document.getElementById('fileContent').value;
+            
+            if (!name) {
+                alert('Por favor, digite um nome para o arquivo!');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/files/create', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ filename: name, content: content })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert(result.message);
+                    closeModal('newFileModal');
+                    loadFiles();
+                } else {
+                    alert('Erro: ' + result.error);
+                }
+            } catch (error) {
+                alert('Erro ao criar arquivo: ' + error.message);
+            }
+        }
+
+        async function createFolder() {
+            const name = document.getElementById('folderName').value.trim();
+            
+            if (!name) {
+                alert('Por favor, digite um nome para a pasta!');
+                return;
+            }
+            
+            // Por enquanto, vamos criar um arquivo marcador para simular a pasta
+            // (Implementação real de pastas requer mais ajustes no backend)
+            try {
+                const response = await fetch('/api/files/create', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        filename: name + '/.folder', 
+                        content: 'Pasta criada em: ' + new Date().toISOString()
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('Pasta "' + name + '" criada com sucesso!');
+                    closeModal('newFolderModal');
+                    loadFiles();
+                } else {
+                    alert('Erro: ' + result.error);
+                }
+            } catch (error) {
+                alert('Erro ao criar pasta: ' + error.message);
+            }
+        }
+
+        function openFile(filename) {
+            // Abrir o arquivo usando a rota correta da API (parâmetro 'name')
+            window.open('/api/files/open?name=' + encodeURIComponent(filename), '_blank');
+        }
+
+        // Fechar modal ao clicar fora
+        window.onclick = function(event) {
+            if (event.target.classList.contains('modal')) {
+                event.target.style.display = 'none';
+            }
+        }
+    
+        let currentEditFile = '';
+
+        async function openEditModal(filename) {
+            currentEditFile = filename;
+            document.getElementById('editFileName').value = filename;
+            document.getElementById('editFileContent').value = 'Carregando...';
+            document.getElementById('editFileModal').style.display = 'flex';
+            
+            try {
+                // Busca o conteúdo atual
+                const resp = await fetch('/api/files/open?name=' + encodeURIComponent(filename));
+                const text = await resp.text(); // Assume que retorna o texto puro ou JSON
+                // Tenta parsear se for JSON, senão usa o texto
+                try {
+                    const json = JSON.parse(text);
+                    document.getElementById('editFileContent').value = json.content || text;
+                } catch(e) {
+                    document.getElementById('editFileContent').value = text;
+                }
+            } catch(e) {
+                document.getElementById('editFileContent').value = 'Erro ao carregar conteúdo.';
+            }
+        }
+
+        async function saveEdit() {
+            const content = document.getElementById('editFileContent').value;
+            try {
+                const resp = await fetch('/api/files/update', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ filename: currentEditFile, content: content })
+                });
+                const result = await resp.json();
+                if(result.success) {
+                    alert('Arquivo atualizado!');
+                    closeModal('editFileModal');
+                    loadFiles();
+                } else {
+                    alert('Erro: ' + result.error);
+                }
+            } catch(e) {
+                alert('Erro ao salvar: ' + e.message);
+            }
+        }
+
+        async function deleteFile(filename) {
+            if(!confirm('Tem certeza que deseja excluir "' + filename + '"?')) return;
+            
+            try {
+                const resp = await fetch('/api/files/delete/' + encodeURIComponent(filename), {
+                    method: 'DELETE'
+                });
+                const result = await resp.json();
+                if(result.success) {
+                    loadFiles(); // Recarrega a lista
+                } else {
+                    alert('Erro: ' + result.error);
+                }
+            } catch(e) {
+                alert('Erro ao excluir: ' + e.message);
+            }
+        }
+
+    
+        // Função para Upload (Importar)
+        async function uploadFile(input) {
+            if (input.files.length === 0) return;
+            
+            const formData = new FormData();
+            formData.append('file', input.files[0]);
+            
+            try {
+                const resp = await fetch('/api/files/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await resp.json();
+                
+                if (result.success || result.status === 'success') {
+                    alert('Arquivo importado com sucesso!');
+                    loadFiles(); // Recarrega a lista
+                } else {
+                    alert('Erro ao importar: ' + (result.error || 'Desconhecido'));
+                }
+            } catch(e) {
+                alert('Erro de conexão ao importar: ' + e.message);
+            } finally {
+                input.value = ''; // Limpa o input para permitir enviar o mesmo arquivo novamente
+            }
+        }
+
+        // Função para Download (Exportar)
+        function downloadFile(filename) {
+            // Cria um link temporário para forçar o download
+            const link = document.createElement('a');
+            link.href = '/api/files/download/' + encodeURIComponent(filename);
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+    </script>
+</body>
+</html>

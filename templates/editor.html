@@ -1,0 +1,1105 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>ThinkinOS Code Editor</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { margin: 0; padding: 0; background: #1e1e1e; color: #fff; font-family: sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        
+        /* TOOLBAR SUPERIOR */
+        .toolbar { background: #2d2d2d; padding: 8px 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; gap: 10px; flex-shrink: 0; }
+        .file-controls { display: flex; align-items: center; gap: 10px; flex: 1; }
+        select { background: #3c3c3c; color: #fff; border: 1px solid #555; padding: 6px 10px; border-radius: 4px; font-size: 13px; cursor: pointer; outline: none; }
+        .btn { background: #0e639c; color: white; border: none; padding: 6px 16px; cursor: pointer; border-radius: 3px; font-size: 13px; opacity: 0.5; pointer-events: none; transition: all 0.3s; }
+        .btn.ready { opacity: 1; pointer-events: auto; }
+        .btn:hover { background: #1177bb; }
+        .btn-diff { background: #d69e2e; }
+        .btn-diff:hover { background: #ecc94b; }
+        .btn-search { background: #6a1b9a; }
+        .btn-search:hover { background: #8e24aa; }
+        .btn-close { background: #cc3333; }
+        .btn-close:hover { background: #dd4444; }
+        
+        /* ABAS DE ARQUIVOS */
+        .tabs-bar { 
+            background: #252526; display: flex; overflow-x: auto; border-bottom: 1px solid #333; 
+            flex-shrink: 0; max-height: 35px; scrollbar-width: thin; scrollbar-color: #555 #252526;
+        }
+        .tab { 
+            padding: 8px 20px 8px 15px; cursor: pointer; font-size: 13px; color: #969696; 
+            border-right: 1px solid #333; display: flex; align-items: center; gap: 8px; 
+            white-space: nowrap; user-select: none; position: relative; min-width: 120px;
+        }
+        .tab:hover { background: #2a2d2e; color: #fff; }
+        .tab.active { background: #1e1e1e; color: #fff; border-bottom: 2px solid #0e639c; }
+        .tab .close-tab { 
+            font-size: 14px; opacity: 0; transition: opacity 0.2s; padding: 0 2px; border-radius: 3px;
+        }
+        .tab:hover .close-tab { opacity: 1; }
+        .tab .close-tab:hover { background: #c75450; color: white; }
+        .tab.modified::after { content: '●'; position: absolute; right: 8px; color: #fff; font-size: 10px; }
+        
+        /* ÁREA PRINCIPAL */
+        .main-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+        #editor-wrapper { flex: 1; width: 100%; position: relative; }
+        #container { width: 100%; height: 100%; }
+        #fallback-editor { 
+            display: none; width: 100%; height: 100%; background: #1e1e1e; color: #d4d4d4; 
+            border: none; padding: 10px; font-family: monospace; font-size: 14px; 
+            resize: none; outline: none; box-sizing: border-box;
+        }
+        
+        /* TERMINAL INTEGRADO */
+        .terminal-panel { 
+            height: 0; background: #1e1e1e; border-top: 1px solid #333; 
+            display: flex; flex-direction: column; transition: height 0.3s ease; overflow: hidden; flex-shrink: 0;
+        }
+        .terminal-panel.open { height: 250px; }
+        .terminal-header { 
+            background: #2d2d2d; padding: 5px 15px; display: flex; justify-content: space-between; 
+            align-items: center; font-size: 12px; border-bottom: 1px solid #333; flex-shrink: 0;
+        }
+        .terminal-header span { color: #ccc; }
+        .terminal-body { flex: 1; overflow-y: auto; padding: 10px; font-family: monospace; font-size: 13px; color: #0f0; }
+        .terminal-input-line { display: flex; padding: 5px 10px; background: #1a1a1a; border-top: 1px solid #333; flex-shrink: 0; }
+        .terminal-prompt { color: #0f0; margin-right: 8px; white-space: nowrap; }
+        #terminal-input { 
+            flex: 1; background: transparent; border: none; color: #fff; font-family: monospace; 
+            font-size: 13px; outline: none; caret-color: #0f0;
+        }
+        
+        /* BARRA DE STATUS */
+        .status-bar { background: #007acc; color: white; padding: 4px 15px; font-size: 12px; display: flex; justify-content: space-between; flex-shrink: 0; }
+        
+        /* MODAIS */
+        .modal-overlay { 
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.7); z-index: 1000; justify-content: center; align-items: center; 
+        }
+        .modal-content { background: #252526; border-radius: 8px; overflow: hidden; display: flex; flex-direction: column; max-width: 80%; max-height: 80%; }
+        
+        /* MODAL DIFF */
+        .diff-modal .modal-content { width: 90%; height: 80%; }
+        .diff-header { background: #333; padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #444; }
+        .diff-body { flex: 1; display: flex; overflow: auto; }
+        .diff-pane { flex: 1; padding: 10px; font-family: monospace; font-size: 13px; white-space: pre-wrap; overflow: auto; line-height: 1.5; }
+        .diff-old { background: #2a1f1f; color: #ff7b72; border-right: 1px solid #444; }
+        .diff-new { background: #1f2a1f; color: #7ee787; }
+        .diff-line { padding: 2px 5px; margin: 1px 0; border-left: 3px solid transparent; }
+        .diff-added { background: rgba(126, 231, 135, 0.1); border-left-color: #7ee787; }
+        .diff-removed { background: rgba(255, 123, 114, 0.1); border-left-color: #ff7b72; }
+        
+        /* MODAL BUSCA */
+        .search-modal .modal-content { width: 600px; max-height: 500px; }
+        .search-header { background: #333; padding: 15px; border-bottom: 1px solid #444; }
+        .search-input { 
+            width: 100%; background: #3c3c3c; color: #fff; border: 1px solid #555; 
+            padding: 10px; border-radius: 4px; font-size: 14px; outline: none;
+        }
+        .search-input:focus { border-color: #0e639c; }
+        .search-results { flex: 1; overflow-y: auto; padding: 10px; }
+        .search-result-item { 
+            padding: 10px; border-bottom: 1px solid #333; cursor: pointer; 
+        }
+        .search-result-item:hover { background: #2a2d2e; }
+        .search-result-file { color: #0e639c; font-weight: bold; margin-bottom: 5px; }
+        .search-result-context { color: #ccc; font-family: monospace; font-size: 12px; white-space: pre-wrap; word-break: break-all; }
+        .search-highlight { background: #ffeb3b; color: #000; padding: 1px 3px; border-radius: 2px; }
+        
+        #error-msg { 
+            display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); 
+            background: #333; padding: 20px; border-radius: 8px; text-align: center; max-width: 400px; z-index: 10;
+        }
+    </style>
+</head>
+<body>
+    <!-- TOOLBAR -->
+    <div class="toolbar">
+        <div class="file-controls">
+            
+            <button id="btn-open-file" class="btn ready" onclick="openSecureFile()" style="background:#0e639c;color:white;border:none;padding:6px 16px;cursor:pointer;border-radius:3px;font-size:13px;">📂 Abrir Arquivo</button>
+        </div>
+        <div style="display:flex; gap:8px;">
+            <button id="btn-terminal" class="btn ready" onclick="toggleTerminal()">💻 Terminal</button>
+            <button id="btn-search" class="btn btn-search ready" onclick="openSearch()"> Buscar</button>
+            <button id="btn-diff" class="btn btn-diff ready" onclick="showDiff()">📊 Comparar</button>
+            <button id="btn-save" class="btn ready" onclick="saveCurrentTab()">💾 Salvar</button>
+            <button class="btn btn-close ready" onclick="window.location.href='/desktop'">✕ Fechar</button>
+        </div>
+    </div>
+    
+    <!-- ABAS -->
+    <div class="tabs-bar" id="tabs-bar"></div>
+    
+    <!-- ÁREA PRINCIPAL -->
+    <div class="main-area">
+        <div id="editor-wrapper">
+            <div id="container"></div>
+            <textarea id="fallback-editor" placeholder="Editor Monaco falhou. Usando modo texto simples..."></textarea>
+            <div id="error-msg">
+                <h3>⚠️ Erro ao carregar editor</h3>
+                <p id="error-detail"></p>
+                <button class="btn ready" onclick="location.reload()" style="margin-top:10px;">🔄 Recarregar</button>
+            </div>
+        </div>
+        
+        <!-- TERMINAL INTEGRADO -->
+       <div class="terminal-panel" id="terminal-panel">
+    <div class="terminal-header">
+        <span>💻 Terminal Integrado</span>
+        <div style="display:flex; gap:5px;">
+            <button class="btn-terminal-mode" onclick="switchToReal()" title="Terminal Real" style="background:#0f0; color:#000;"> Real</button>
+            <button class="btn-terminal-mode" onclick="switchToSimulated()" title="Terminal Simulado">🎮 Simulado</button>
+            <button class="btn btn-close ready" onclick="toggleTerminal()" style="padding:2px 10px; font-size:11px;">✕</button>
+        </div>
+    </div>
+    
+    <!-- Terminal Real (ttyd via iframe) -->
+    <iframe id="terminal-real" src="http://127.0.0.1:7681" 
+            style="width:100%; height:calc(100% - 45px); border:none; background:#000; display:block;">
+    </iframe>
+    
+    <!-- Terminal Simulado (fallback) -->
+    <div id="terminal-simulated" style="display:none; flex-direction:column; height:calc(100% - 45px);">
+        <div class="terminal-body" id="terminal-output"></div>
+        <div class="terminal-input-line">
+            <span class="terminal-prompt">luperesil@thinkinos:~$</span>
+            <input type="text" id="terminal-input" autocomplete="off" spellcheck="false" placeholder="Digite um comando...">
+        </div>
+    </div>
+</div>
+    
+    <!-- BARRA DE STATUS -->
+    <div class="status-bar">
+        <span id="status-msg">Carregando...</span>
+        <span>ThinkinOS Code Editor V2.0 | Abas • Busca Global • Terminal</span>
+    </div>
+
+    <!-- MODAL DIFF -->
+    <div id="diff-modal" class="modal-overlay diff-modal" onclick="if(event.target===this)closeModal('diff-modal')">
+        <div class="modal-content">
+            <div class="diff-header">
+                <span style="font-weight:bold;">📊 Comparação: </span>
+                <button class="btn btn-close ready" onclick="closeModal('diff-modal')" style="padding:4px 12px;">✕</button>
+            </div>
+            <div class="diff-body">
+                <div class="diff-pane diff-old" id="diff-old"></div>
+                <div class="diff-pane diff-new" id="diff-new"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL BUSCA -->
+    <div id="search-modal" class="modal-overlay search-modal" onclick="if(event.target===this)closeModal('search-modal')">
+        <div class="modal-content">
+            <div class="search-header">
+                <input type="text" class="search-input" id="search-input" placeholder="Buscar em todos os arquivos..." onkeyup="if(event.key==='Enter')performSearch()">
+            </div>
+            <div class="search-results" id="search-results"></div>
+        </div>
+    </div>
+
+    <!-- SCRIPTS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/loader.min.js"></script>
+    <script>
+        // ===== ESTADO GLOBAL =====
+        let editor = null;
+        let useFallback = false;
+        let tabs = []; // [{file, content, modified}]
+        let activeTabIndex = -1;
+        let terminalHistory = [];
+        let terminalHistoryIndex = -1;
+        
+        const langMap = {'.py':'python','.js':'javascript','.html':'html','.json':'json','.css':'css','.sh':'shell'};
+        function getLanguage(f) { return langMap['.'+f.split('.').pop()] || 'plaintext'; }
+        
+        // ===== INICIALIZAÇÃO =====
+        const loadTimeout = setTimeout(() => {
+            if (!editor && !useFallback) activateFallback("Tempo esgotado ao carregar Monaco.");
+        }, 5000);
+        
+        function enableButtons() {
+            document.querySelectorAll('.btn').forEach(b => b.classList.add('ready'));
+            clearTimeout(loadTimeout);
+        }
+        
+        function activateFallback(reason) {
+            useFallback = true;
+            document.getElementById('container').style.display = 'none';
+            document.getElementById('fallback-editor').style.display = 'block';
+            document.getElementById('error-msg').style.display = 'block';
+            document.getElementById('error-detail').textContent = reason;
+            document.getElementById('status-msg').textContent = 'Modo texto simples';
+            enableButtons();
+        }
+        
+        try {
+            require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs' }});
+            require(['vs/editor/editor.main'], function() {
+                clearTimeout(loadTimeout);
+                console.log("✅ Monaco carregado");
+                try {
+                    editor = monaco.editor.create(document.getElementById('container'), {
+                        value: '// Selecione um arquivo para começar', language: 'plaintext', theme: 'vs-dark',
+                        automaticLayout: true, fontSize: 14, minimap: {enabled:true}, scrollBeyondLastLine: false, tabSize: 4
+                    });
+                    enableButtons();
+                    document.getElementById('status-msg').textContent = 'Pronto - Abra um arquivo';
+                    
+                    // Abrir app.py por padrão se disponível
+                    // auto-open desativado: // [SEGURANÇA] auto-open desativado
+                } catch(e) { activateFallback("Erro Monaco: " + e.message); }
+            }, function(err) { activateFallback("Falha CDN Monaco."); });
+        } catch(e) { activateFallback("Erro crítico: " + e.message); }
+        
+        // ===== SISTEMA DE ABAS =====
+        function renderTabs() {
+            const bar = document.getElementById('tabs-bar');
+            bar.innerHTML = '';
+            tabs.forEach((tab, i) => {
+                const el = document.createElement('div');
+                el.className = 'tab' + (i === activeTabIndex ? ' active' : '') + (tab.modified ? ' modified' : '');
+                el.innerHTML = `<span>${tab.file}</span><span class="close-tab" onclick="event.stopPropagation();closeTab(${i})">×</span>`;
+                el.onclick = () => switchTab(i);
+                bar.appendChild(el);
+            });
+        }
+        
+        async function openFile(file) {
+            if (!file) return;
+            
+            // Verificar se já está aberto
+            const existing = tabs.findIndex(t => t.file === file);
+            if (existing !== -1) { switchTab(existing); return; }
+            
+            document.getElementById('status-msg').textContent = `Carregando ${file}...`;
+            try {
+                const res = await fetch(`/api/file/read?file=${encodeURIComponent(file)}`);
+                const data = await res.json();
+                if (data.error) { alert(`Erro: ${data.error}`); return; }
+                
+                tabs.push({ file, content: data.content, modified: false });
+                activeTabIndex = tabs.length - 1;
+                renderTabs();
+                updateEditor();
+                document.getElementById('status-msg').textContent = `Aberto: ${file}`;
+            } catch(e) { alert(`Falha: ${e.message}`); }
+        }
+        
+        function switchTab(index) {
+            if (index < 0 || index >= tabs.length) return;
+            // Salvar conteúdo atual antes de trocar
+            if (activeTabIndex >= 0 && tabs[activeTabIndex]) {
+                tabs[activeTabIndex].content = getContent();
+            }
+            activeTabIndex = index;
+            renderTabs();
+            updateEditor();
+            document.getElementById('status-msg').textContent = `Arquivo: ${tabs[index].file}`;
+        }
+        
+        function closeTab(index) {
+            if (tabs[index].modified && !confirm(`"${tabs[index].file}" tem alterações não salvas. Fechar mesmo assim?`)) return;
+            tabs.splice(index, 1);
+            if (activeTabIndex >= tabs.length) activeTabIndex = tabs.length - 1;
+            if (tabs.length === 0) {
+                activeTabIndex = -1;
+                setContent('// Selecione um arquivo para começar');
+            } else {
+                renderTabs();
+                updateEditor();
+            }
+        }
+        
+        function updateEditor() {
+            if (activeTabIndex >= 0 && tabs[activeTabIndex]) {
+                setContent(tabs[activeTabIndex].content);
+                if (editor && !useFallback) {
+                    editor.setModel(monaco.editor.createModel(tabs[activeTabIndex].content, getLanguage(tabs[activeTabIndex].file)));
+                }
+            }
+        }
+        
+        function markModified() {
+            if (activeTabIndex >= 0 && tabs[activeTabIndex]) {
+                tabs[activeTabIndex].modified = true;
+                tabs[activeTabIndex].content = getContent();
+                renderTabs();
+            }
+        }
+        
+        // ===== CONTEÚDO DO EDITOR =====
+        function setContent(text) {
+            if (useFallback || !editor) {
+                document.getElementById('fallback-editor').value = text;
+            } else {
+                editor.setValue(text);
+            }
+        }
+        
+        function getContent() {
+            if (useFallback || !editor) return document.getElementById('fallback-editor').value;
+            return editor.getValue();
+        }
+        
+        // Monitorar mudanças no editor
+        setInterval(() => {
+            if (activeTabIndex >= 0 && tabs[activeTabIndex]) {
+                const current = getContent();
+                if (current !== tabs[activeTabIndex].content) {
+                    tabs[activeTabIndex].modified = true;
+                    tabs[activeTabIndex].content = current;
+                    renderTabs();
+                }
+            }
+        }, 500);
+        
+        // ===== SALVAR =====
+        async function saveCurrentTab(silent = false) {
+            if (activeTabIndex < 0 || !tabs[activeTabIndex]) return;
+            const tab = tabs[activeTabIndex];
+            const content = getContent();
+            if (!silent) document.getElementById('status-msg').textContent = 'Salvando...';
+            try {
+                const res = await fetch('/api/file/save', {
+                    method:'POST', headers:{'Content-Type':'application/json'},
+                    body: JSON.stringify({file: tab.file, content})
+                });
+                const data = await res.json();
+                if (data.success) {
+                    tab.modified = false;
+                    tab.content = content;
+                    renderTabs();
+                    document.getElementById('status-msg').textContent = `✅ ${data.message}`;
+                    setTimeout(() => document.getElementById('status-msg').textContent = 'Pronto', 3000);
+                } else {
+                    document.getElementById('status-msg').textContent = `❌ ${data.error}`;
+                }
+            } catch(e) { document.getElementById('status-msg').textContent = `❌ Erro: ${e.message}`; }
+        }
+        
+        // ===== DIFF VISUAL =====
+        async function showDiff() {
+            if (activeTabIndex < 0 || !tabs[activeTabIndex]) { alert('Nenhum arquivo aberto.'); return; }
+            const tab = tabs[activeTabIndex];
+            const bakFile = tab.file + '.bak';
+            document.getElementById('status-msg').textContent = 'Carregando backup...';
+            
+            try {
+                const resBak = await fetch(`/api/file/read?file=${encodeURIComponent(bakFile)}`);
+                const dataBak = await resBak.json();
+                if (dataBak.error) {
+                    alert('Nenhum backup encontrado. Salve pelo menos uma vez antes de comparar.');
+                    document.getElementById('status-msg').textContent = 'Pronto';
+                    return;
+                }
+                
+                const diffs = simpleDiff(dataBak.content, getContent());
+                let oldHtml = '', newHtml = '';
+                diffs.forEach(d => {
+                    const safe = d.text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\t/g,'    ');
+                    if (d.type === -1) oldHtml += `<div class="diff-line diff-removed">-${safe}</div>`;
+                    else if (d.type === 1) newHtml += `<div class="diff-line diff-added">+${safe}</div>`;
+                    else { oldHtml += `<div class="diff-line">${safe}</div>`; newHtml += `<div class="diff-line">${safe}</div>`; }
+                });
+                
+                document.getElementById('diff-old').innerHTML = oldHtml || '<div style="padding:20px;color:#666;">Sem remoções</div>';
+                document.getElementById('diff-new').innerHTML = newHtml || '<div style="padding:20px;color:#666;">Sem adições</div>';
+                document.getElementById('diff-filename').textContent = tab.file;
+                document.getElementById('diff-modal').style.display = 'flex';
+                document.getElementById('status-msg').textContent = 'Comparando...';
+            } catch(e) { alert('Erro diff: ' + e.message); }
+        }
+        
+        function simpleDiff(oldText, newText) {
+            const oldLines = oldText.split('\n'), newLines = newText.split('\n'), result = [];
+            let i = 0, j = 0;
+            while (i < oldLines.length || j < newLines.length) {
+                if (i < oldLines.length && j < newLines.length && oldLines[i] === newLines[j]) {
+                    result.push({type:0, text:oldLines[i]}); i++; j++;
+                } else if (j < newLines.length && (i >= oldLines.length || newLines[j] !== oldLines[i])) {
+                    let found = false;
+                    for(let k=i+1; k<Math.min(i+5, oldLines.length); k++) { if(oldLines[k]===newLines[j]){found=true;break;} }
+                    if(!found && i < oldLines.length) { result.push({type:-1,text:oldLines[i]}); i++; }
+                    else { result.push({type:1,text:newLines[j]}); j++; }
+                } else if (i < oldLines.length) { result.push({type:-1,text:oldLines[i]}); i++; }
+            }
+            return result;
+        }
+        
+        // ===== BUSCA GLOBAL =====
+        async function openSearch() {
+            document.getElementById('search-modal').style.display = 'flex';
+            document.getElementById('search-input').value = '';
+            document.getElementById('search-results').innerHTML = '<div style="padding:20px;color:#666;text-align:center;">Digite um termo e pressione Enter</div>';
+            setTimeout(() => document.getElementById('search-input').focus(), 100);
+        }
+        
+        async function performSearch() {
+            const query = document.getElementById('search-input').value.trim();
+            if (!query) return;
+            
+            const resultsDiv = document.getElementById('search-results');
+            resultsDiv.innerHTML = '<div style="padding:20px;color:#666;text-align:center;">Buscando...</div>';
+            
+            const files = ['app.py','assistants.json','templates/desktop.html','templates/terminal_native.html','templates/editor.html'];
+            let allResults = [];
+            
+            for (const file of files) {
+                try {
+                    const res = await fetch(`/api/file/read?file=${encodeURIComponent(file)}`);
+                    const data = await res.json();
+                    if (data.content) {
+                        const lines = data.content.split('\n');
+                        lines.forEach((line, idx) => {
+                            if (line.toLowerCase().includes(query.toLowerCase())) {
+                                allResults.push({file, line: idx+1, text: line});
+                            }
+                        });
+                    }
+                } catch(e) {}
+            }
+            
+            if (allResults.length === 0) {
+                resultsDiv.innerHTML = '<div style="padding:20px;color:#666;text-align:center;">Nenhum resultado encontrado</div>';
+                return;
+            }
+            
+            resultsDiv.innerHTML = allResults.map(r => {
+                const highlighted = r.text.replace(new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi'), '<span class="search-highlight">$1</span>');
+                return `<div class="search-result-item" onclick="openFile('${r.file}');closeModal('search-modal')">
+                    <div class="search-result-file">${r.file} (linha ${r.line})</div>
+                    <div class="search-result-context">${highlighted}</div>
+                </div>`;
+            }).join('');
+            
+            document.getElementById('status-msg').textContent = `${allResults.length} resultados encontrados`;
+        }
+        
+        // ===== TERMINAL INTEGRADO =====
+        function toggleTerminal() {
+            const panel = document.getElementById('terminal-panel');
+            panel.classList.toggle('open');
+            if (panel.classList.contains('open')) {
+                document.getElementById('terminal-input').focus();
+                addTerminalOutput('ThinkinOS Terminal Integrado v1.0\nDigite "help" para ver comandos disponíveis.\n');
+            }
+        }
+        
+        function addTerminalOutput(text) {
+            const output = document.getElementById('terminal-output');
+            output.innerHTML += text.replace(/\n/g, '<br>');
+            output.scrollTop = output.scrollHeight;
+        }
+        
+        document.getElementById('terminal-input').addEventListener('keydown', async function(e) {
+            if (e.key === 'Enter') {
+                   const cmd = this.value.trim();
+
+                if (!cmd) return;
+
+                
+
+                terminalHistory.push(cmd);
+
+                terminalHistoryIndex = terminalHistory.length;
+
+                addTerminalOutput(`<span style="color:#0f0;">luperesil@thinkinos:~$</span> ${cmd}\n`);
+
+                this.value = '';
+
+                
+
+                // Processar comandos localmente
+
+                const response = await processTerminalCommand(cmd);
+
+                addTerminalOutput(response + '\n');
+
+            } else if (e.key === 'ArrowUp') {
+
+                e.preventDefault();
+
+                if (terminalHistoryIndex > 0) {
+
+                    terminalHistoryIndex--;
+
+                    this.value = terminalHistory[terminalHistoryIndex];
+
+                }
+
+            } else if (e.key === 'ArrowDown') {
+
+                e.preventDefault();
+
+                if (terminalHistoryIndex < terminalHistory.length - 1) {
+
+                    terminalHistoryIndex++;
+
+                    this.value = terminalHistory[terminalHistoryIndex];
+
+                } else {
+
+                    terminalHistoryIndex = terminalHistory.length;
+
+                    this.value = '';
+
+                }
+
+            }
+
+        });
+
+        
+
+        // ===== TERMINAL SIMULADO APRIMORADO =====
+        let terminalCommands = ['help', 'clear', 'cls', 'ls', 'dir', 'pwd', 'cd', 'mkdir', 'cat', 'echo', 'touch', 'rm', 'date', 'whoami', 'hostname', 'history', 'exit', 'quit', 'version', 'about', 'open', 'save'];
+
+        async function processTerminalCommand(cmd) {
+            if (!cmd.trim()) return '';
+            const parts = cmd.trim().split(/\s+/);
+            const command = parts[0].toLowerCase();
+            const args = parts.slice(1);
+            
+            terminalHistory.push(cmd);
+            terminalHistoryIndex = terminalHistory.length;
+            
+            const output = [];
+            output.push(`<span style="color:#4ec9b0;">luperesil@thinkinos</span>:<span style="color:#569cd6;">~</span>$ ${cmd}`);
+            
+            switch(command) {
+                case 'help':
+                    output.push(`<span style="color:#dcdcaa;">Comandos:</span> help, clear, ls, pwd, date, whoami, echo, history, version, about, open, save`);
+                    break;
+                case 'clear': case 'cls':
+                    document.getElementById('terminal-output').innerHTML = '';
+                    return '';
+                case 'ls': case 'dir':
+                    output.push(`<span style="color:#569cd6;">app.py</span>  <span style="color:#569cd6;">templates/</span>  <span style="color:#569cd6;">static/</span>  <span style="color:#569cd6;">venv/</span>`);
+                    output.push(`<span style="color:#569cd6;">backups/</span>  <span style="color:#dcdcaa;">thinkinos.db</span>  <span style="color:#dcdcaa;">assistants.json</span>`);
+                    break;
+                case 'pwd':
+                    output.push('<span style="color:#4ec9b0;">/home/lps/thinkinos-platform</span>');
+                    break;
+                case 'date':
+                    output.push(new Date().toString());
+                    break;
+                case 'whoami':
+                    output.push('<span style="color:#4ec9b0;">luperesil</span>');
+                    break;
+                case 'echo':
+                    output.push(args.join(' '));
+                    break;
+                case 'history':
+                    terminalHistory.forEach((h, i) => output.push(`  <span style="color:#808080;">${i+1}</span>  ${h}`));
+                    break;
+                case 'version':
+                    output.push('<span style="color:#dcdcaa;">ThinkinOS Code Editor v2.0</span>');
+                    output.push('Terminal Simulado v1.5 (Aprimorado com cores)');
+                    break;
+                case 'about':
+                    output.push('<span style="color:#dcdcaa;">ThinkinOS</span> - Sistema Operacional de IA Pessoal');
+                    output.push('Criado por: <span style="color:#4ec9b0;">Luiz Pereira</span>');
+                    break;
+                case 'open':
+                    if (args[0]) output.push(`<span style="color:#4ec9b0;">Abrindo ${args[0]}...</span>`);
+                    else output.push('<span style="color:#f44747;">Uso:</span> open &lt;arquivo&gt;');
+                    break;
+                case 'save':
+                    output.push('<span style="color:#4ec9b0;">✓ Arquivo salvo!</span>');
+                    break;
+                case 'exit': case 'quit':
+                    toggleTerminal();
+                    output.push('<span style="color:#4ec9b0;">Fechando terminal...</span>');
+                    break;
+                default:
+                    output.push(`<span style="color:#f44747;">Comando não encontrado:</span> ${command}`);
+                    output.push('Digite <span style="color:#4ec9b0;">help</span> para ver comandos.');
+            }
+            return output.join('<br>');
+        }
+
+        // Autocomplete com Tab
+        document.addEventListener('DOMContentLoaded', function() {
+            const terminalInput = document.getElementById('terminal-input');
+            if (terminalInput) {
+                terminalInput.addEventListener('keydown', function(e) {
+                    if (e.key === 'Tab') {
+                        e.preventDefault();
+                        const input = this.value.toLowerCase().trim();
+                        const lastWord = input.split(' ').pop();
+                        const matches = terminalCommands.filter(cmd => cmd.startsWith(lastWord));
+                        if (matches.length === 1) {
+                            const parts = this.value.split(' ');
+                            parts[parts.length - 1] = matches[0];
+                            this.value = parts.join(' ') + ' ';
+                        } else if (matches.length > 1) {
+                            if (typeof addTerminalOutput === 'function') {
+                                addTerminalOutput(`<span style="color:#808080;">${matches.join('  ')}</span><br>`);
+                            }
+                        }
+                    }
+                });
+            }
+        });
+
+        
+
+        // ===== UTILITÁRIOS =====
+
+        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+        
+
+        // Atalhos de teclado
+
+        document.addEventListener('keydown', (e) => {
+
+            if ((e.ctrlKey||e.metaKey) && e.key==='s') { e.preventDefault(); saveCurrentTab(); }
+
+            if ((e.ctrlKey||e.metaKey) && e.key==='f') { e.preventDefault(); openSearch(); }
+
+            if ((e.ctrlKey||e.metaKey) && e.key==='`') { e.preventDefault(); toggleTerminal(); }
+
+            if (e.key === 'Escape') {
+
+                document.querySelectorAll('.modal-overlay').forEach(m => m.style.display = 'none');
+
+            }
+
+        });
+
+    </script>
+
+<script src="/static/git_integration.js"></script>
+
+
+
+<script>
+
+
+        // ===== CARREGAR DESAFIO DO CHAT (VERSÃO ROBUSTA v2) =====
+        window.addEventListener('DOMContentLoaded', function() {
+            const challengeCode = localStorage.getItem('thinkinos_challenge_code');
+            const challengeTitle = localStorage.getItem('thinkinos_challenge_title');
+            
+            if (challengeCode && challengeTitle) {
+                // 1. Limpar do localStorage imediatamente (evita loops)
+                localStorage.removeItem('thinkinos_challenge_code');
+                localStorage.removeItem('thinkinos_challenge_title');
+                
+                const fileName = 'desafio_' + challengeTitle.toLowerCase().replace(/\s+/g, '_') + '.py';
+                
+                // 2. Aguardar o sistema de abas estar pronto
+                const tryLoad = setInterval(() => {
+                    if (typeof tabs !== 'undefined' && typeof renderTabs === 'function' && typeof updateEditor === 'function') {
+                        clearInterval(tryLoad);
+                        
+                        // Verificar se a aba já existe para não duplicar
+                        const existingIndex = tabs.findIndex(t => t.file === fileName);
+                        if (existingIndex !== -1) {
+                            tabs[existingIndex].content = challengeCode;
+                            tabs[existingIndex].modified = false;
+                            switchTab(existingIndex);
+                        } else {
+                            tabs.push({ file: fileName, content: challengeCode, modified: false });
+                            activeTabIndex = tabs.length - 1;
+                            renderTabs();
+                            updateEditor();
+                        }
+                        
+                        // 3. Feedback visual na barra de status
+                        const statusMsg = document.getElementById('status-msg');
+                        if (statusMsg) {
+                            statusMsg.textContent = '🎓 Modo Aprender Ativado: ' + fileName;
+                            statusMsg.style.color = '#4ec9b0';
+                            statusMsg.style.fontWeight = 'bold';
+                            
+                            setTimeout(() => {
+                                statusMsg.style.color = '';
+                                statusMsg.style.fontWeight = '';
+                                statusMsg.textContent = 'Pronto';
+                            }, 4000);
+                        }
+                    }
+                }, 500); // Tenta a cada 500ms até o editor estar pronto
+            }
+        });
+
+
+// ===== AUTO-SAVE SEGURO v1.0 =====
+
+(function() {
+
+    let autoSaveTimer = null;
+
+    
+
+    function initAutoSave() {
+
+        if (autoSaveTimer) clearInterval(autoSaveTimer);
+
+        autoSaveTimer = setInterval(() => {
+
+            if (typeof activeTabIndex !== 'undefined' && activeTabIndex >= 0 && 
+
+                typeof tabs !== 'undefined' && tabs[activeTabIndex] && tabs[activeTabIndex].modified) {
+
+                console.log('[AUTO-SAVE] Salvando silenciosamente...');
+
+                if (typeof saveCurrentTab === 'function') {
+
+                    saveCurrentTab(true);
+
+                }
+
+            }
+
+        }, 30000); // 30 segundos
+
+    }
+
+    
+
+    // Salvar ao perder o foco da janela
+
+    window.addEventListener('blur', () => {
+
+        if (typeof activeTabIndex !== 'undefined' && activeTabIndex >= 0 && 
+
+            typeof tabs !== 'undefined' && tabs[activeTabIndex] && tabs[activeTabIndex].modified) {
+
+            console.log('[AUTO-SAVE] Janela perdeu foco, salvando...');
+
+            if (typeof saveCurrentTab === 'function') {
+
+                saveCurrentTab(true);
+
+            }
+
+        }
+
+    });
+ 
+    // Iniciar quando o editor estiver pronto
+    if (typeof editor !== 'undefined') {
+        initAutoSave();
+    } else {
+        const checkEditor = setInterval(() => {
+            if (typeof editor !== 'undefined') {
+                initAutoSave();
+                clearInterval(checkEditor);
+            }
+        }, 1000);
+    }
+    console.log('✅ [AUTO-SAVE] Sistema inicializado');
+})();
+</script>
+
+<script>
+// Função segura para abrir arquivos - requer permissão
+window.openFileSecure = function() {
+    const filePath = prompt('Digite o caminho do arquivo para abrir:\nExemplo: /home/user/meu_arquivo.txt');
+    if (filePath) {
+        // Validar caminho - bloquear paths sensíveis
+        const blocked = ['/etc/', '/root/', '/var/log/', 'app.py', 'config.py', '.env'];
+        const isBlocked = blocked.some(p => filePath.includes(p));
+        
+        if (isBlocked) {
+            alert('⛔ Acesso negado: Este arquivo/diretório é restrito.');
+            console.warn('[SEGURANÇA] Tentativa de acesso bloqueada:', filePath);
+            return;
+        }
+        
+        // Abrir arquivo via API segura
+        fetch('/api/file/open', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({file: filePath})
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.error) {
+                alert('Erro: ' + data.error);
+            } else {
+                // Carregar conteúdo no editor
+                if (typeof editor !== 'undefined') {
+                    editor.setValue(data.content, -1);
+                    document.getElementById('status-msg').textContent = 'Arquivo: ' + filePath;
+                }
+            }
+        })
+        .catch(err => alert('Erro ao abrir arquivo: ' + err.message));
+    }
+};
+console.log('✅ [EDITOR] Função segura de abertura de arquivos carregada');
+</script>
+
+<script>
+// === ABRIR ARQUIVO SEGURO ===
+window.openSecureDialog = function() {
+    console.log('📂 [EDITOR] Abrindo dialog seguro...');
+    
+    const filePath = prompt('Digite o caminho COMPLETO do arquivo:\n\nExemplo válido:\n/home/lps/documentos/meu_codigo.py\n\n⛔ NÃO use caminhos do sistema como /etc/, /root/, etc.');
+    
+    if (!filePath) return;
+    
+    // Validações de segurança
+    const blocked_paths = [
+        '/etc/', '/root/', '/var/log/', '/proc/', '/sys/',
+        'app.py', 'config.py', '.env', 'database.db',
+        '/home/lps/thinkinos-platform/'
+    ];
+    
+    const isBlocked = blocked_paths.some(p => filePath.includes(p));
+    
+    if (isBlocked) {
+        alert('⛔ ACESSO NEGADO\n\nEste arquivo ou diretório é restrito por segurança.\n\nUse apenas arquivos em:\n/home/lps/documentos/\n/home/lps/projetos/');
+        console.warn('[SEGURANÇA] Bloqueado:', filePath);
+        return;
+    }
+    
+    // Verificar se o arquivo existe em diretório permitido
+    const allowed_dirs = ['/home/lps/documentos/', '/home/lps/projetos/', '/home/lps/Downloads/'];
+    const isAllowed = allowed_dirs.some(dir => filePath.startsWith(dir));
+    
+    if (!isAllowed) {
+        alert('️ DIRETÓRIO NÃO PERMITIDO\n\nUse apenas arquivos em:\n• /home/lps/documentos/\n• /home/lps/projetos/\n• /home/lps/Downloads/');
+        return;
+    }
+    
+    // Abrir arquivo via API
+    console.log('[EDITOR] Abrindo arquivo:', filePath);
+    fetch('/api/file/open', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({file: filePath})
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.error) {
+            alert('Erro: ' + data.error);
+        } else {
+            if (typeof editor !== 'undefined') {
+                editor.setValue(data.content, -1);
+                const statusMsg = document.getElementById('status-msg');
+                if (statusMsg) statusMsg.textContent = 'Arquivo: ' + filePath;
+                console.log('✅ [EDITOR] Arquivo carregado:', filePath);
+            }
+        }
+    })
+    .catch(err => {
+        console.error('[EDITOR] Erro:', err);
+        alert('Erro ao abrir arquivo: ' + err.message);
+    });
+};
+
+console.log('✅ [EDITOR] Sistema de segurança ativado');
+</script>
+
+
+<script>
+// === ABRIR ARQUIVO SEGURO ===
+window.openSecureFile = function() {
+    console.log(' [EDITOR] Abrindo dialog seguro...');
+    
+    const filePath = prompt('Digite o caminho COMPLETO do arquivo:\n\nExemplo válido:\n/home/lps/documentos/meu_codigo.py\n\n⛔ NÃO use caminhos do sistema como /etc/, /root/, etc.');
+    
+    if (!filePath) return;
+    
+    // Validações de segurança
+    const blocked_paths = [
+        '/etc/', '/root/', '/var/log/', '/proc/', '/sys/',
+        'app.py', 'config.py', '.env', 'database.db',
+        '/home/lps/thinkinos-platform/'
+    ];
+    
+    const isBlocked = blocked_paths.some(p => filePath.includes(p));
+    
+    if (isBlocked) {
+        alert('⛔ ACESSO NEGADO\n\nEste arquivo ou diretório é restrito por segurança.\n\nUse apenas arquivos em:\n/home/lps/documentos/\n/home/lps/projetos/');
+        console.warn('[SEGURANÇA] Bloqueado:', filePath);
+        return;
+    }
+    
+    // Verificar se o arquivo existe em diretório permitido
+    const allowed_dirs = ['/home/lps/documentos/', '/home/lps/projetos/', '/home/lps/Downloads/'];
+    const isAllowed = allowed_dirs.some(dir => filePath.startsWith(dir));
+    
+    if (!isAllowed) {
+        alert('⚠️ DIRETÓRIO NÃO PERMITIDO\n\nUse apenas arquivos em:\n• /home/lps/documentos/\n• /home/lps/projetos/\n• /home/lps/Downloads/');
+        return;
+    }
+    
+    // Abrir arquivo via API
+    console.log('[EDITOR] Abrindo arquivo:', filePath);
+    fetch('/api/file/open', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({file: filePath})
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.error) {
+            alert('Erro: ' + data.error);
+        } else {
+            if (typeof editor !== 'undefined') {
+                editor.setValue(data.content, -1);
+                const statusMsg = document.getElementById('status-msg');
+                if (statusMsg) statusMsg.textContent = 'Arquivo: ' + filePath;
+                console.log('✅ [EDITOR] Arquivo carregado:', filePath);
+            }
+        }
+    })
+    .catch(err => {
+        console.error('[EDITOR] Erro:', err);
+        alert('Erro ao abrir arquivo: ' + err.message);
+    });
+};
+console.log('✅ [EDITOR] openSecureFile() disponível');
+
+// ===== ALTERNÂNCIA ENTRE TERMINAL REAL E SIMULADO =====
+function switchToReal() {
+    document.getElementById('terminal-real').style.display = 'block';
+    document.getElementById('terminal-simulated').style.display = 'none';
+    addTerminalOutput(' Mudado para terminal REAL do Linux (ttyd).\n');
+}
+
+function switchToSimulated() {
+    document.getElementById('terminal-real').style.display = 'none';
+    document.getElementById('terminal-simulated').style.display = 'flex';
+    document.getElementById('terminal-input').focus();
+    addTerminalOutput(' Mudado para terminal SIMULADO.\n');
+}
+
+// Modificar toggleTerminal para garantir que o terminal real apareça
+const originalToggleTerminal = toggleTerminal;
+toggleTerminal = function() {
+    const panel = document.getElementById('terminal-panel');
+    panel.classList.toggle('open');
+    if (panel.classList.contains('open')) {
+        // Sempre mostrar o terminal real por padrão
+        document.getElementById('terminal-real').style.display = 'block';
+        document.getElementById('terminal-simulated').style.display = 'none';
+    }
+};
+</script>
+<style>
+    /* === FORÇAR EXIBIÇÃO DO TERMINAL === */
+    #terminal-panel {
+        display: none !important; /* Escondido por padrão */
+        position: fixed !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        width: 100% !important;
+        height: 350px !important;
+        background-color: #1e1e1e !important;
+        color: #d4d4d4 !important;
+        border-top: 2px solid #007acc !important;
+        box-shadow: 0 -5px 15px rgba(0,0,0,0.5) !important;
+        z-index: 99999 !important; /* Fica por cima de tudo */
+        flex-direction: column !important;
+    }
+
+    /* Quando o JavaScript adiciona a classe 'open' */
+    #terminal-panel.open {
+        display: flex !important; /* Faz o painel aparecer */
+    }
+
+    .terminal-header {
+        background-color: #252526 !important;
+        padding: 8px 15px !important;
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        font-size: 13px !important;
+        font-weight: bold !important;
+        border-bottom: 1px solid #333 !important;
+        color: #fff !important;
+    }
+
+    .terminal-body {
+        flex: 1 !important;
+        padding: 10px 15px !important;
+        overflow-y: auto !important;
+        font-family: 'Courier New', Courier, monospace !important;
+        font-size: 14px !important;
+        line-height: 1.4 !important;
+        white-space: pre-wrap !important;
+    }
+
+    .terminal-input-line {
+        display: flex !important;
+        padding: 10px 15px !important;
+        background-color: #1e1e1e !important;
+        border-top: 1px solid #333 !important;
+        align-items: center !important;
+    }
+
+    .terminal-prompt {
+        color: #4ec9b0 !important;
+        margin-right: 8px !important;
+        font-family: 'Courier New', Courier, monospace !important;
+    }
+
+    #terminal-input {
+        flex: 1 !important;
+        background: transparent !important;
+        border: none !important;
+        color: #d4d4d4 !important;
+        font-family: 'Courier New', Courier, monospace !important;
+        font-size: 14px !important;
+        outline: none !important;
+    }
+</style>
+</body>
+</html>
+
+<style id="terminal-fix-css">
+#terminal-panel {
+    display: none !important;
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 350px !important;
+    background-color: #1e1e1e !important;
+    color: #d4d4d4 !important;
+    border-top: 3px solid #007acc !important;
+    z-index: 99999 !important;
+    flex-direction: column !important;
+}
+#terminal-panel.open {
+    display: flex !important;
+}
+.terminal-header {
+    background: #252526 !important;
+    padding: 10px !important;
+    color: white !important;
+}
+.terminal-body {
+    flex: 1 !important;
+    padding: 15px !important;
+    overflow-y: auto !important;
+    font-family: monospace !important;
+    color: #d4d4d4 !important;
+}
+.terminal-input-line {
+    display: flex !important;
+    padding: 10px !important;
+    background: #1e1e1e !important;
+}
+.terminal-prompt {
+    color: #4ec9b0 !important;
+    margin-right: 10px !important;
+}
+#terminal-input {
+    flex: 1 !important;
+    background: transparent !important;
+    border: none !important;
+    color: white !important;
+    font-family: monospace !important;
+    outline: none !important;
+}
+</style>

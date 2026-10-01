@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Terminal - ThinkinOS</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background: #1e1e1e; color: #d4d4d4;
+            font-family: 'Consolas', 'Monaco', monospace;
+            height: 100vh; display: flex; flex-direction: column;
+        }
+        .header {
+            background: #333; padding: 10px 20px;
+            display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 1px solid #444;
+        }
+        .header h2 { font-size: 14px; font-weight: 600; }
+        .btn-close {
+            background: #ff5f56; border: none; color: white;
+            padding: 5px 12px; border-radius: 4px; cursor: pointer;
+            text-decoration: none; font-size: 12px;
+        }
+        #terminal-output {
+            flex: 1; padding: 15px; overflow-y: auto;
+            background: #1e1e1e; font-size: 13px; line-height: 1.6;
+        }
+        .command-line { color: #0f0; margin-bottom: 5px; }
+        .output-line { color: #d4d4d4; margin-bottom: 3px; white-space: pre-wrap; }
+        .error-line { color: #f48771; }
+        .input-line {
+            display: flex; align-items: center;
+            background: #252526; padding: 10px;
+            border-top: 1px solid #444;
+        }
+        .prompt { color: #0f0; margin-right: 10px; font-weight: bold; }
+        #terminal-input {
+            flex: 1; background: transparent; border: none;
+            color: #d4d4d4; font-family: inherit; font-size: 13px;
+            outline: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h2>️ Terminal Web - ThinkinOS</h2>
+        <a href="/desktop" class="btn-close">✕ Fechar</a>
+    </div>
+    
+    <div id="terminal-output">
+        <div class="output-line">ThinkinOS Terminal v1.0</div>
+        <div class="output-line">Digite 'help' para ver os comandos disponíveis.</div>
+        <div class="output-line"></div>
+    </div>
+    
+    <div class="input-line">
+        <span class="prompt">lps@thinkinos:~$</span>
+        <input type="text" id="terminal-input" autocomplete="off" autofocus>
+    </div>
+
+    <script>
+        const output = document.getElementById('terminal-output');
+        const input = document.getElementById('terminal-input');
+
+        input.addEventListener('keypress', async (e) => {
+            if (e.key === 'Enter') {
+                const command = input.value.trim();
+                if (!command) return;
+
+                // Adiciona comando no output
+                output.innerHTML += `<div class="command-line">lps@thinkinos:~$ ${command}</div>`;
+                input.value = '';
+                output.scrollTop = output.scrollHeight;
+
+                // Executa comando
+                try {
+                    const res = await fetch('/api/workspace/terminal', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ command: command })
+                    });
+                    const data = await res.json();
+
+                    if (data.success) {
+                        if (data.output) {
+                            output.innerHTML += `<div class="output-line">${escapeHtml(data.output)}</div>`;
+                        }
+                    } else {
+                        output.innerHTML += `<div class="output-line error-line">Erro: ${escapeHtml(data.error)}</div>`;
+                    }
+                } catch (err) {
+                    output.innerHTML += `<div class="output-line error-line">Erro de conexão: ${err.message}</div>`;
+                }
+
+                output.scrollTop = output.scrollHeight;
+            }
+        });
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Focar no input ao carregar
+        input.focus();
+        document.addEventListener('click', () => input.focus());
+    </script>
+</body>
+</html>

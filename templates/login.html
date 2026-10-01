@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ThinkinOS - Login</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+        
+        .login-container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            width: 400px;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+        }
+        
+        .logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .logo h1 {
+            color: white;
+            font-size: 2.5em;
+            font-weight: 300;
+            letter-spacing: 2px;
+        }
+        
+        .logo p {
+            color: rgba(255, 255, 255, 0.7);
+            margin-top: 10px;
+            font-size: 0.9em;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            color: rgba(255, 255, 255, 0.9);
+            margin-bottom: 8px;
+            font-size: 0.9em;
+        }
+        
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 1em;
+            transition: all 0.3s;
+        }
+        
+        .form-group input:focus {
+            outline: none;
+            border-color: rgba(255, 255, 255, 0.6);
+            background: rgba(255, 255, 255, 0.15);
+        }
+        
+        .btn-login {
+            width: 100%;
+            padding: 14px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            border-radius: 8px;
+            color: white;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 10px;
+        }
+        
+        .btn-login:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+        
+        .toggle-form {
+            text-align: center;
+            margin-top: 20px;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.9em;
+        }
+        
+        .toggle-form a {
+            color: white;
+            text-decoration: none;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        .toggle-form a:hover {
+            text-decoration: underline;
+        }
+        
+        .error-message {
+            background: rgba(244, 67, 54, 0.2);
+            border: 1px solid rgba(244, 67, 54, 0.5);
+            color: white;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        
+        .success-message {
+            background: rgba(76, 175, 80, 0.2);
+            border: 1px solid rgba(76, 175, 80, 0.5);
+            color: white;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="logo">
+            <h1>ThinkinOS</h1>
+            <p>Sistema Operacional Inteligente</p>
+        </div>
+        
+        <div class="error-message" id="error-msg"></div>
+        <div class="success-message" id="success-msg"></div>
+        
+        <!-- Formulário de Login -->
+        <form id="login-form">
+            <div class="form-group">
+                <label for="username">Usuário</label>
+                <input type="text" id="username" name="username" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Senha</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            
+            <button type="submit" class="btn-login">Entrar</button>
+        </form>
+        
+        <!-- Formulário de Cadastro (oculto inicialmente) -->
+        <form id="register-form" class="hidden">
+            <div class="form-group">
+                <label for="reg-username">Usuário</label>
+                <input type="text" id="reg-username" name="username" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="reg-display-name">Nome de Exibição (opcional)</label>
+                <input type="text" id="reg-display-name" name="display_name">
+            </div>
+            
+            <div class="form-group">
+                <label for="reg-password">Senha (mínimo 6 caracteres)</label>
+                <input type="password" id="reg-password" name="password" required minlength="6">
+            </div>
+            
+            <div class="form-group">
+                <label for="reg-confirm-password">Confirmar Senha</label>
+                <input type="password" id="reg-confirm-password" name="confirm_password" required minlength="6">
+            </div>
+            
+            <button type="submit" class="btn-login">Cadastrar</button>
+        </form>
+        
+        <div class="toggle-form">
+            <span id="toggle-text">Não tem conta?</span> <a href="#" id="toggle-link">Cadastre-se</a>
+        </div>
+    </div>
+    
+    <script>
+        const loginForm = document.getElementById('login-form');
+        const registerForm = document.getElementById('register-form');
+        const toggleLink = document.getElementById('toggle-link');
+        const toggleText = document.getElementById('toggle-text');
+        const errorMsg = document.getElementById('error-msg');
+        const successMsg = document.getElementById('success-msg');
+        
+        let isLoginMode = true;
+        
+        toggleLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            isLoginMode = !isLoginMode;
+            
+            if (isLoginMode) {
+                loginForm.classList.remove('hidden');
+                registerForm.classList.add('hidden');
+                toggleText.textContent = 'Não tem conta?';
+                toggleLink.textContent = 'Cadastre-se';
+            } else {
+                loginForm.classList.add('hidden');
+                registerForm.classList.remove('hidden');
+                toggleText.textContent = 'Já tem conta?';
+                toggleLink.textContent = 'Faça login';
+            }
+            
+            errorMsg.style.display = 'none';
+            successMsg.style.display = 'none';
+        });
+        
+        // Login
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    successMsg.textContent = 'Login realizado com sucesso!';
+                    successMsg.style.display = 'block';
+                    setTimeout(() => {
+                        window.location.href = '/desktop';
+                    }, 1000);
+                } else {
+                    errorMsg.textContent = data.error || 'Erro ao fazer login';
+                    errorMsg.style.display = 'block';
+                }
+            } catch (err) {
+                errorMsg.textContent = 'Erro de conexão';
+                errorMsg.style.display = 'block';
+            }
+        });
+        
+        // Cadastro
+        registerForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const username = document.getElementById('reg-username').value;
+            const displayName = document.getElementById('reg-display-name').value;
+            const password = document.getElementById('reg-password').value;
+            const confirmPassword = document.getElementById('reg-confirm-password').value;
+            
+            if (password !== confirmPassword) {
+                errorMsg.textContent = 'As senhas não coincidem';
+                errorMsg.style.display = 'block';
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, display_name: displayName, password })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    successMsg.textContent = 'Cadastro realizado! Faça login agora.';
+                    successMsg.style.display = 'block';
+                    errorMsg.style.display = 'none';
+                    
+                    // Voltar para o formulário de login após 2 segundos
+                    setTimeout(() => {
+                        isLoginMode = true;
+                        loginForm.classList.remove('hidden');
+                        registerForm.classList.add('hidden');
+                        toggleText.textContent = 'Não tem conta?';
+                        toggleLink.textContent = 'Cadastre-se';
+                        registerForm.reset();
+                    }, 2000);
+                } else {
+                    errorMsg.textContent = data.error || 'Erro ao cadastrar';
+                    errorMsg.style.display = 'block';
+                }
+            } catch (err) {
+                errorMsg.textContent = 'Erro de conexão';
+                errorMsg.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>

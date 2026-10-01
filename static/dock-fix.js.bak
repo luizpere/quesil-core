@@ -1,0 +1,56 @@
+// dock-fix.js v2 - Correção agressiva da navegação
+(function() {
+    function fixDock() {
+        const dockMap = {
+            'Início': '/dashboard',
+            'Arquivos': '/arquivos',
+            'Perfil': '/perfil',
+            'Gestão': '/configuracoes'
+        };
+
+        document.querySelectorAll('.dock-item').forEach(item => {
+            const text = item.textContent.trim();
+            
+            // REMOVER QUALQUER ONCLICK EXISTENTE (mesmo que seja alert)
+            item.removeAttribute('onclick');
+            item.onclick = null;
+            
+            // ADICIONAR NOVO EVENTO
+            if (dockMap[text]) {
+                item.style.cursor = 'pointer';
+                item.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    window.location.href = dockMap[text];
+                }, true); // useCapture=true para garantir prioridade
+                console.log(`🔗 Dock fixada: ${text} → ${dockMap[text]}`);
+            }
+            
+            if (text === 'Chat') {
+                item.style.cursor = 'pointer';
+                item.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (typeof openChat === 'function') openChat();
+                    else {
+                        const modal = document.getElementById('chat-modal');
+                        if (modal) modal.classList.add('active');
+                    }
+                }, true);
+            }
+        });
+        
+        console.log('✅ Dock v2 aplicada!');
+    }
+
+    // Executar imediatamente e também quando DOM carregar
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', fixDock);
+    } else {
+        fixDock();
+    }
+    
+    // Observar mudanças no DOM (caso a dock seja recriada dinamicamente)
+    const observer = new MutationObserver(fixDock);
+    observer.observe(document.body, { childList: true, subtree: true });
+})();

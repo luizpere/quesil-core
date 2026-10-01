@@ -1,0 +1,69 @@
+
+
+
+/* Garante que containers principais respeitem a tela */
+.desktop-container, .main-wrapper {
+    max-width: 100vw !important;
+    max-height: 100vh !important;
+}
+
+/* Glassmorphism Base */ 
+
+
+/* Ajuste fino para modais e elementos fixos */
+#files-modal > div, 
+.dock-container,
+.top-bar {
+    transform: scale(1); /* Reseta escala para elementos que já se ajustam */
+}
+
+body { background: #0a0a12; color: white; font-family: sans-serif; }
+
+/* OTIMIZAÇÃO PARA TELA 800x600 */
+@media (max-width: 850px) {
+    /* Reduz dock proporcionalmente */
+    .dock-container, nav.dock {
+        transform: scale(0.85);
+        transform-origin: bottom center;
+    }
+    
+    /* Ajusta cards para não vazar */
+    .card, .assistant-card {
+        padding: 12px !important;
+        font-size: 0.9rem !important;
+    }
+    
+    /* Garante que modais caibam na tela */
+    #files-modal > div {
+        width: 95vw !important;
+        max-height: 85vh !important;
+    }
+    
+    /* Top bar mais compacta */
+    .top-bar, header {
+        padding: 4px 8px !important;
+        font-size: 0.85rem !important;
+    }
+}
+
+/* === TESTE HOT RELOAD - LUIZ === */
+/* Mudanças drásticas para verificar atualização */
+body {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+}
+
+.top-bar, header {
+    background: linear-gradient(90deg, #f093fb 0%, #f5576c 100%) !important;
+    box-shadow: 0 4px 15px rgba(245, 87, 108, 0.5) !important;
+}
+
+.dock-container, nav.dock {
+    background: rgba(102, 126, 234, 0.8) !important;
+    border: 2px solid #f5576c !important;
+    border-radius: 20px !important;
+}
+
+.card, .assistant-card {
+    border: 2px solid #00ff88 !important;
+    box-shadow: 0 0 20px rgba(0, 255, 136, 0.3) !important;
+}

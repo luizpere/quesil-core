@@ -1,0 +1,28 @@
+{
+  "name": "ThinkinOS v2.0",
+  "short_name": "ThinkinOS",
+  "description": "Sistema Operacional de IA Pessoal",
+  "start_url": "/desktop",
+  "display": "standalone",
+  "background_color": "#1a1a1a",
+  "theme_color": "#667eea",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/static/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/static/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/static/icons/icon-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

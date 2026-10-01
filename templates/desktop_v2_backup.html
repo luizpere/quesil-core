@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ThinkinOS v2.0</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #0f0f0f; color: white; font-family: -apple-system, BlinkMacSystemFont, sans-serif; overflow: hidden; height: 100vh; }
+        
+        /* CAMADAS */
+        .topbar { position:fixed; top:0; left:0; width:100%; height:42px; background:#111; display:flex; align-items:center; justify-content:space-between; padding:0 20px; z-index:5000; border-bottom:1px solid #333; }
+        .dock { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(40,40,40,0.95); border-radius: 20px; padding: 10px 20px; display: flex; gap: 15px; z-index:4000; border: 1px solid #444; }
+        #dashboard-panel { position: fixed; top: 60px; right: 20px; width: 380px; height: calc(100vh - 140px); background: #1a1a1a; border-radius: 12px; padding: 20px; display: none; z-index: 6000; border: 1px solid #333; box-shadow: 0 10px 30px rgba(0,0,0,0.5); overflow-y: auto; }
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: none; z-index: 10000 !important; align-items: center; justify-content: center; }
+        
+        /* CONTEUDO */
+        #main-area { margin-top: 50px; height: calc(100vh - 120px); overflow-y: auto; padding: 20px; padding-bottom: 100px; }
+        #assistants-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; }
+        
+        /* UI */
+        .dock-item { display: flex; flex-direction: column; align-items: center; cursor: pointer; padding: 5px 10px; border-radius: 8px; transition: 0.2s; }
+        .dock-item:hover { background: rgba(255,255,255,0.1); }
+        .dock-icon { font-size: 24px; margin-bottom: 2px; }
+        .dock-label { font-size: 10px; opacity: 0.7; }
+        
+        input, textarea { width: 100%; padding: 10px; margin-bottom: 10px; background: #222; border: 1px solid #444; border-radius: 6px; color: white; }
+        button { padding: 10px; border: none; border-radius: 6px; color: white; font-weight: bold; cursor: pointer; width: 100%; }
+        .btn-green { background: #22c55e; }
+        .btn-purple { background: #8b5cf6; }
+        .btn-red { background: #ef4444; width: auto; padding: 4px 8px; font-size: 11px; }
+        
+        .card { background: #1e1e1e; border-left: 4px solid #6366f1; border-radius: 8px; padding: 15px; display: flex; flex-direction: column; gap: 8px; }
+    </style>
+</head>
+<body>
+    <!-- TOPBAR -->
+    <div class="topbar">
+        <div style="display:flex; align-items:center; gap:10px;">
+            <span></span> <b>ThinkinOS</b> <span style="font-size:11px; opacity:0.5;">v2.0</span>
+        </div>
+        <div id="clock" style="font-family:monospace; font-size:13px;"></div>
+    </div>
+
+    <!-- MAIN -->
+    <div id="main-area">
+        <div id="assistants-grid"></div>
+    </div>
+
+    <!-- GESTAO -->
+    <div id="dashboard-panel">
+        <h3 style="margin-bottom:15px;">⚙️ Gestão</h3>
+        <button class="btn-purple" onclick="openModal()" style="margin-bottom:15px;">+ Novo Assistente</button>
+        <div id="mgmt-list" style="margin-top:10px; padding-bottom:20px;"></div>
+    </div>
+
+    <!-- MODAL CRIACAO -->
+    <div id="modal-create" class="modal-overlay" onclick="if(event.target===this)closeModal()">
+        <div style="background:#1a1a1a; padding:20px; border-radius:12px; width:350px; border:1px solid #333;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:15px;">
+                <h3>✨ Novo Assistente</h3>
+                <button onclick="closeModal()" style="background:none; width:auto; padding:0; font-size:18px;">&times;</button>
+            </div>
+            <input id="inp-name" placeholder="Nome">
+            <input id="inp-spec" placeholder="Especialidade">
+            <textarea id="inp-prompt" placeholder="Prompt (opcional)" rows="3"></textarea>
+            <button class="btn-green" onclick="doCreate()">Criar Assistente</button>
+        </div>
+    </div>
+
+    <!-- MODAL CHAT -->
+    <div id="chat-modal" class="modal-overlay" style="z-index:10001;" onclick="if(event.target===this)this.style.display='none'">
+        <div style="background:#1e1e1e; width:450px; max-width:95vw; height:600px; max-height:80vh; border-radius:12px; display:flex; flex-direction:column; border:1px solid #333; box-shadow:0 25px 50px rgba(0,0,0,0.5); overflow:hidden;">
+            <div style="padding:15px 20px; border-bottom:1px solid #333; display:flex; justify-content:space-between; align-items:center; background:#252525; flex-shrink:0;">
+                <h3 style="margin:0; font-size:16px; color:white;">💬 Chat Local</h3>
+                <button onclick="document.getElementById('chat-modal').style.display='none'" style="background:none; border:none; color:#aaa; font-size:20px; cursor:pointer; padding:0; line-height:1;">&times;</button>
+            </div>
+            <div id="chat-messages" style="flex:1; padding:20px; overflow-y:auto; background:#1a1a1a; display:flex; flex-direction:column; gap:12px;">
+                <div style="text-align:center; margin-top:40%; opacity:0.4; font-size:13px;">Carregando assistentes...</div>
+            </div>
+            <div style="padding:15px; border-top:1px solid #333; background:#1e1e1e; display:flex; align-items:center; gap:10px; flex-shrink:0;">
+                <input type="text" id="chat-input" placeholder="Digite sua mensagem aqui..." style="flex:1; background:#ffffff; border:2px solid #8b5cf6; border-radius:8px; padding:12px 15px; color:#1a1a1a; font-size:15px; font-weight:500; outline:none; box-shadow:0 2px 8px rgba(0,0,0,0.1);" onkeypress="if(event.key==='Enter') sendChatMessage()">
+                <button onclick="sendChatMessage()" style="background:#8b5cf6; color:white; border:none; border-radius:8px; width:45px; height:45px; display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; transition:0.2s;" title="Enviar Mensagem">➤</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL ARQUIVOS -->
+    <div id="files-modal" class="modal-overlay" onclick="if(event.target===this)this.style.display='none'">
+        <div style="background:#1a1a1a; padding:24px; border-radius:16px; width:500px; max-width:90vw; border:1px solid #333;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:20px;">
+                <h3>📂 Gerenciador de Arquivos</h3>
+                <button onclick="document.getElementById('files-modal').style.display='none'" style="background:none; border:none; color:#aaa; font-size:24px; cursor:pointer;">&times;</button>
+            </div>
+            <div id="files-list" style="background:#111; padding:15px; border-radius:8px; min-height:200px; max-height:400px; overflow-y:auto;">
+                <p style="text-align:center; opacity:0.5; padding:40px;">Carregando arquivos...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL PERFIL -->
+    <div id="profile-modal" class="modal-overlay" onclick="if(event.target===this)this.style.display='none'">
+        <div style="background:#1a1a1a; padding:24px; border-radius:16px; width:400px; max-width:90vw; border:1px solid #333;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:20px;">
+                <h3>👤 Configurações de Perfil</h3>
+                <button onclick="document.getElementById('profile-modal').style.display='none'" style="background:none; border:none; color:#aaa; font-size:24px; cursor:pointer;">&times;</button>
+            </div>
+            <div style="background:#111; padding:20px; border-radius:8px;">
+                <p style="margin-bottom:15px;"><b>Usuário:</b> Luiz (Admin)</p>
+                <p style="margin-bottom:15px;"><b>Versão:</b> ThinkinOS v2.0</p>
+                <p style="margin-bottom:15px;"><b>Assistentes Ativos:</b> <span id="profile-active-count">-</span></p>
+                <button onclick="alert('Configurações salvas!')" style="background:#22c55e;">Salvar Preferências</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- DOCK -->
+    <div class="dock">
+        <div class="dock-item" onclick="location.reload()"><span class="dock-icon">🏠</span><span class="dock-label">Início</span></div>
+        <div class="dock-item" onclick="openFilesModal()"><span class="dock-icon">📂</span><span class="dock-label">Arquivos</span></div>
+        <div class="dock-item" onclick="openChatModal()"><span class="dock-icon">💬</span><span class="dock-label">Chat</span></div>
+        <div class="dock-item" onclick="openProfileModal()"><span class="dock-icon">👤</span><span class="dock-label">Perfil</span></div>
+        <div class="dock-item" onclick="toggleMgmt()"><span class="dock-icon">⚙️</span><span class="dock-label">Gestão</span></div>
+        <div class="dock-item" onclick="openModal()"><span class="dock-icon">➕</span><span class="dock-label">Novo</span></div>
+    </div>
+
+<script>
+// === RELÓGIO ===
+function updateClock() {
+    var d = new Date();
+    var el = document.getElementById('clock');
+    if(el) el.innerText = d.toLocaleTimeString('pt-BR');
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// === MODAIS BASICOS ===
+function openModal() { document.getElementById('modal-create').style.display = 'flex'; }
+function closeModal() { document.getElementById('modal-create').style.display = 'none'; }
+function openFilesModal() { 
+    document.getElementById('files-modal').style.display='flex'; 
+    setTimeout(function() {
+        var list = document.getElementById('files-list');
+        if(list) list.innerHTML = '<div style="padding:10px; border-bottom:1px solid #333;">📁 thinkinos-platform/</div>' +
+                         '<div style="padding:10px; border-bottom:1px solid #333;">📄 app.py</div>' +
+                         '<div style="padding:10px; border-bottom:1px solid #333;">📄 assistants.json</div>' +
+                         '<div style="padding:10px;">📄 desktop.html</div>';
+    }, 300);
+}
+function openProfileModal() { 
+    document.getElementById('profile-modal').style.display='flex';
+    fetch('/api/assistants').then(r=>r.json()).then(d => {
+        var count = 0;
+        var assts = d.assistants || {};
+        for(var k in assts) { if(assts[k].active) count++; }
+        var el = document.getElementById('profile-active-count');
+        if(el) el.innerText = count;
+    });
+}
+
+// === GESTÃO ===
+function toggleMgmt() {
+    var p = document.getElementById('dashboard-panel');
+    if(p.style.display === 'block') {
+        p.style.display = 'none';
+    } else {
+        p.style.display = 'block';
+        loadMgmtList();
+    }
+}
+
+function loadMgmtList() {
+    fetch('/api/assistants').then(function(r){return r.json();}).then(function(d) {
+        var list = document.getElementById('mgmt-list');
+        if(!list) return;
+        list.innerHTML = '';
+        var assts = d.assistants || {};
+        
+        for(var k in assts) {
+            var a = assts[k];
+            var div = document.createElement('div');
+            div.style.cssText = 'padding:12px; background:#222; margin-bottom:8px; border-radius:8px; display:flex; justify-content:space-between; align-items:center;';
+            
+            var msgCount = a.message_count || 0;
+            var activeTime = a.active_time_seconds || 0;
+            var timeStr = Math.floor(activeTime / 60) + 'min';
+            
+            var info = document.createElement('div');
+            info.innerHTML = '<b>' + a.name + '</b><br>' +
+                             '<small style="opacity:0.7">' + a.specialty + '</small><br>' +
+                             '<small style="color:#aaa; font-size:10px;">💬 ' + msgCount + ' msgs | ️ ' + timeStr + '</small>';
+            
+            var btn = document.createElement('button');
+            btn.innerText = a.active ? 'Ativo' : 'Inativo';
+            btn.style.width = 'auto';
+            btn.style.padding = '6px 12px';
+            btn.style.fontSize = '12px';
+            btn.style.borderRadius = '20px';
+            btn.style.cursor = 'pointer';
+            btn.style.border = 'none';
+            btn.style.color = 'white';
+            btn.style.fontWeight = 'bold';
+            
+            if(a.active) {
+                btn.style.background = '#22c55e';
+            } else {
+                btn.style.background = '#4b5563';
+            }
+            
+            btn.setAttribute('data-name', a.name);
+            btn.onclick = function() {
+                var name = this.getAttribute('data-name');
+                toggleAsst(name);
+            };
+            
+            div.appendChild(info);
+            div.appendChild(btn);
+            list.appendChild(div);
+        }
+    });
+}
+
+// === GRID ===
+function loadGrid() {
+    fetch('/api/assistants').then(function(r){return r.json();}).then(function(d) {
+        var g = document.getElementById('assistants-grid');
+        g.innerHTML = '';
+        var assts = d.assistants || {};
+        var count = 0;
+        for(var k in assts) { count++; }
+        
+        if(count === 0) {
+            g.innerHTML = '<p style="grid-column:1/-1; text-align:center; opacity:0.5; padding:40px;">Nenhum assistente. Clique em + para criar.</p>';
+            return;
+        }
+        
+        for(var k in assts) {
+            var a = assts[k];
+            var c = document.createElement('div');
+            c.className = 'card';
+            c.style.borderLeftColor = a.color || '#6366f1';
+            
+            var safeName = a.name.replace(/'/g, "\\'"); 
+            
+            c.innerHTML = '<div style="display:flex; justify-content:space-between;"><h3>' + a.name + '</h3><span>' + (a.icon||'') + '</span></div>' +
+                          '<span style="font-size:11px; color:' + (a.color||'#aaa') + '; font-weight:bold;">' + a.specialty + '</span>' +
+                          '<p style="font-size:12px; opacity:0.7;">' + (a.prompt||'') + '</p>' +
+                          '<div style="display:flex; gap:8px; margin-top:auto;">' +
+                          '<button class="btn-green" onclick="toggleAsst(\'' + safeName + '\')">' + (a.active?'✅ ATIVO':'⏸ INATIVO') + '</button>' +
+                          '<button class="btn-red" onclick="delAsst(\'' + safeName + '\')">🗑️</button></div>';
+            g.appendChild(c);
+        }
+    });
+}
+
+// === AÇÕES ===
+function toggleAsst(name) {
+    fetch('/api/assistants/' + encodeURIComponent(name) + '/toggle', {method:'POST'}).then(function(){ 
+        loadGrid(); 
+        loadMgmtList(); 
+    });
+}
+
+function delAsst(name) {
+    if(confirm('Excluir ' + name + '?')) {
+        fetch('/api/assistants/' + encodeURIComponent(name), {method:'DELETE'}).then(function(){ 
+            loadGrid(); 
+            loadMgmtList(); 
+        });
+    }
+}
+
+function doCreate() {
+    var n = document.getElementById('inp-name').value;
+    var s = document.getElementById('inp-spec').value;
+    var p = document.getElementById('inp-prompt').value;
+    
+    if(!n || !s) { alert('Preencha nome e especialidade!'); return; }
+    
+    fetch('/api/assistants/create', {
+        method:'POST', 
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({name:n, specialty:s, prompt:p})
+    }).then(function(r){return r.json();}).then(function(d){
+        if(d.status === 'success') {
+            closeModal();
+            document.getElementById('inp-name').value = '';
+            document.getElementById('inp-spec').value = '';
+            document.getElementById('inp-prompt').value = '';
+            loadGrid();
+            alert('Criado com sucesso!');
+        } else {
+            alert('Erro: ' + (d.error||'Desconhecido'));
+        }
+    }).catch(function(e){ alert('Erro de conexão'); });
+}
+
+// === CHAT SYSTEM ===
+window.currentChatAssistant = null;
+
+window.openChatModal = function() {
+    var modal = document.getElementById('chat-modal');
+    var container = document.getElementById('chat-messages');
+    if (!modal || !container) return;
+    
+    modal.style.display = 'flex';
+    window.currentChatAssistant = null;
+    
+    container.innerHTML = '<div style="text-align:center; padding-top:40px;">' +
+        '<h4 style="margin-bottom:20px; opacity:0.8;">Com quem deseja conversar?</h4>' +
+        '<div id="asst-selector" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;"></div></div>';
+    
+    var selector = document.getElementById('asst-selector');
+    
+    fetch('/api/assistants').then(function(r){ return r.json(); }).then(function(d) {
+        var assts = d.assistants || {};
+        selector.innerHTML = '';
+        
+        for (var k in assts) {
+            var a = assts[k];
+            if (!a.active) continue;
+            
+            var card = document.createElement('div');
+            card.style.cssText = 'background:#252525; padding:15px; border-radius:8px; cursor:pointer; border:1px solid #333; text-align:center; transition:0.2s;';
+            card.onmouseover = function(){ this.style.background='#333'; };
+            card.onmouseout = function(){ this.style.background='#252525'; };
+            
+            card.innerHTML = '<div style="font-size:24px; margin-bottom:5px;">🤖</div>' +
+                             '<div style="font-weight:bold;">' + a.name + '</div>' +
+                             '<div style="font-size:10px; opacity:0.6;">' + a.specialty + '</div>';
+            
+            (function(n, s) {
+                card.onclick = function() { startChat(n, s); };
+            })(a.name, a.specialty);
+            
+            selector.appendChild(card);
+        }
+    });
+};
+
+window.startChat = function(name, specialty) {
+    window.currentChatAssistant = name;
+    var container = document.getElementById('chat-messages');
+    
+    container.innerHTML = '<div style="text-align:center; padding:15px; background:#252525; border-radius:8px; margin-bottom:15px;">' +
+                          '<div style="font-size:24px;">🤖</div>' +
+                          '<div style="font-weight:bold;">Conversando com ' + name + '</div>' +
+                          '<div style="font-size:11px; opacity:0.6;">' + specialty + '</div>' +
+                          '<button onclick="openChatModal()" style="margin-top:10px; background:none; border:1px solid #444; color:#aaa; padding:4px 10px; border-radius:4px; font-size:10px; cursor:pointer;">Trocar Assistente</button>' +
+                          '</div>';
+    
+    setTimeout(function(){ 
+        var inp = document.getElementById('chat-input');
+        if(inp) inp.focus(); 
+    }, 100);
+};
+
+window.sendChatMessage = function() {
+    var input = document.getElementById('chat-input');
+    var container = document.getElementById('chat-messages');
+    if (!input || !container) return;
+    
+    var msg = input.value.trim();
+    if (!msg) return;
+    
+    if (!window.currentChatAssistant) {
+        alert('Selecione um assistente primeiro!');
+        return;
+    }
+
+    var userBubble = document.createElement('div');
+    userBubble.style.cssText = 'align-self:flex-end; background:#22c55e; color:white; padding:10px 15px; border-radius:12px 12px 0 12px; max-width:80%; word-wrap:break-word; margin-top:10px;';
+    userBubble.innerText = msg;
+    container.appendChild(userBubble);
+    
+    input.value = '';
+    container.scrollTop = container.scrollHeight;
+
+    setTimeout(function() {
+        var botBubble = document.createElement('div');
+        botBubble.style.cssText = 'align-self:flex-start; background:#333; color:#ddd; padding:10px 15px; border-radius:12px 12px 12px 0; max-width:80%; word-wrap:break-word;';
+        botBubble.innerHTML = '<b>' + window.currentChatAssistant + ':</b><br>Recebido! Em breve responderei sobre: ' + msg;
+        container.appendChild(botBubble);
+        container.scrollTop = container.scrollHeight;
+    }, 800);
+};
+
+// INIT
+loadGrid();
+</script>
+</body>
+</html>

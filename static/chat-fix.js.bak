@@ -1,0 +1,142 @@
+// chat-fix.js - Lógica de chat isolada e segura
+(function() {
+    function initChat() {
+        const input = document.getElementById('chat-input');
+        if (!input) return;
+
+        window.sendChatMessage = async function() {
+            const msg = input.value.trim();
+            if (!msg) return;
+            input.value = '';
+
+            const chatArea = document.getElementById('chat-messages');
+            if (!chatArea) return;
+
+            // Mensagem do usuário
+            const uDiv = document.createElement('div');
+            uDiv.className = 'msg-user';
+            uDiv.innerHTML = '<span>' + msg.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</span>';
+            chatArea.appendChild(uDiv);
+            chatArea.scrollTop = chatArea.scrollHeight;
+
+            // Enviar para API
+            try {
+                const resp = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({assistant: 'pedro', message: msg})
+                });
+                const data = await resp.json();
+                
+                if (data.response) {
+                    const aDiv = document.createElement('div');
+                    aDiv.className = 'msg-ai';
+                    aDiv.innerHTML = '<div><strong>Pedro:</strong> ' + data.response.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</div>';
+                    chatArea.appendChild(aDiv);
+                    chatArea.scrollTop = chatArea.scrollHeight;
+                }
+            } catch(e) {
+                console.error('Erro no chat:', e);
+                const errDiv = document.createElement('div');
+                errDiv.className = 'msg-ai';
+                errDiv.innerHTML = '<div style="color:red;">Erro ao conectar com Pedro.</div>';
+                chatArea.appendChild(errDiv);
+            }
+        };
+        console.log('✅ Chat system initialized from external file.');
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initChat);
+    } else {
+        initChat();
+    }
+})();
+
+// Restaurar funções da dock e modais
+document.addEventListener('DOMContentLoaded', function() {
+    // Dock items - adicionar placeholders para funcionalidades futuras
+    const dockItems = document.querySelectorAll('.dock-item');
+    dockItems.forEach((item, index) => {
+        if (index === 0) item.onclick = () => alert('Início - Em desenvolvimento');
+        if (index === 1) item.onclick = () => alert('Arquivos - Em desenvolvimento');
+        if (index === 3) item.onclick = () => alert('Perfil - Em desenvolvimento');
+        if (index === 4) item.onclick = () => alert('Gestão - Em desenvolvimento');
+        if (index === 5) item.onclick = () => alert('Novo - Em desenvolvimento');
+    });
+
+    // Trocar Assistente - placeholder funcional
+    window.switchAssistant = function() {
+        alert('Seleção de assistentes será implementada na próxima versão!');
+    };
+    
+    // Atualizar botão de trocar assistente no modal
+    const switchBtn = document.querySelector('.switch-btn');
+    if (switchBtn) {
+        switchBtn.onclick = window.switchAssistant;
+    }
+    
+    console.log('✅ Funções da dock e modais restauradas!');
+});
+
+// Trocar Assistente - Funcionalidade Real
+window.switchAssistant = async function() {
+    try {
+        const resp = await fetch('/api/assistants');
+        const data = await resp.json();
+        const assistants = data.assistants || data;
+        
+        let html = '<div style="padding:20px;"><h3>Escolha um assistente:</h3><div style="display:grid;gap:10px;margin-top:15px;">';
+        
+        Object.values(assistants).forEach(asst => {
+            if (asst.active !== false) {
+                html += `<button onclick="selectAssistant('${asst.name}')" 
+                         style="background:#2a2a2a;border:1px solid #444;color:white;padding:12px;border-radius:8px;cursor:pointer;text-align:left;">
+                         <strong>${asst.display_name || asst.name}</strong><br>
+                         <small style="color:#aaa">${asst.specialty || asst.category || ''}</small>
+                         </button>`;
+            }
+        });
+        
+        html += '</div><button onclick="this.parentElement.parentElement.remove()" style="margin-top:15px;background:#dc3545;color:white;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;">Cancelar</button></div>';
+        
+        // Criar modal temporário
+        const modal = document.createElement('div');
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:3000;display:flex;align-items:center;justify-content:center;';
+        modal.innerHTML = `<div style="background:#1a1a1a;border-radius:12px;max-width:400px;width:90%;max-height:80vh;overflow-y:auto;">${html}</div>`;
+        document.body.appendChild(modal);
+        
+    } catch(e) {
+        alert('Erro ao carregar assistentes: ' + e.message);
+    }
+};
+
+window.selectAssistant = function(name) {
+    // Atualizar título do chat
+    const statusEl = document.getElementById('chat-status');
+    if (statusEl) {
+        statusEl.innerHTML = `
+            <div style="font-size:40px;margin-bottom:10px;"></div>
+            <h3>Conversando com ${name}</h3>
+            <p style="color:#888;font-size:12px;text-transform:uppercase;">ASSISTENTE SELECIONADO</p>
+            <button class="switch-btn" onclick="switchAssistant()">Trocar Assistente</button>
+        `;
+    }
+    
+    // Fechar modal de seleção
+    document.querySelector('[style*="z-index:3000"]')?.remove();
+    
+    // Limpar chat anterior
+    const chatArea = document.getElementById('chat-messages');
+    if (chatArea) chatArea.innerHTML = '';
+    
+    console.log(`✅ Assistente trocado para: ${name}`);
+};
+
+// Conectar botão "Trocar Assistente" existente
+document.addEventListener('DOMContentLoaded', function() {
+    const switchBtn = document.querySelector('.switch-btn');
+    if (switchBtn) {
+        switchBtn.onclick = window.switchAssistant;
+    }
+});

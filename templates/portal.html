@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ThinkinOS v2.0 - Sistema Operacional de IA</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+            overflow-x: hidden;
+            line-height: 1.6;
+        }
+        
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 40px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.4rem;
+            font-weight: bold;
+        }
+        
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+        }
+        
+        .btn-enter {
+            padding: 12px 30px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 25px;
+            color: white;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+        
+        .btn-enter:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+        
+        /* Hero Section */
+        .hero {
+            text-align: center;
+            padding: 100px 20px 80px;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        
+        .hero h1 {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            text-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            line-height: 1.1;
+            font-weight: 900;
+        }
+        
+        .hero p {
+            font-size: 1.3rem;
+            opacity: 0.95;
+            margin-bottom: 40px;
+            line-height: 1.7;
+            max-width: 750px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .btn-start {
+            display: inline-block;
+            padding: 20px 50px;
+            background: white;
+            color: #667eea;
+            text-decoration: none;
+            border-radius: 50px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            transition: all 0.3s;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+        
+        .btn-start:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+        }
+        
+        /* Features Section */
+        .features {
+            padding: 80px 40px;
+            max-width: 1300px;
+            margin: 0 auto;
+        }
+        
+        .features h2 {
+            text-align: center;
+            font-size: 2.8rem;
+            margin-bottom: 50px;
+            font-weight: 700;
+        }
+        
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 30px;
+        }
+        
+        .feature-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 16px;
+            padding: 40px 25px;
+            text-align: center;
+            transition: all 0.3s;
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-10px);
+            background: rgba(255, 255, 255, 0.15);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+        }
+        
+        .feature-icon {
+            font-size: 3.5rem;
+            margin-bottom: 20px;
+        }
+        
+        .feature-card h3 {
+            font-size: 1.4rem;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+        
+        .feature-card p {
+            opacity: 0.9;
+            line-height: 1.6;
+            font-size: 0.95rem;
+        }
+        
+        /* Seções Expandidas */
+        .landing-section {
+            padding: 80px 40px;
+            max-width: 1300px;
+            margin: 0 auto;
+        }
+        
+        .section-title {
+            text-align: center;
+            font-size: 3rem;
+            margin-bottom: 15px;
+            font-weight: 700;
+            background: linear-gradient(90deg, #fff, #e0c3fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .section-subtitle {
+            text-align: center;
+            color: rgba(255, 255, 255, 0.9);
+            margin-bottom: 50px;
+            font-size: 1.15rem;
+            max-width: 650px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        /* Instalação - COMPACTO */
+        .install-card {
+            background: rgba(15, 15, 25, 0.95);
+            border: 2px solid rgba(168, 85, 247, 0.4);
+            border-radius: 16px;
+            padding: 40px 35px;
+            max-width: 750px;
+            margin: 0 auto;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+        }
+        
+        .code-block {
+            background: #0a0a0f;
+            color: #a5b4fc;
+            padding: 25px;
+            border-radius: 12px;
+            font-family: 'Courier New', monospace;
+            font-size: 1rem;
+            text-align: left;
+            margin: 25px 0;
+            overflow-x: auto;
+            border: 2px solid #3b82f6;
+            line-height: 1.8;
+        }
+        
+        .code-block code {
+            display: block;
+            margin-bottom: 12px;
+        }
+        
+        .code-block .comment {
+            color: #64748b;
+            font-style: italic;
+        }
+        
+        .install-link {
+            color: #3b82f6;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1rem;
+            transition: color 0.3s;
+        }
+        
+        .install-link:hover {
+            color: #a855f7;
+            text-decoration: underline;
+        }
+        
+        /* Screenshots */
+        .screenshot-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 35px;
+            margin-top: 40px;
+            max-width: 1050px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .screenshot-item {
+            background: rgba(15, 15, 25, 0.95);
+            border: 2px solid rgba(59, 130, 246, 0.3);
+            border-radius: 16px;
+            overflow: hidden;
+            transition: all 0.3s;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+        }
+        
+        .screenshot-item:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 25px 60px rgba(59, 130, 246, 0.4);
+            border-color: #a855f7;
+        }
+        
+        .screenshot-placeholder {
+            height: 260px;
+            background: linear-gradient(135deg, #0f0f13, #1e1e2e);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 7rem;
+        }
+        
+        .screenshot-caption {
+            padding: 22px;
+            text-align: center;
+            color: #f1f5f9;
+            font-weight: 600;
+            font-size: 1.15rem;
+            background: rgba(168, 85, 247, 0.1);
+        }
+        
+        /* Roadmap */
+        .roadmap-container {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+            max-width: 850px;
+            margin: 0 auto;
+        }
+        
+        .roadmap-item {
+            background: rgba(15, 15, 25, 0.95);
+            border: 2px solid rgba(168, 85, 247, 0.3);
+            border-left: 8px solid #22c55e;
+            border-radius: 16px;
+            padding: 30px 35px;
+            display: flex;
+            align-items: flex-start;
+            gap: 25px;
+            transition: all 0.3s;
+        }
+        
+        .roadmap-item:hover {
+            transform: translateX(10px);
+            border-left-color: #a855f7;
+        }
+        
+        .roadmap-item.pending {
+            border-left-color: #f59e0b;
+        }
+        
+        .roadmap-icon {
+            font-size: 2.5rem;
+            flex-shrink: 0;
+        }
+        
+        .roadmap-text h4 {
+            margin: 0 0 10px 0;
+            color: #f1f5f9;
+            font-size: 1.4rem;
+            font-weight: 700;
+        }
+        
+        .roadmap-text p {
+            margin: 0;
+            color: #94a3b8;
+            font-size: 1rem;
+            line-height: 1.6;
+        }
+        
+        /* Beta CTA */
+        .beta-cta {
+            background: linear-gradient(135deg, rgba(168, 85, 247, 0.15), rgba(59, 130, 246, 0.15));
+            border: 3px solid rgba(168, 85, 247, 0.4);
+            border-radius: 20px;
+            padding: 70px 50px;
+            text-align: center;
+            max-width: 850px;
+            margin: 60px auto 0;
+            box-shadow: 0 20px 60px rgba(168, 85, 247, 0.2);
+        }
+        
+        .beta-cta h2 {
+            font-size: 2.8rem;
+            margin-bottom: 20px;
+            font-weight: 700;
+            background: linear-gradient(90deg, #fff, #e0c3fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .beta-cta p {
+            color: rgba(255, 255, 255, 0.9);
+            max-width: 650px;
+            margin: 0 auto 30px;
+            font-size: 1.1rem;
+            line-height: 1.7;
+        }
+        
+        .beta-btn {
+            display: inline-block;
+            background: linear-gradient(90deg, #a855f7, #3b82f6);
+            color: white;
+            padding: 20px 50px;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 1.15rem;
+            transition: all 0.3s;
+            box-shadow: 0 10px 30px rgba(168, 85, 247, 0.4);
+        }
+        
+        .beta-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 15px 40px rgba(168, 85, 247, 0.6);
+        }
+        
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 40px 20px;
+            margin-top: 80px;
+            opacity: 0.8;
+            font-size: 1rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        /* Responsivo */
+        @media (max-width: 768px) {
+            .hero h1 { font-size: 2.5rem; }
+            .hero p { font-size: 1rem; }
+            .section-title { font-size: 2.2rem; }
+            .screenshot-grid { grid-template-columns: 1fr; }
+            .header { padding: 15px 20px; }
+            .landing-section { padding: 50px 20px; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="logo">
+            <div class="logo-icon">🧠</div>
+            <span>ThinkinOS</span>
+        </div>
+        <a href="/desktop" class="btn-enter">Entrar</a>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <h1>O Futuro da IA Pessoal</h1>
+        <p>Um sistema operacional completo com assistentes inteligentes, editor de código, terminal web e muito mais. Tudo integrado em uma única plataforma.</p>
+        <a href="/desktop" class="btn-start">Começar Agora →</a>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features">
+        <h2>Recursos Poderosos</h2>
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon">🤖</div>
+                <h3>10 Assistentes IA</h3>
+                <p>Pedro, Ana, Lena, Carlos e mais. Cada um especialista em uma área para te ajudar no dia a dia.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">💻</div>
+                <h3>Editor de Código</h3>
+                <p>Editor Monaco profissional com syntax highlighting, auto-save e integração Git.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">⌨️</div>
+                <h3>Terminal Web</h3>
+                <p>Acesse o terminal Linux diretamente do navegador com segurança e praticidade.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">📁</div>
+                <h3>Gerenciador de Arquivos</h3>
+                <p>Upload drag & drop, preview de imagens, compressão ZIP e muito mais.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🌐</div>
+                <h3>Browser Integrado</h3>
+                <p>Navegue na web sem sair do ThinkinOS com nosso browser embutido.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🔒</div>
+                <h3>Segurança Total</h3>
+                <p>Validação de caminhos, whitelist de diretórios e proteção contra ataques.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Instalação -->
+    <div class="landing-section">
+        <h2 class="section-title">Instalação em 3 Minutos</h2>
+        <p class="section-subtitle">Sem ISOs complicadas. Sem configurações de kernel. Apenas Python.</p>
+        <div class="install-card">
+            <div class="code-block">
+                <code><span class="comment"># 1. Clone o repositório</span></code>
+                <code>git clone https://github.com/luperesil/thinkinos.git</code>
+                <code><span class="comment"># 2. Entre na pasta e instale as dependências</span></code>
+                <code>cd thinkinos && pip install -r requirements.txt</code>
+                <code><span class="comment"># 3. Inicie o sistema</span></code>
+                <code>python3 app.py</code>
+            </div>
+            <p style="color: rgba(255, 255, 255, 0.9); font-size: 1rem; margin-top: 25px;">
+                Acesse depois em: <a href="http://127.0.0.1:5000/desktop" class="install-link">http://127.0.0.1:5000/desktop</a>
+            </p>
+        </div>
+    </div>
+
+    <!-- Screenshots -->
+    <div class="landing-section">
+        <h2 class="section-title">Veja o ThinkinOS em Ação</h2>
+        <p class="section-subtitle">Uma interface moderna, fluida e poderosa.</p>
+        <div class="screenshot-grid">
+            <div class="screenshot-item">
+                <div class="screenshot-placeholder">🖥️</div>
+                <div class="screenshot-caption">Desktop com Assistentes IA</div>
+            </div>
+            <div class="screenshot-item">
+                <div class="screenshot-placeholder">⌨️</div>
+                <div class="screenshot-caption">Terminal Web Integrado</div>
+            </div>
+            <div class="screenshot-item">
+                <div class="screenshot-placeholder">📁</div>
+                <div class="screenshot-caption">Gerenciador de Arquivos</div>
+            </div>
+            <div class="screenshot-item">
+                <div class="screenshot-placeholder">🎨</div>
+                <div class="screenshot-caption">Temas e Personalização</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Roadmap -->
+    <div class="landing-section">
+        <h2 class="section-title">Roadmap de Desenvolvimento</h2>
+        <p class="section-subtitle">O que já construímos e o que vem por aí.</p>
+        <div class="roadmap-container">
+            <div class="roadmap-item done">
+                <div class="roadmap-icon">✅</div>
+                <div class="roadmap-text">
+                    <h4>v1.0 - Fundação (Concluído)</h4>
+                    <p>Desktop, Dock, Terminal Web e Gerenciador de Arquivos básico.</p>
+                </div>
+            </div>
+            <div class="roadmap-item done">
+                <div class="roadmap-icon">✅</div>
+                <div class="roadmap-text">
+                    <h4>v2.0 - Inteligência e UX (Atual)</h4>
+                    <p>Assistentes IA (Pedro, Ana, Lena), Busca Global (Ctrl+K), Temas Dinâmicos e Live Preview.</p>
+                </div>
+            </div>
+            <div class="roadmap-item pending">
+                <div class="roadmap-icon">🚧</div>
+                <div class="roadmap-text">
+                    <h4>v2.1 - Virtualização (Em Breve)</h4>
+                    <p>Integração VNC para executar ambientes Linux/Windows dentro do ThinkinOS.</p>
+                </div>
+            </div>
+            <div class="roadmap-item pending">
+                <div class="roadmap-icon"></div>
+                <div class="roadmap-text">
+                    <h4>v3.0 - Ecosistema (Futuro)</h4>
+                    <p>Loja de aplicativos, sincronização em nuvem e modo mobile responsivo.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Beta CTA -->
+    <div class="landing-section">
+        <div class="beta-cta">
+            <h2>Seja um Beta Tester</h2>
+            <p>
+                O ThinkinOS está em constante evolução. Ajude a moldar o futuro deste sistema operacional web, 
+                reportando bugs, sugerindo features e testando as novas funcionalidades antes de todo mundo.
+            </p>
+            <a href="https://docs.google.com/forms/d/e/1FAIpQLSclPZFTDs38O8jDtxYo4b0sT0u2alh20L8gM7_8kki9nvBmbQ/viewform" target="_blank" rel="noopener noreferrer" class="beta-btn">
+                🚀 Quero Participar do Beta
+            </a>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p>ThinkinOS v2.0 © 2026 - Desenvolvido com 💜 por Luiz</p>
+    </footer>
+</body>
+</html>

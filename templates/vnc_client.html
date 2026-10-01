@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>ThinkinOS - VNC: {{ vm_name }}</title>
+    
+    <style>
+        body { margin: 0; background: #0a0a0a; color: #fff; font-family: sans-serif; overflow: hidden; }
+        #vnc-container { width: 100vw; height: 100vh; display: flex; align-items: center; justify-content: center; }
+        #status { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.8); padding: 10px 15px; border-radius: 6px; font-size: 14px; z-index: 100; }
+    </style>
+</head>
+<body>
+    <div id="status">Conectando à VM: {{ vm_name }}...</div>
+    <div id="vnc-container"></div>
+    
+    
+
+<script type="module">
+import RFB from '/static/novnc/core/rfb.js';
+
+console.log('✅ Módulo RFB importado com sucesso!');
+
+const wsPort = {{ ws_port }};
+const target = document.getElementById('vnc-container');
+const status = document.getElementById('status');
+
+try {
+    console.log(` Conectando a ws://${window.location.hostname}:${wsPort}/websockify`);
+    
+    const rfb = new RFB(target, `ws://${window.location.hostname}:${wsPort}/websockify`);
+    
+    rfb.addEventListener('connect', () => {
+        status.textContent = '✅ Conectado à VM!';
+        status.style.background = 'rgba(76,175,80,0.9)';
+        console.log(' VNC Conectado');
+    });
+    
+    rfb.addEventListener('disconnect', (e) => {
+        const reason = e.detail ? e.detail.reason : 'Sem detalhes';
+        status.textContent = '❌ Desconectado: ' + reason;
+        status.style.background = 'rgba(244,67,54,0.9)';
+        console.error('🔴 VNC Desconectado:', reason);
+    });
+    
+    // Configurações essenciais
+    rfb.scaleViewport = true;
+    rfb.resizeSession = true;
+    
+} catch (err) {
+    console.error('💥 Erro fatal:', err);
+    status.textContent = 'Erro: ' + err.message;
+}
+</script>
+</body>
+</html>

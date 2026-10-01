@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bem-vindo ao ThinkinOS</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); color: white; margin: 0; padding: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; }
+        h1 { font-size: 2.5rem; margin-bottom: 10px; text-align: center; }
+        p.subtitle { color: #a0a0b0; margin-bottom: 40px; text-align: center; font-size: 1.1rem; }
+        .cards-container { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; padding: 20px; }
+        .card { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; padding: 30px; width: 280px; text-align: center; cursor: pointer; transition: all 0.3s ease; text-decoration: none; color: white; }
+        .card:hover { transform: translateY(-10px); box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .card.leigo { border-top: 4px solid #ff6b9d; } .card.leigo:hover { background: rgba(255, 107, 157, 0.1); }
+        .card.intermediario { border-top: 4px solid #4facfe; } .card.intermediario:hover { background: rgba(79, 172, 254, 0.1); }
+        .card.avancado { border-top: 4px solid #9d4edd; } .card.avancado:hover { background: rgba(157, 78, 221, 0.1); }
+        .icon { font-size: 3rem; margin-bottom: 15px; display: block; }
+        .card h2 { margin: 0 0 10px 0; font-size: 1.5rem; }
+        .card p { color: #b0b0c0; font-size: 0.95rem; line-height: 1.5; }
+        .btn { display: inline-block; margin-top: 20px; padding: 10px 20px; border-radius: 8px; font-weight: bold; font-size: 0.9rem; }
+        .leigo .btn { background: #ff6b9d; color: white; } .intermediario .btn { background: #4facfe; color: white; } .avancado .btn { background: #9d4edd; color: white; }
+    </style>
+</head>
+<body>
+    <h1>Bem-vindo ao ThinkinOS</h1>
+    <p class="subtitle">Escolha seu nível de experiência para começarmos</p>
+    <div class="cards-container">
+        <a href="/chat?assistant=Ana&nivel=leigo" class="card leigo">
+            <span class="icon">🌸</span><h2>Iniciante</h2><p>Foco em organização pessoal, bem-estar e autoconhecimento com a Ana.</p><span class="btn">Começar</span>
+        </a>
+        <a href="/chat?assistant=Carlos&nivel=intermediario" class="card intermediario">
+            <span class="icon">💻</span><h2>Intermediário</h2><p>Desafios de Python e lógica de programação com o mentor Carlos.</p><span class="btn">Começar</span>
+        </a>
+        <a href="/chat?assistant=ThinkinIA&nivel=avancado" class="card avancado">
+            <span class="icon"></span><h2>Avançado</h2><p>Scripts de automação, Linux e infraestrutura com a ThinkinIA.</p><span class="btn">Começar</span>
+        </a>
+    </div>
+</body>
+</html>

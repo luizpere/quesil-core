@@ -1,0 +1,880 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>ThinkinOS Chat</title>
+    <style>
+        /* RESET E ESTRUTURA FLEXBOX RÍGIDA */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body {
+        height: 100%;
+        width: 100%;
+        overflow: auto; 
+            background: #0f0f1a; color: white; font-family: 'Segoe UI', sans-serif; 
+        }
+        
+        /* CONTAINER PRINCIPAL QUE OCUPA TUDO */
+        .app-container {
+            display: flex; flex-direction: column; 
+            height: 100vh; width: 100vw;
+            overflow: visible;
+        }
+
+        /* BARRA DE TÍTULO (COR DINÂMICA) */
+        .title-bar {
+            min-height: 45px;
+            flex-shrink: 0; /* Não encolher */
+            background: var(--agent-color, #7c4dff);
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+        .window-controls { display: flex; gap: 8px; }
+        .control { width: 12px; height: 12px; border-radius: 50%; cursor: pointer; }
+        .red { background: #ff5f56; } .yellow { background: #ffbd2e; } .green { background: #27c93f; }
+        .title-text { font-weight: 600; font-size: 13px; letter-spacing: 0.5px; text-transform: uppercase; }
+
+        /* ÁREA DE MENSAGENS (SCROLLÁVEL) */
+        .chat-area, #messages {
+            flex: 1 1 auto !important;
+            min-height: 0 !important; /* CRUCIAL para flexbox funcionar com scroll */
+            overflow-y: auto !important;
+            padding: 20px !important;
+            padding-bottom: 90px !important; /* Espaço para o input fixo */
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 15px !important;
+            background: #0f0f1a !important;
+        }
+        
+        /* ESTILO DAS MENSAGENS */
+        .message { max-width: 85%; padding: 12px 16px; border-radius: 12px; font-size: 14px; line-height: 1.5; word-wrap: break-word; }
+        .user-msg { background: var(--agent-color, #7c4dff); align-self: flex-end; border-bottom-right-radius: 2px; color: white; }
+        .ai-msg { background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255,255,255,0.1); align-self: flex-start; border-bottom-left-radius: 2px; color: #e0e0e0; }
+
+        /* BARRA DE INPUT (FIXA NO FUNDO) */
+        .input-container {
+            position: fixed !important;
+            bottom: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            min-height: 70px !important;
+            background: rgba(20, 20, 35, 0.98);
+            border-top: 1px solid rgba(255,255,255,0.1);
+            display: flex !important; align-items: center; padding: 0 20px; gap: 12px;
+            z-index: 9999 !important;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.3);
+        }
+        input {
+            flex: 1; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px; padding: 12px 15px; color: white; outline: none; font-size: 14px;
+        }
+        button {
+            background: var(--agent-color, #7c4dff); border: none; color: white;
+            padding: 12px 25px; border-radius: 8px; cursor: pointer; font-weight: bold;
+            transition: filter 0.2s;
+        }
+        button:hover { filter: brightness(1.2); }
+    
+    #daily-challenge-card {
+        flex-shrink: 0; /* Não encolher */
+        margin: 15px;
+        flex-grow: 0; /* Não crescer */
+    }
+
+
+        /* GARANTIA DE ESTILOS CRÍTICOS */
+        .message {
+            max-width: 80%;
+            padding: 12px 16px;
+            border-radius: 12px;
+            font-size: 14px;
+            line-height: 1.5;
+            word-wrap: break-word;
+            display: block !important;
+            visibility: visible !important;
+        }
+        .user-msg {
+            background: var(--agent-color, #7c4dff) !important;
+            align-self: flex-end;
+            border-bottom-right-radius: 2px;
+            color: white !important;
+        }
+        .ai-msg {
+            background: rgba(255, 255, 255, 0.08) !important;
+            border: 1px solid rgba(255,255,255,0.1);
+            align-self: flex-start;
+            border-bottom-left-radius: 2px;
+            color: #e0e0e0 !important;
+        }
+        .input-container {
+            flex-shrink: 0 !important;
+            min-height: 70px !important;
+            background: rgba(20, 20, 35, 0.95) !important;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            display: flex !important;
+            align-items: center;
+            padding: 0 20px;
+            gap: 12px;
+            z-index: 10;
+        }
+
+    
+        /* CORREÇÃO FINAL: Estilos explícitos para mensagens */
+        .message {
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            max-width: 80%;
+            padding: 12px 16px;
+            border-radius: 12px;
+            font-size: 14px;
+            line-height: 1.5;
+            word-wrap: break-word;
+        }
+        .user-msg {
+            background: var(--agent-color, #7c4dff) !important;
+            color: white !important;
+            align-self: flex-end;
+            border-bottom-right-radius: 2px;
+        }
+        .ai-msg {
+            background: rgba(255, 255, 255, 0.08) !important;
+            color: #e0e0e0 !important;
+            border: 1px solid rgba(255,255,255,0.1);
+            align-self: flex-start;
+            border-bottom-left-radius: 2px;
+        }
+
+    </style>
+
+    
+
+
+    
+
+
+    
+
+<style>
+        /* LAYOUT PRINCIPAL */
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden; /* Evita scroll na página inteira */
+            background: #0f0f1a;
+            color: white;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        /* CARD DE DESAFIO */
+        #daily-challenge-card {
+            flex-shrink: 0; /* Não encolhe */
+            margin: 15px;
+        }
+
+        /* BARRA DE TÍTULO (ROSA) */
+        .title-bar {
+            flex-shrink: 0; /* Não encolhe */
+            min-height: 45px;
+            background: var(--agent-color, #ff6b9d);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+
+        .title-bar-left, .title-bar-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .window-controls {
+            display: flex;
+            gap: 6px;
+        }
+
+        .control {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        .control:hover { opacity: 0.7; }
+        .control.red { background: #ff5f56; }
+        .control.yellow { background: #ffbd2e; }
+        .control.green { background: #27ca40; }
+
+        /* ÁREA DE MENSAGENS (O CORAÇÃO DO CHAT) */
+        .chat-area, #messages {
+            flex: 1 1 0%; /* Ocupa todo o espaço restante, permite encolher */
+            min-height: 0; /* CRUCIAL para flexbox funcionar com overflow */
+            overflow-y: auto; /* Scroll apenas aqui */
+            padding: 20px;
+            padding-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            background: #0f0f1a; /* Fundo escuro */
+        }
+
+        /* MENSAGENS */
+        .message {
+            max-width: 80%;
+            padding: 12px 16px;
+            border-radius: 12px;
+            font-size: 14px;
+            line-height: 1.5;
+            word-wrap: break-word;
+        }
+        .user-msg {
+            background: var(--agent-color, #7c4dff);
+            align-self: flex-end;
+            border-bottom-right-radius: 2px;
+            color: white;
+        }
+        .ai-msg {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255,255,255,0.1);
+            align-self: flex-start;
+            border-bottom-left-radius: 2px;
+            color: #e0e0e0;
+        }
+
+        /* BARRA DE INPUT (FIXA NO FUNDO VIA FLEX) */
+        .input-container {
+            flex-shrink: 0; /* Não encolhe */
+            min-height: 70px;
+            background: rgba(20, 20, 35, 0.95);
+            border-top: 1px solid rgba(255,255,255,0.1);
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            gap: 12px;
+            z-index: 10;
+        }
+
+        input {
+            flex: 1;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            padding: 12px 15px;
+            color: white;
+            outline: none;
+            font-size: 14px;
+        }
+
+        button {
+            background: var(--agent-color, #7c4dff);
+            border: none;
+            color: white;
+            padding: 12px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: filter 0.2s;
+        }
+        button:hover { filter: brightness(1.2); }
+</style>
+</head>
+<body>
+    <div class="app-container">
+
+<!-- ===== CARD DESAFIO DO DIA ===== -->
+<div id="daily-challenge-card" style="background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); border-radius: 8px; padding: 15px; margin: 15px; color: white; display: none; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <h3 style="margin: 0; font-size: 16px;">🎓 Desafio do Dia: <span id="challenge-title">Carregando...</span></h3>
+        <button onclick="document.getElementById('daily-challenge-card').style.display='none'" style="background:rgba(255,255,255,0.2); border:none; color:white; border-radius:50%; width:24px; height:24px; cursor:pointer;">&times;</button>
+    </div>
+    <p id="challenge-desc" style="margin: 0 0 15px 0; font-size: 14px; opacity: 0.9;"></p>
+    {% if nivel != 'leigo' %}
+    <button onclick="startChallenge()" style="background: #10b981; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px; display: flex; align-items: center; gap: 8px; margin: 0 auto;">
+        🚀 Abrir no Editor
+    </button>
+    {% endif %}
+</div>
+
+<script>
+// Carregar desafio ao iniciar
+async function loadDailyChallenge() {
+    try {
+        const res = await fetch(`/api/challenge?nivel=${window.nivel}`);
+        const data = await res.json();
+        document.getElementById('challenge-title').textContent = data.title;
+        document.getElementById('challenge-desc').textContent = data.description;
+        document.getElementById('daily-challenge-card').dataset.code = data.starter_code;
+        document.getElementById('daily-challenge-card').style.display = 'block';
+    } catch(e) {
+        console.error('Erro ao carregar desafio:', e);
+    }
+}
+
+// Função para abrir no editor
+function startChallenge() {
+    const code = document.getElementById('daily-challenge-card').dataset.code;
+    localStorage.setItem('thinkinos_challenge_code', code);
+    localStorage.setItem('thinkinos_challenge_title', document.getElementById('challenge-title').textContent);
+    window.location.href = '/editor';
+}
+
+// Chamar ao carregar a página
+document.addEventListener('DOMContentLoaded', loadDailyChallenge);
+</script>
+<!-- ================================= -->
+
+        <!-- Título -->
+        <div class="title-bar">
+            <div class="title-bar-left">
+                <button onclick="window.location.href='/desktop'" style="background:rgba(255,255,255,0.2); border:none; color:white; padding:4px 10px; border-radius:4px; cursor:pointer; font-size:12px; margin-right:10px;">← Voltar</button>
+                <div class="window-controls">
+                    <div class="control red" onclick="window.location.href='/desktop'" title="Voltar ao Desktop"></div>
+                    <div class="control yellow" onclick="toggleChatMinimize()" title="Minimizar Chat"></div>
+                    <div class="control green" onclick="toggleChatMaximize()" title="Maximizar/Restaurar"></div>
+                </div>
+            </div>
+            <div class="title-bar-right">
+                <a href="/ide" style="background:linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%); color:white; padding:6px 12px; border-radius:4px; text-decoration:none; font-size:12px; font-weight:bold; margin-right:8px; box-shadow:0 2px 8px rgba(108,92,231,0.4);">💻 IDE</a>
+                <a href="/terminal" target="_blank" style="background:linear-gradient(135deg, #2d3748 0%, #4a5568 100%); color:white; padding:6px 12px; border-radius:4px; text-decoration:none; font-size:12px; font-weight:bold; margin-right:8px; box-shadow:0 2px 8px rgba(45,55,72,0.4);">🖥️ Terminal</a>
+                <span id="streak-indicator" style="background:linear-gradient(135deg, #ff6b35 0%, #f7931e 100%); color:white; padding:6px 12px; border-radius:4px; font-size:12px; font-weight:bold; margin-right:8px; box-shadow:0 2px 8px rgba(255,107,53,0.4);">🔥 1 dia</span>
+                <button id="badges-toggle-btn" onclick="showMyBadges()" style="background:linear-gradient(135deg, #ffd700 0%, #ffed4e 100%); color:#333; padding:6px 12px; border-radius:4px; cursor:pointer; font-size:12px; font-weight:bold; margin-right:8px; box-shadow:0 2px 8px rgba(255,215,0,0.4);">🏆 Conquistas</button>
+                <button id="diary-toggle-btn" onclick="showMyDiary()" style="background:rgba(255,107,157,0.3); border:1px solid rgba(255,107,157,0.5); color:white; padding:6px 12px; border-radius:4px; cursor:pointer; font-size:12px; margin-right:8px;">📖 Meu Diário</button>
+                
+                
+                
+                
+                <button id="history-toggle-btn" onclick="toggleHistory()" style="background:rgba(255,255,255,0.2); border:none; color:white; padding:6px 12px; border-radius:4px; cursor:pointer; font-size:12px;">📜 Histórico</button>
+            </div>
+        </div>
+
+            <select id="agent-select" class="title-text" style="background: transparent; color: white; border: none; font-weight: 600; font-size: 13px; letter-spacing: 0.5px; text-transform: uppercase; cursor: pointer; outline: none; appearance: none; -webkit-appearance: none;">
+                <option value="Ana">Ana</option>
+                <option value="Carlos">Carlos</option>
+                <option value="Lena">Lena</option>
+                <option value="Pedro">Pedro</option>
+                <option value="ThinkinIA">ThinkinIA</option>
+            </select>
+            <div style="width: 50px;"></div>
+        </div>
+
+        <!-- Chat -->
+        <div class="chat-area" id="messages">
+            <div class="message ai-msg">Olá! Como posso ajudar você hoje?</div>
+        </div>
+
+        <!-- Input -->
+        <div class="input-container">
+            <input type="text" id="prompt" placeholder="Digite sua mensagem..." autocomplete="off">
+            <button type="button" onclick="send()">Enviar</button>
+        </div>
+    </div>
+
+    <script>
+        // 1. CONFIGURAÇÃO DE CORES E NOME
+        const params = new URLSearchParams(window.location.search);
+        const assistant = params.get('assistant') || 'Ana';
+        window.nivel = params.get('nivel') || 'leigo';
+        const colors = { 
+            "Ana": "#ff6b9d",      // Rosa
+            "Carlos": "#4facfe",   // Azul
+            "Lena": "#00f2fe",     // Ciano
+            "Pedro": "#43e97b",    // Verde
+            "ThinkinIA": "#9d4edd" // Roxo (corrigido)
+        };
+        const color = colors[assistant] || '#7c4dff';
+        
+        document.documentElement.style.setProperty('--agent-color', color);
+        
+        const selectElement = document.getElementById('agent-select');
+        if (selectElement) {
+            selectElement.value = assistant;
+            selectElement.style.color = colors[assistant] || '#ffffff';
+            selectElement.addEventListener('change', function() {
+                const url = new URL(window.location.href);
+                url.searchParams.set('assistant', this.value);
+                window.location.href = url.toString(); // Recarrega com o novo assistente
+            });
+        }
+
+        document.title = `Chat com ${assistant}`;
+
+        // 2. LÓGICA DE CHAT
+        const inputElement = document.getElementById('prompt');
+        inputElement.addEventListener('keypress', e => e.key === 'Enter' && send());
+
+        async function send() {
+            const msg = inputElement.value.trim();
+            if (!msg) return;
+            
+            const area = document.getElementById('messages');
+            if (!area) {
+                alert("❌ Elemento #messages NÃO ENCONTRADO!");
+                return;
+            }
+            
+            
+            
+            
+            
+            // 1. Adiciona a mensagem do usuário na tela IMEDIATAMENTE com estilo FORÇADO
+            const userDiv = document.createElement('div');
+            userDiv.className = 'message user-msg';
+            userDiv.textContent = msg;
+            
+            area.appendChild(userDiv);
+            
+            
+            
+            // Forçar visibilidade do container
+            area.style.display = 'flex';
+            area.style.visibility = 'visible';
+            area.style.height = '400px';
+            area.style.overflowY = 'auto';
+             // Fundo vermelho claro para visualizar
+            
+            
+            
+            // Limpa o input
+            inputElement.value = '';
+            
+            // Scroll para o final
+            area.scrollTop = area.scrollHeight;
+            
+            // 2. Mostra um indicador de "Digitando..."
+            const loadingDiv = document.createElement('div');
+            loadingDiv.className = 'message ai-msg';
+            loadingDiv.id = 'loading-msg';
+            loadingDiv.textContent = 'Digitando...';
+            area.appendChild(loadingDiv);
+            area.scrollTop = area.scrollHeight;
+
+            try {
+                // 3. Chama o backend
+                const res = await fetch('/api/chat', {
+                    method: 'POST', 
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ prompt: msg, assistant: assistant })
+                });
+                
+                if (!res.ok) throw new Error('HTTP error');
+                
+                const data = await res.json();
+                
+                // 4. Remove o "Digitando..." e adiciona a resposta real
+                const loading = document.getElementById('loading-msg');
+                if (loading) loading.remove();
+                
+                const aiDiv = document.createElement('div');
+                aiDiv.className = 'message ai-msg';
+                aiDiv.textContent = data.response || data.error || 'Sem resposta.';
+                area.appendChild(aiDiv);
+                
+            } catch(e) {
+                console.error("Erro na requisição:", e);
+                const loading = document.getElementById('loading-msg');
+                if (loading) loading.remove();
+                
+                const errDiv = document.createElement('div');
+                errDiv.className = 'message ai-msg';
+                errDiv.style.color = '#ff5f56';
+                errDiv.textContent = 'Falha na conexão.';
+                area.appendChild(errDiv);
+            }
+            
+            // Scroll final
+            area.scrollTop = area.scrollHeight;
+        }
+
+    </script>
+
+<!-- PAINEL DE HISTÓRIO GLASSMORPHISM -->
+<div id="history-panel" class="glass-sidebar" style="display:none;">
+    <div class="sidebar-header">
+        <span>📜 Histórico de Conversas</span>
+        <button onclick="toggleHistory()" class="close-btn">×</button>
+    </div>
+    <div class="sidebar-content">
+        <div id="history-list"></div>
+        <button onclick="clearHistory()" class="danger-btn">🗑️ Limpar Histórico</button>
+    </div>
+</div>
+
+<style>
+.glass-sidebar {
+    position: fixed; right: 0; top: 0; width: 350px; height: 100vh;
+    background: rgba(20, 20, 35, 0.9); backdrop-filter: blur(25px);
+    border-left: 1px solid rgba(255,255,255,0.1); z-index: 10002;
+    display: flex; flex-direction: column; box-shadow: -10px 0 30px rgba(0,0,0,0.5);
+}
+.sidebar-header {
+    padding: 20px; border-bottom: 1px solid rgba(255,255,255,0.1);
+    display: flex; justify-content: space-between; align-items: center; font-weight: bold;
+}
+.sidebar-content { padding: 20px; overflow-y: auto; flex: 1; }
+.history-item {
+    background: rgba(255,255,255,0.05); border-radius: 12px; padding: 15px;
+    margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.05);
+}
+.history-user { color: #7c4dff; font-size: 12px; margin-bottom: 5px; opacity: 0.8; }
+.history-ai { font-size: 14px; line-height: 1.4; }
+.history-time { font-size: 10px; opacity: 0.5; margin-top: 8px; text-align: right; }
+.danger-btn {
+    width: 100%; padding: 12px; background: rgba(255, 82, 82, 0.2);
+    border: 1px solid rgba(255, 82, 82, 0.4); color: #ff5252; border-radius: 10px;
+    cursor: pointer; margin-top: 20px; transition: all 0.3s;
+}
+.danger-btn:hover { background: rgba(255, 82, 82, 0.4); }
+.close-btn { background: none; border: none; color: white; font-size: 24px; cursor: pointer; }
+
+    #daily-challenge-card {
+        flex-shrink: 0; /* Não encolher */
+        margin: 15px;
+        flex-grow: 0; /* Não crescer */
+    }
+
+</style>
+
+<script>
+// Lógica do Painel de Histórico
+function toggleHistory() {
+    const panel = document.getElementById('history-panel');
+    panel.style.display = panel.style.display === 'none' ? 'flex' : 'none';
+    if (panel.style.display === 'flex') loadHistory();
+}
+
+async function loadHistory() {
+    // Pega nome do assistente da URL ou usa padrão
+    const params = new URLSearchParams(window.location.search);
+    const assistant = params.get('assistant') || 'Ana';
+        window.nivel = params.get('nivel') || 'leigo';
+    
+    try {
+        const res = await fetch(`/api/history/${assistant}`);
+        const data = await res.json();
+        const list = document.getElementById('history-list');
+        list.innerHTML = '';
+        
+        if (!data.messages.length) {
+            list.innerHTML = '<p style="opacity:0.6; text-align:center;">Nenhuma conversa salva ainda.</p>';
+            return;
+        }
+        
+        data.messages.forEach(msg => {
+            const item = document.createElement('div');
+            item.className = 'history-item';
+            item.innerHTML = `
+                <div class="history-user">Você: ${msg.user_msg}</div>
+                <div class="history-ai">${msg.ai_response}</div>
+                <div class="history-time">${new Date(msg.timestamp).toLocaleString('pt-BR')}</div>
+            `;
+            list.appendChild(item);
+        });
+    } catch(e) { console.error("Erro ao carregar histórico:", e); }
+}
+
+async function clearHistory() {
+    if (!confirm("Tem certeza que deseja apagar todo o histórico?")) return;
+    const params = new URLSearchParams(window.location.search);
+    const assistant = params.get('assistant') || 'Ana';
+        window.nivel = params.get('nivel') || 'leigo';
+    
+    try {
+        await fetch(`/api/history/clear/${assistant}`, { method: 'DELETE' });
+        loadHistory(); // Recarrega lista vazia
+    } catch(e) { alert("Erro ao limpar histórico!"); }
+}
+
+// Botão de histórico já está na barra (HTML estático)
+// Não precisa criar dinamicamente
+</script>
+
+
+<script>
+// ===== CONTROLES DE JANELA FUNCIONAIS (v6 - Forçar Tela Cheia) =====
+window.chatMinimized = false;
+window.chatMaximized = false;
+
+window.toggleChatMinimize = function() {
+    window.chatMinimized = !window.chatMinimized;
+    const chatArea = document.getElementById('messages');
+    const inputContainer = document.querySelector('.input-container');
+    if (window.chatMinimized) {
+        if (chatArea) chatArea.style.display = 'none';
+        if (inputContainer) inputContainer.style.display = 'none';
+    } else {
+        if (chatArea) chatArea.style.display = 'block';
+        if (inputContainer) inputContainer.style.display = 'flex';
+    }
+};
+
+window.toggleChatMaximize = function() {
+    window.chatMaximized = !window.chatMaximized;
+    
+    if (window.chatMaximized) {
+        // Aplicar modo tela cheia no BODY inteiro
+        document.body.classList.add('thinkin-fullscreen-mode');
+        document.body.style.position = 'fixed';
+        document.body.style.top = '0';
+        document.body.style.left = '0';
+        document.body.style.width = '100vw';
+        document.body.style.height = '100vh';
+        document.body.style.margin = '0';
+        document.body.style.padding = '0';
+        document.body.style.overflow = 'hidden';
+        document.body.style.zIndex = '999999';
+        
+        // Esconder elementos desnecessários
+        const navBar = document.querySelector('.nav-bar');
+        const challengeCard = document.getElementById('daily-challenge-card');
+        if (navBar) navBar.style.display = 'none';
+        if (challengeCard) challengeCard.style.display = 'none';
+    } else {
+        // Restaurar modo normal
+        document.body.classList.remove('thinkin-fullscreen-mode');
+        document.body.style.position = '';
+        document.body.style.top = '';
+        document.body.style.left = '';
+        document.body.style.width = '';
+        document.body.style.height = '';
+        document.body.style.margin = '';
+        document.body.style.padding = '';
+        document.body.style.overflow = '';
+        document.body.style.zIndex = '';
+        
+        // Mostrar elementos escondidos
+        const navBar = document.querySelector('.nav-bar');
+        const challengeCard = document.getElementById('daily-challenge-card');
+        if (navBar) navBar.style.display = '';
+        if (challengeCard) challengeCard.style.display = '';
+    }
+};
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<script>
+// Inicialização limpa do chat
+window.addEventListener('DOMContentLoaded', function() {
+    const messages = document.getElementById('messages');
+    if (!messages) return;
+    
+    // Aplicar estilos corretos para garantir visibilidade
+    messages.style.position = 'absolute';
+    messages.style.top = '200px';
+    messages.style.left = '0';
+    messages.style.right = '0';
+    messages.style.bottom = '70px';
+    messages.style.width = '100%';
+    messages.style.overflowY = 'auto';
+    messages.style.padding = '20px';
+    messages.style.background = '#0f0f1a';
+    messages.style.display = 'flex';
+    messages.style.flexDirection = 'column';
+    messages.style.gap = '15px';
+    messages.style.zIndex = '100';
+    
+    console.log("✅ Chat inicializado corretamente!");
+});
+</script>
+
+
+<script>
+// Função para mostrar o Diário
+function showMyDiary() {
+    // Criar modal do Diário
+    let modal = document.getElementById('diary-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'diary-modal';
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:10000;display:flex;align-items:center;justify-content:center;';
+        modal.innerHTML = `
+            <div style="background:#1e1e2e;padding:30px;border-radius:12px;max-width:600px;width:90%;max-height:80vh;overflow-y:auto;border:1px solid rgba(255,107,157,0.5);">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+                    <h2 style="color:#ff6b9d;margin:0;">📖 Meu Diário</h2>
+                    <button onclick="document.getElementById('diary-modal').remove()" style="background:none;border:none;color:white;font-size:24px;cursor:pointer;">×</button>
+                </div>
+                <div id="diary-entries">
+                    <p style="color:#888;text-align:center;">Carregando entradas...</p>
+                </div>
+                <textarea id="new-diary-entry" placeholder="Escreva uma nova entrada..." style="width:100%;min-height:100px;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:12px;color:white;font-size:14px;margin-top:15px;resize:vertical;"></textarea>
+                <button onclick="saveDiaryEntry()" style="background:#ff6b9d;color:white;border:none;padding:10px 20px;border-radius:6px;cursor:pointer;font-weight:bold;margin-top:10px;width:100%;">💾 Salvar Entrada</button>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        loadDiaryEntries();
+    }
+}
+
+async function loadDiaryEntries() {
+    try {
+        const res = await fetch('/api/diary');
+        const data = await res.json();
+        const container = document.getElementById('diary-entries');
+        if (data.entries && data.entries.length > 0) {
+            container.innerHTML = data.entries.map(e => `
+                <div style="background:rgba(255,255,255,0.05);padding:15px;border-radius:8px;margin-bottom:10px;border-left:3px solid #ff6b9d;">
+                    <div style="font-size:11px;color:#888;margin-bottom:5px;">${new Date(e.timestamp).toLocaleString('pt-BR')}</div>
+                    <div style="font-size:14px;line-height:1.5;">${e.content}</div>
+                </div>
+            `).join('');
+        } else {
+            container.innerHTML = '<p style="color:#888;text-align:center;">Nenhuma entrada ainda. Comece escrevendo abaixo!</p>';
+        }
+    } catch(e) {
+        document.getElementById('diary-entries').innerHTML = '<p style="color:#f48771;">Erro ao carregar diário.</p>';
+    }
+}
+
+async function saveDiaryEntry() {
+    const content = document.getElementById('new-diary-entry').value.trim();
+    if (!content) return alert('Escreva algo primeiro!');
+    try {
+        await fetch('/api/diary', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({content: content})
+        });
+        document.getElementById('new-diary-entry').value = '';
+        loadDiaryEntries();
+    } catch(e) {
+        alert('Erro ao salvar!');
+    }
+}
+
+function showMyBadges() {
+    // Criar modal de Conquistas
+    let modal = document.getElementById('badges-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'badges-modal';
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:10000;display:flex;align-items:center;justify-content:center;';
+        modal.innerHTML = `
+            <div style="background:#1e1e2e;padding:30px;border-radius:12px;max-width:600px;width:90%;max-height:80vh;overflow-y:auto;border:1px solid rgba(255,215,0,0.5);">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+                    <h2 style="color:#ffd700;margin:0;">🏆 Conquistas</h2>
+                    <button onclick="document.getElementById('badges-modal').remove()" style="background:none;border:none;color:white;font-size:24px;cursor:pointer;">×</button>
+                </div>
+                <div id="badges-list">
+                    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:15px;">
+                        <div style="background:rgba(255,215,0,0.1);padding:20px;border-radius:12px;text-align:center;border:2px solid #ffd700;">
+                            <div style="font-size:40px;margin-bottom:10px;">🎯</div>
+                            <div style="font-weight:bold;color:#ffd700;">Primeiro Passo</div>
+                            <div style="font-size:11px;color:#888;margin-top:5px;">Complete sua primeira conversa</div>
+                        </div>
+                        <div style="background:rgba(255,255,255,0.05);padding:20px;border-radius:12px;text-align:center;border:2px solid rgba(255,255,255,0.1);opacity:0.5;">
+                            <div style="font-size:40px;margin-bottom:10px;"></div>
+                            <div style="font-weight:bold;color:#888;">7 Dias Seguidos</div>
+                            <div style="font-size:11px;color:#666;margin-top:5px;">Use por 7 dias consecutivos</div>
+                        </div>
+                        <div style="background:rgba(255,255,255,0.05);padding:20px;border-radius:12px;text-align:center;border:2px solid rgba(255,255,255,0.1);opacity:0.5;">
+                            <div style="font-size:40px;margin-bottom:10px;">💻</div>
+                            <div style="font-weight:bold;color:#888;">Primeiro Código</div>
+                            <div style="font-size:11px;color:#666;margin-top:5px;">Use a IDE pela primeira vez</div>
+                        </div>
+                        <div style="background:rgba(255,255,255,0.05);padding:20px;border-radius:12px;text-align:center;border:2px solid rgba(255,255,255,0.1);opacity:0.5;">
+                            <div style="font-size:40px;margin-bottom:10px;">📖</div>
+                            <div style="font-weight:bold;color:#888;">Diário Ativo</div>
+                            <div style="font-size:11px;color:#666;margin-top:5px;">Escreva 10 entradas no diário</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    }
+}
+
+// Atualizar streak dinamicamente
+async function updateStreakDisplay() {
+    try {
+        const response = await fetch('/api/streak');
+        const data = await response.json();
+        if (data.success) {
+            const streakEl = document.getElementById('streak-indicator');
+            if (streakEl) {
+                const dias = data.current_streak || 1;
+                streakEl.textContent = ' ' + dias + (dias === 1 ? ' dia' : ' dias');
+            }
+        }
+    } catch (err) {
+        console.log('Erro ao atualizar streak:', err);
+    }
+}
+
+// Carregar streak ao iniciar
+window.addEventListener('load', updateStreakDisplay);
+</script>
+</body>
+</html>
+
+
+
+
+
+
+
+<script>
+// ===== CONTROLES DE JANELA FUNCIONAIS (v5 - Seletores Corretos) =====
+window.chatMinimized = false;
+window.chatMaximized = false;
+
+window.toggleChatMinimize = function() {
+    window.chatMinimized = !window.chatMinimized;
+    
+    const chatArea = document.getElementById('messages');
+    const inputContainer = document.querySelector('.input-container');
+    
+    if (window.chatMinimized) {
+        if (chatArea) chatArea.style.display = 'none';
+        if (inputContainer) inputContainer.style.display = 'none';
+    } else {
+        if (chatArea) chatArea.style.display = 'block';
+        if (inputContainer) inputContainer.style.display = 'flex';
+    }
+};
+
+
+</script>
+
+
+<script>
+function toggleHistoryPanel() {
+    const panel = document.getElementById('history-panel');
+    if (panel) {
+        panel.style.display = panel.style.display === 'none' ? 'flex' : 'none';
+    }
+}
+</script>
