@@ -123,6 +123,7 @@
         .git-file.modified { color: #e2c08d; }
         .git-file.added { color: #89d185; }
         .git-file.deleted { color: #f48771; }
+        .git-file.untracked { color: #58a6ff; }
         .git-actions { padding: 15px; }
         .git-input {
             width: 100%; padding: 8px; margin-bottom: 10px; border-radius: 4px;
@@ -411,21 +412,38 @@
                 const res = await fetch('/api/git/status');
                 const data = await res.json();
                 const fileList = document.getElementById('git-files-list');
-                if (data.success && data.files.length > 0) {
+                if (data.success && data.files && data.files.length > 0) {
                     fileList.innerHTML = data.files.map(f => {
+                        const fileName = f.file || f.path || 'desconhecido';
+                        const status = (f.status || '').trim();
+                        
                         let statusClass = '';
                         let statusText = '';
-                        if (f.status.includes('M')) { statusClass = 'modified'; statusText = 'Modificado'; }
-                        else if (f.status.includes('A')) { statusClass = 'added'; statusText = 'Adicionado'; }
-                        else if (f.status.includes('D')) { statusClass = 'deleted'; statusText = 'Excluido'; }
-                        else { statusClass = ''; statusText = f.status; }
+                        
+                        if (status === 'M' || status === 'M ' || status === 'MM') {
+                            statusClass = 'modified';
+                            statusText = 'Modificado';
+                        } else if (status === 'A' || status === 'A ' || status === 'AM' || status === 'M ') {
+                            statusClass = 'added';
+                            statusText = 'Adicionado';
+                        } else if (status === '??' || status === 'U') {
+                            statusClass = 'untracked';
+                            statusText = 'Novo';
+                        } else if (status === 'D' || status === 'D ' || status === 'AD') {
+                            statusClass = 'deleted';
+                            statusText = 'Excluído';
+                        } else {
+                            statusClass = 'modified';
+                            statusText = status || 'Alterado';
+                        }
+                        
                         return '<div class="git-file ' + statusClass + '">' +
-                            '<span>' + f.path + '</span>' +
+                            '<span>' + fileName + '</span>' +
                             '<span style="font-size: 10px; opacity: 0.7;">' + statusText + '</span>' +
                         '</div>';
                     }).join('');
                 } else {
-                    fileList.innerHTML = '<p style="color: #858585; font-size: 12px; padding: 10px;">Nenhuma mudanca pendente</p>';
+                    fileList.innerHTML = '<p style="color: #858585; font-size: 12px; padding: 10px;">Nenhuma mudança pendente</p>';
                 }
             } catch(e) {
                 console.error('Erro ao carregar status do Git:', e);
