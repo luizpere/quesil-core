@@ -1,4 +1,5 @@
 import sys
+from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 import psutil
 from werkzeug.security import generate_password_hash, check_password_hash
 # === DECORATOR DE AUTENTICAÇÃO ===
@@ -49,6 +50,16 @@ def get_cursor():
 load_dotenv()
 
 app = Flask(__name__)
+
+# Flask-Login Configuration
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
+
+@login_manager.user_loader
+def load_user(user_id):
+    # TODO: Implementar conforme seu modelo de usuário
+    return None
 socketio = SocketIO(app, cors_allowed_origins='*', ping_timeout=60, ping_interval=25)
 socketio = SocketIO(app, cors_allowed_origins='*', ping_timeout=60, ping_interval=25)
 # === INICIALIZAÇÃO DO DOCKER ===
@@ -3108,17 +3119,58 @@ def ide_page():
     """Página da IDE web"""
     return render_template('ide.html')
 
+def get_user_workspace_dir():
+    """Determina o diretório do workspace baseado no usuário logado"""
+    import os
+    from flask_login import current_user
+    
+    base_dir = "/home/lps/thinkinos-platform/workspaces"
+    
+    if current_user.is_authenticated and hasattr(current_user, 'username'):
+        # Usuário 'lps' (desenvolvedor) usa workspace de dev
+        if current_user.username and username.lower() in ['lps', 'luiz']:
+            workspace_dir = os.path.join(base_dir, "dev", "workspace")
+        else:
+            workspace_dir = os.path.join(base_dir, "users", current_user.username, "workspace")
+    else:
+        # Usuário não autenticado usa workspace default
+        workspace_dir = os.path.join(base_dir, "default", "workspace")
+    
+    # Criar diretório se não existir
+    os.makedirs(workspace_dir, exist_ok=True)
+    
+    return workspace_dir
+
+
+@app.route('/api/user/info')
+def user_info():
+    username = session.get('username')
+    if username:
+        return jsonify({'username': username, 'authenticated': True})
+    return jsonify({'username': None, 'authenticated': False})
+
 @app.route('/api/workspace/files', methods=['GET'])
 def list_workspace_files():
-    """Lista arquivos do workspace"""
+    """Lista arquivos do workspace do usuário logado"""
     import os
-    workspace_dir = os.path.expanduser('~/thinkinos-platform')
+
+    mode = request.args.get('mode', 'workspace')
+    username = session.get('username')
+
+    print(f"[DEBUG WORKSPACE] Modo solicitado: {mode} | Usuário: {username}")
+
+    if mode == 'dev' and username and username.lower() in ['lps', 'luiz']:
+        workspace_dir = os.path.expanduser('~/thinkinos-platform')
+        print(f"[DEBUG WORKSPACE] >>> ATIVANDO MODO DESENVOLVIMENTO: {workspace_dir}")
+    else:
+        workspace_dir = get_user_workspace_dir()
+        print(f"[DEBUG WORKSPACE] >>> USANDO WORKSPACE PADRÃO: {workspace_dir}")
+
     files = []
     for root, dirs, filenames in os.walk(workspace_dir):
-        # Ignorar diretórios ocultos e venv
         dirs[:] = [d for d in dirs if not d.startswith('.') and d != 'venv' and d != '__pycache__']
         for filename in filenames:
-            if not filename.startswith('.') and not filename.endswith('.pyc'):
+            if not filename.startswith('.') and not filename.endswith('.pyc') and not any(ext in filename for ext in ['.bak', '.backup', '.broken', '.old', 'BACKUP', 'backup_']):
                 filepath = os.path.join(root, filename)
                 relpath = os.path.relpath(filepath, workspace_dir)
                 files.append({
@@ -3126,55 +3178,156 @@ def list_workspace_files():
                     'path': relpath,
                     'size': os.path.getsize(filepath)
                 })
+
     return jsonify({'success': True, 'files': sorted(files, key=lambda x: x['name'])})
 
 @app.route('/api/workspace/file', methods=['GET'])
 def get_file_content():
-    """Lê o conteúdo de um arquivo"""
+    """Lê o conteúdo de um arquivo do workspace do usuário"""
     import os
+    
     filepath = request.args.get('path', '')
+    mode = request.args.get('mode', 'workspace')
+    username = session.get('username')
+    
     if not filepath:
         return jsonify({'success': False, 'error': 'Caminho não fornecido'})
+
+    if mode == 'dev' and username and username.lower() in ['lps', 'luiz']:
+        workspace_dir = os.path.expanduser('~/thinkinos-platform')
+    else:
+        workspace_dir = get_user_workspace_dir()
     
-    workspace_dir = os.path.expanduser('~/thinkinos-platform')
-    full_path = os.path.join(workspace_dir, filepath)
-    
-    # Segurança: verificar se está dentro do workspace
-    if not os.path.realpath(full_path).startswith(os.path.realpath(workspace_dir)):
-        return jsonify({'success': False, 'error': 'Acesso negado'})
-    
+    full_path = os.path.realpath(os.path.join(workspace_dir, filepath))
+
+    if not full_path.startswith(os.path.realpath(workspace_dir)):
+        return jsonify({'success': False, 'error': 'Acesso negado: caminho inválido'})
+
     try:
         with open(full_path, 'r', encoding='utf-8') as f:
-            content = f.read()
-        return jsonify({'success': True, 'content': content, 'path': filepath})
+            file_content = f.read()
+        return jsonify({'success': True, 'content': file_content, 'path': filepath})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
 @app.route('/api/workspace/file', methods=['POST'])
 def save_file_content():
-    """Salva o conteúdo de um arquivo"""
+    """Salva o conteúdo de um arquivo no workspace do usuário"""
     import os
+    
     data = request.get_json()
     filepath = data.get('path', '')
-    content = data.get('content', '')
-    
+    file_content = data.get('content', '')
+    mode = request.args.get('mode', 'workspace')
+    username = session.get('username')
+
     if not filepath:
         return jsonify({'success': False, 'error': 'Caminho não fornecido'})
+
+    if mode == 'dev' and username and username.lower() in ['lps', 'luiz']:
+        workspace_dir = os.path.expanduser('~/thinkinos-platform')
+    else:
+        workspace_dir = get_user_workspace_dir()
     
-    workspace_dir = os.path.expanduser('~/thinkinos-platform')
-    full_path = os.path.join(workspace_dir, filepath)
-    
-    # Segurança: verificar se está dentro do workspace
-    if not os.path.realpath(full_path).startswith(os.path.realpath(workspace_dir)):
-        return jsonify({'success': False, 'error': 'Acesso negado'})
-    
+    full_path = os.path.realpath(os.path.join(workspace_dir, filepath))
+
+    if not full_path.startswith(os.path.realpath(workspace_dir)):
+        return jsonify({'success': False, 'error': 'Acesso negado: caminho inválido'})
+
     try:
         with open(full_path, 'w', encoding='utf-8') as f:
-            f.write(content)
+            f.write(file_content)
         return jsonify({'success': True, 'message': 'Arquivo salvo com sucesso!'})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
+
 # =====================================================
+
+
+@app.route('/api/workspace/create', methods=['POST'])
+def create_file():
+    import os
+    data = request.get_json()
+    filepath = data.get('path', '')
+    is_dir = data.get('is_dir', False)
+    mode = request.args.get('mode', 'workspace')
+    username = session.get('username')
+    
+    if not filepath:
+        return jsonify({'success': False, 'error': 'Nome do arquivo não fornecido'})
+
+    if mode == 'dev' and username and username.lower() in ['lps', 'luiz']:
+        workspace_dir = os.path.expanduser('~/thinkinos-platform')
+    else:
+        workspace_dir = get_user_workspace_dir()
+    
+    full_path = os.path.realpath(os.path.join(workspace_dir, filepath))
+    if not full_path.startswith(os.path.realpath(workspace_dir)):
+        return jsonify({'success': False, 'error': 'Acesso negado'})
+
+    try:
+        if is_dir:
+            os.makedirs(full_path, exist_ok=True)
+        else:
+            with open(full_path, 'w', encoding='utf-8') as f:
+                f.write('')
+        return jsonify({'success': True, 'message': 'Criado com sucesso!'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/workspace/file', methods=['DELETE'])
+def delete_file():
+    import os
+    filepath = request.args.get('path', '')
+    mode = request.args.get('mode', 'workspace')
+    username = session.get('username')
+    
+    if not filepath:
+        return jsonify({'success': False, 'error': 'Caminho não fornecido'})
+
+    if mode == 'dev' and username and username.lower() in ['lps', 'luiz']:
+        workspace_dir = os.path.expanduser('~/thinkinos-platform')
+    else:
+        workspace_dir = get_user_workspace_dir()
+    
+    full_path = os.path.realpath(os.path.join(workspace_dir, filepath))
+    if not full_path.startswith(os.path.realpath(workspace_dir)):
+        return jsonify({'success': False, 'error': 'Acesso negado'})
+
+    try:
+        os.remove(full_path)
+        return jsonify({'success': True, 'message': 'Arquivo excluído!'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/workspace/rename', methods=['POST'])
+def rename_file():
+    import os
+    data = request.get_json()
+    old_path = data.get('old_path', '')
+    new_name = data.get('new_name', '')
+    mode = request.args.get('mode', 'workspace')
+    username = session.get('username')
+    
+    if not old_path or not new_name:
+        return jsonify({'success': False, 'error': 'Dados incompletos'})
+
+    if mode == 'dev' and username and username.lower() in ['lps', 'luiz']:
+        workspace_dir = os.path.expanduser('~/thinkinos-platform')
+    else:
+        workspace_dir = get_user_workspace_dir()
+    
+    old_full = os.path.realpath(os.path.join(workspace_dir, old_path))
+    new_full = os.path.realpath(os.path.join(os.path.dirname(old_full), new_name))
+    
+    if not old_full.startswith(os.path.realpath(workspace_dir)) or not new_full.startswith(os.path.realpath(workspace_dir)):
+        return jsonify({'success': False, 'error': 'Acesso negado'})
+
+    try:
+        os.rename(old_full, new_full)
+        return jsonify({'success': True, 'message': 'Arquivo renomeado!'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
 
 if __name__ == '__main__':
     socketio.run(app, host='0.0.0.0', port=5000, debug=True, allow_unsafe_werkzeug=True)
