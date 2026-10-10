@@ -5,10 +5,13 @@
 ThinkinOS não é apenas mais um chatbot. É um ambiente de trabalho web completo que integra assistentes de IA especializados, gerenciamento de arquivos, editor de código profissional e virtualização de containers em uma interface unificada, elegante e responsiva.
 
 ### 🖥️ Desktop Principal
+![ThinkinOS Desktop](images/Screenshot_2026-10-09_21-18-22.png)
 
 ### 📁 Gerenciador de Arquivos Moderno
+![Gerenciador de Arquivos](images/Screenshot_2026-10-09_21-19-00.png)
 
 ### 🌐 Portal de Documentação
+![Portal ThinkinOS](images/Screenshot_2026-10-09_21-21-20.png)
 
 ---
 
