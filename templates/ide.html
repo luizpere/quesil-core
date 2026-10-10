@@ -59,10 +59,7 @@
         }
         .icon-btn:hover { background: #3c3c3c; color: #fff; }
         .file-list-container { flex: 1; overflow-y: auto; padding: 10px; }
-        .file-explorer h3 {
-            font-size: 11px; text-transform: uppercase; color: #858585;
-            margin-bottom: 10px; letter-spacing: 1px;
-        }
+
         .file-item {
             padding: 6px 10px; cursor: pointer; border-radius: 4px;
             font-size: 13px; color: #cccccc; margin-bottom: 2px;
@@ -71,6 +68,8 @@
         .file-item:hover { background: #2a2d2e; }
         .file-item.active { background: #37373d; color: #fff; }
         .file-icon { font-size: 14px; }
+        .file-actions { display: flex; gap: 4px; opacity: 0; transition: opacity 0.2s; }
+        .file-item:hover .file-actions { opacity: 1; }
 
         .editor-area { flex: 1; display: flex; flex-direction: column; min-width: 400px; }
         .editor-tabs {
@@ -123,7 +122,7 @@
         .git-file.modified { color: #e2c08d; }
         .git-file.added { color: #89d185; }
         .git-file.deleted { color: #f48771; }
-        .git-file.untracked { color: #58a6ff; }
+        .git-file.untracked { color: #75beff; }
         .git-actions { padding: 15px; }
         .git-input {
             width: 100%; padding: 8px; margin-bottom: 10px; border-radius: 4px;
@@ -145,7 +144,558 @@
             background: #007acc; color: white; padding: 4px 15px;
             font-size: 12px; display: flex; justify-content: space-between;
         }
+
+        /* Busca Rápida (Ctrl+P) */
+        .search-modal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: flex-start;
+            padding-top: 100px;
+        }
+        .search-modal.active { display: flex; }
+        .search-container {
+            background: #252526; border: 1px solid #3e3e42; border-radius: 8px;
+            width: 600px; max-height: 400px; overflow: hidden;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+        }
+        .search-input {
+            width: 100%; padding: 15px 20px; border: none; background: #252526;
+            color: #fff; font-size: 16px; outline: none; border-bottom: 1px solid #3e3e42;
+        }
+        .search-input::placeholder { color: #858585; }
+        .search-results { max-height: 350px; overflow-y: auto; }
+        .search-result-item {
+            padding: 10px 20px; cursor: pointer; display: flex; align-items: center; gap: 10px;
+            border-bottom: 1px solid #2d2d30;
+        }
+        .search-result-item:hover, .search-result-item.selected {
+            background: #094771; color: #fff;
+        }
+        .search-result-item .file-icon { font-size: 14px; opacity: 0.7; }
+        .search-result-item .file-path { flex: 1; font-size: 14px; }
+        .search-result-item .file-dir { font-size: 12px; color: #858585; }
+        .search-hint {
+            padding: 8px 20px; font-size: 11px; color: #858585;
+            border-top: 1px solid #3e3e42; display: flex; gap: 15px;
+        }
+        .search-hint kbd {
+            background: #3c3c3c; padding: 2px 6px; border-radius: 3px; font-family: monospace;
+        }
+    
+    
+        #status-save {
+            margin-left: 15px !important;
+            font-weight: 600 !important;
+            color: #89d185 !important;
+            transition: color 0.3s ease !important;
+        }
+        #status-save.dirty {
+            color: #e2c08d !important;
+        }
+        #status-save.saving {
+            color: #4a9eff !important;
+        }
+
+        /* Estilos para conteúdo Markdown no painel IA */
+        #ai-response {
+            font-family: 'Segoe UI', sans-serif;
+            line-height: 1.6;
+        }
+        #ai-response h1, #ai-response h2, #ai-response h3 {
+            color: #fff;
+            margin-top: 15px;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+        #ai-response h1 { font-size: 18px; }
+        #ai-response h2 { font-size: 16px; }
+        #ai-response h3 { font-size: 14px; }
+        #ai-response p {
+            margin-bottom: 10px;
+            color: #d4d4d4;
+        }
+        #ai-response ul, #ai-response ol {
+            margin-left: 20px;
+            margin-bottom: 10px;
+        }
+        #ai-response li {
+            margin-bottom: 5px;
+        }
+        #ai-response code {
+            background: #2d2d30;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 12px;
+            color: #ce9178;
+        }
+        #ai-response pre {
+            background: #1e1e1e;
+            border: 1px solid #3e3e42;
+            border-radius: 6px;
+            padding: 12px;
+            overflow-x: auto;
+            margin: 10px 0;
+            position: relative;
+        }
+        #ai-response pre code {
+            background: transparent;
+            padding: 0;
+            color: #d4d4d4;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+        #ai-response blockquote {
+            border-left: 3px solid #007acc;
+            padding-left: 15px;
+            margin: 10px 0;
+            color: #858585;
+            font-style: italic;
+        }
+        #ai-response strong {
+            color: #fff;
+            font-weight: 600;
+        }
+        #ai-response em {
+            color: #9cdcfe;
+        }
+        /* Botão copiar código */
+        .copy-code-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: #3c3c3c;
+            border: none;
+            color: #d4d4d4;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        #ai-response pre:hover .copy-code-btn {
+            opacity: 1;
+        }
+        .copy-code-btn:hover {
+            background: #007acc;
+            color: #fff;
+        }
+
     </style>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.3.0/css/xterm.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.3.0/lib/xterm.min.js">
+        // === TERMINAL INTEGRADO (SIMPLES) ===
+        let terminalSocket;
+        let isTerminalOpen = false;
+
+        function toggleTerminal() {
+            const panel = document.getElementById('terminal-panel');
+            if (panel.style.display === 'flex') {
+                panel.style.display = 'none';
+                isTerminalOpen = false;
+            } else {
+                panel.style.display = 'flex';
+                isTerminalOpen = true;
+                initSimpleTerminal();
+            }
+        }
+
+        function initSimpleTerminal() {
+            if (terminalSocket) return; // Já inicializado
+
+            const output = document.getElementById('terminal-output');
+            output.innerHTML = 'ThinkinOS Terminal v1.0\nDigite seus comandos...\n\n';
+
+            terminalSocket = io();
+
+            terminalSocket.on('connect', () => {
+                terminalSocket.emit('terminal_init');
+            });
+
+            terminalSocket.on('terminal_output', (data) => {
+                output.innerHTML += data.data;
+                output.scrollTop = output.scrollHeight;
+            });
+        }
+
+        function handleTerminalInput(event) {
+            if (event.key === 'Enter') {
+                const input = document.getElementById('terminal-input');
+                const command = input.value;
+                if (command.trim()) {
+                    const output = document.getElementById('terminal-output');
+                    output.innerHTML += '$ ' + command + '\n';
+                    terminalSocket.emit('terminal_input', { data: command + '\n' });
+                    input.value = '';
+                }
+            }
+        }
+
+    
+        // === PAINEL IA (COPILOT) ===
+        let aiPanelOpen = false;
+        let aiGeneratedCode = '';
+
+        function toggleAIPanel() {
+            const panel = document.getElementById('ai-panel');
+            aiPanelOpen = !aiPanelOpen;
+            panel.style.display = aiPanelOpen ? 'flex' : 'none';
+        }
+
+        function getSelectedCode() {
+            if (!editor) return '';
+            const selection = editor.getSelection();
+            if (selection.isEmpty()) {
+                // Se não há seleção, pega o arquivo inteiro
+                return editor.getValue();
+            }
+            return editor.getModel().getValueInRange(selection);
+        }
+
+        function askAI(action) {
+            const code = getSelectedCode();
+            if (!code.trim()) {
+                alert('Selecione um trecho de código primeiro!');
+                return;
+            }
+
+            let prompt = '';
+            switch(action) {
+                case 'explique':
+                    prompt = 'Explique de forma clara e didática o que este código faz, linha por linha se necessário:\n\n```\n' + code + '\n```';
+                    break;
+                case 'bugs':
+                    prompt = 'Analise este código e identifique possíveis bugs, erros ou problemas. Sugira correções:\n\n```\n' + code + '\n```';
+                    break;
+                case 'refatore':
+                    prompt = 'Refatore este código para melhorar sua legibilidade, estrutura e boas práticas. Mantenha a mesma funcionalidade:\n\n```\n' + code + '\n```';
+                    break;
+                case 'otimize':
+                    prompt = 'Otimize este código para melhor performance e eficiência. Explique as melhorias:\n\n```\n' + code + '\n```';
+                    break;
+            }
+
+            sendToAI(prompt);
+        }
+
+        function askAICustom() {
+            const customPrompt = document.getElementById('ai-custom-prompt').value.trim();
+            if (!customPrompt) {
+                alert('Digite uma pergunta!');
+                return;
+            }
+
+            const code = getSelectedCode();
+            let fullPrompt = customPrompt;
+            if (code) {
+                fullPrompt += '\n\nCódigo de referência:\n```\n' + code + '\n```';
+            }
+
+            sendToAI(fullPrompt);
+        }
+
+        function sendToAI(prompt) {
+            const responseDiv = document.getElementById('ai-response');
+            responseDiv.innerHTML = '<p style="color: #4a9eff;">⏳ Ana está analisando...</p>';
+
+            fetch('/api/chat', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    message: prompt,
+                    assistant: 'Ana',
+                    nivel: 'tecnico',
+                    preserve_markdown: true
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success || data.response) {
+                    const response = data.response || data.message || 'Sem resposta';
+                    
+                    // Renderizar Markdown
+                    let htmlContent = marked.parse(response);
+                    responseDiv.innerHTML = htmlContent;
+                    
+                    // Aplicar syntax highlighting nos blocos de código
+                    responseDiv.querySelectorAll('pre code').forEach((block) => {
+                        hljs.highlightElement(block);
+                        
+                        // Adicionar botão copiar
+                        const pre = block.parentElement;
+                        const copyBtn = document.createElement('button');
+                        copyBtn.className = 'copy-code-btn';
+                        copyBtn.textContent = ' Copiar';
+                        copyBtn.onclick = () => {
+                            navigator.clipboard.writeText(block.textContent);
+                            copyBtn.textContent = '✓ Copiado!';
+                            setTimeout(() => copyBtn.textContent = ' Copiar', 2000);
+                        };
+                        pre.appendChild(copyBtn);
+                    });
+                    
+                    // Tentar extrair código da resposta para o botão "Aplicar"
+                    const codeMatch = response.match(/```[\w]*\n([\s\S]*?)```/);
+                    if (codeMatch) {
+                        aiGeneratedCode = codeMatch[1].trim();
+                        document.getElementById('ai-actions').style.display = 'block';
+                    } else {
+                        aiGeneratedCode = '';
+                        document.getElementById('ai-actions').style.display = 'none';
+                    }
+                } else {
+                    responseDiv.innerHTML = '<p style="color: #f48771;">Erro: ' + (data.error || 'Sem resposta') + '</p>';
+                }
+            })
+            .catch(err => {
+                responseDiv.innerHTML = '<p style="color: #f48771;">Erro de conexão: ' + err.message + '</p>';
+            });
+        }
+
+        function applyAICode() {
+            if (!aiGeneratedCode) {
+                alert('Nenhum código gerado para aplicar!');
+                return;
+            }
+
+            if (!editor) return;
+
+            const selection = editor.getSelection();
+            if (selection.isEmpty()) {
+                // Se não há seleção, adiciona no final
+                const model = editor.getModel();
+                const lastLine = model.getLineCount();
+                const lastCol = model.getLineMaxColumn(lastLine);
+                editor.executeEdits('ai-apply', [{
+                    range: new monaco.Range(lastLine, lastCol, lastLine, lastCol),
+                    text: '\n' + aiGeneratedCode
+                }]);
+            } else {
+                // Substitui a seleção
+                editor.executeEdits('ai-apply', [{
+                    range: selection,
+                    text: aiGeneratedCode
+                }]);
+            }
+
+            alert('Código aplicado com sucesso!');
+            aiGeneratedCode = '';
+            document.getElementById('ai-actions').style.display = 'none';
+        }
+
+    </script>
+    <script src="https://cdn.socket.io/4.7.4/socket.io.min.js">
+        // === TERMINAL INTEGRADO (SIMPLES) ===
+        let terminalSocket;
+        let isTerminalOpen = false;
+
+        function toggleTerminal() {
+            const panel = document.getElementById('terminal-panel');
+            if (panel.style.display === 'flex') {
+                panel.style.display = 'none';
+                isTerminalOpen = false;
+            } else {
+                panel.style.display = 'flex';
+                isTerminalOpen = true;
+                initSimpleTerminal();
+            }
+        }
+
+        function initSimpleTerminal() {
+            if (terminalSocket) return; // Já inicializado
+
+            const output = document.getElementById('terminal-output');
+            output.innerHTML = 'ThinkinOS Terminal v1.0\nDigite seus comandos...\n\n';
+
+            terminalSocket = io();
+
+            terminalSocket.on('connect', () => {
+                terminalSocket.emit('terminal_init');
+            });
+
+            terminalSocket.on('terminal_output', (data) => {
+                output.innerHTML += data.data;
+                output.scrollTop = output.scrollHeight;
+            });
+        }
+
+        function handleTerminalInput(event) {
+            if (event.key === 'Enter') {
+                const input = document.getElementById('terminal-input');
+                const command = input.value;
+                if (command.trim()) {
+                    const output = document.getElementById('terminal-output');
+                    output.innerHTML += '$ ' + command + '\n';
+                    terminalSocket.emit('terminal_input', { data: command + '\n' });
+                    input.value = '';
+                }
+            }
+        }
+
+    
+        // === PAINEL IA (COPILOT) ===
+        let aiPanelOpen = false;
+        let aiGeneratedCode = '';
+
+        function toggleAIPanel() {
+            const panel = document.getElementById('ai-panel');
+            aiPanelOpen = !aiPanelOpen;
+            panel.style.display = aiPanelOpen ? 'flex' : 'none';
+        }
+
+        function getSelectedCode() {
+            if (!editor) return '';
+            const selection = editor.getSelection();
+            if (selection.isEmpty()) {
+                // Se não há seleção, pega o arquivo inteiro
+                return editor.getValue();
+            }
+            return editor.getModel().getValueInRange(selection);
+        }
+
+        function askAI(action) {
+            const code = getSelectedCode();
+            if (!code.trim()) {
+                alert('Selecione um trecho de código primeiro!');
+                return;
+            }
+
+            let prompt = '';
+            switch(action) {
+                case 'explique':
+                    prompt = 'Explique de forma clara e didática o que este código faz, linha por linha se necessário:\n\n```\n' + code + '\n```';
+                    break;
+                case 'bugs':
+                    prompt = 'Analise este código e identifique possíveis bugs, erros ou problemas. Sugira correções:\n\n```\n' + code + '\n```';
+                    break;
+                case 'refatore':
+                    prompt = 'Refatore este código para melhorar sua legibilidade, estrutura e boas práticas. Mantenha a mesma funcionalidade:\n\n```\n' + code + '\n```';
+                    break;
+                case 'otimize':
+                    prompt = 'Otimize este código para melhor performance e eficiência. Explique as melhorias:\n\n```\n' + code + '\n```';
+                    break;
+            }
+
+            sendToAI(prompt);
+        }
+
+        function askAICustom() {
+            const customPrompt = document.getElementById('ai-custom-prompt').value.trim();
+            if (!customPrompt) {
+                alert('Digite uma pergunta!');
+                return;
+            }
+
+            const code = getSelectedCode();
+            let fullPrompt = customPrompt;
+            if (code) {
+                fullPrompt += '\n\nCódigo de referência:\n```\n' + code + '\n```';
+            }
+
+            sendToAI(fullPrompt);
+        }
+
+        function sendToAI(prompt) {
+            const responseDiv = document.getElementById('ai-response');
+            responseDiv.innerHTML = '<p style="color: #4a9eff;">⏳ Ana está analisando...</p>';
+
+            fetch('/api/chat', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    message: prompt,
+                    assistant: 'Ana',
+                    nivel: 'tecnico',
+                    preserve_markdown: true
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success || data.response) {
+                    const response = data.response || data.message || 'Sem resposta';
+                    
+                    // Renderizar Markdown
+                    let htmlContent = marked.parse(response);
+                    responseDiv.innerHTML = htmlContent;
+                    
+                    // Aplicar syntax highlighting nos blocos de código
+                    responseDiv.querySelectorAll('pre code').forEach((block) => {
+                        hljs.highlightElement(block);
+                        
+                        // Adicionar botão copiar
+                        const pre = block.parentElement;
+                        const copyBtn = document.createElement('button');
+                        copyBtn.className = 'copy-code-btn';
+                        copyBtn.textContent = ' Copiar';
+                        copyBtn.onclick = () => {
+                            navigator.clipboard.writeText(block.textContent);
+                            copyBtn.textContent = '✓ Copiado!';
+                            setTimeout(() => copyBtn.textContent = ' Copiar', 2000);
+                        };
+                        pre.appendChild(copyBtn);
+                    });
+                    
+                    // Tentar extrair código da resposta para o botão "Aplicar"
+                    const codeMatch = response.match(/```[\w]*\n([\s\S]*?)```/);
+                    if (codeMatch) {
+                        aiGeneratedCode = codeMatch[1].trim();
+                        document.getElementById('ai-actions').style.display = 'block';
+                    } else {
+                        aiGeneratedCode = '';
+                        document.getElementById('ai-actions').style.display = 'none';
+                    }
+                } else {
+                    responseDiv.innerHTML = '<p style="color: #f48771;">Erro: ' + (data.error || 'Sem resposta') + '</p>';
+                }
+            })
+            .catch(err => {
+                responseDiv.innerHTML = '<p style="color: #f48771;">Erro de conexão: ' + err.message + '</p>';
+            });
+        }
+
+        function applyAICode() {
+            if (!aiGeneratedCode) {
+                alert('Nenhum código gerado para aplicar!');
+                return;
+            }
+
+            if (!editor) return;
+
+            const selection = editor.getSelection();
+            if (selection.isEmpty()) {
+                // Se não há seleção, adiciona no final
+                const model = editor.getModel();
+                const lastLine = model.getLineCount();
+                const lastCol = model.getLineMaxColumn(lastLine);
+                editor.executeEdits('ai-apply', [{
+                    range: new monaco.Range(lastLine, lastCol, lastLine, lastCol),
+                    text: '\n' + aiGeneratedCode
+                }]);
+            } else {
+                // Substitui a seleção
+                editor.executeEdits('ai-apply', [{
+                    range: selection,
+                    text: aiGeneratedCode
+                }]);
+            }
+
+            alert('Código aplicado com sucesso!');
+            aiGeneratedCode = '';
+            document.getElementById('ai-actions').style.display = 'none';
+        }
+
+    </script>
+
+
+    <!-- Markdown Parser -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- Syntax Highlighting -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/javascript.min.js"></script>
+
 </head>
 <body>
     <div class="header">
@@ -157,6 +707,8 @@
         <div>
             <button class="btn" onclick="saveCurrentFile()">Salvar</button>
             <button class="btn" onclick="runFile()">Executar</button>
+            <button class="btn" onclick="toggleTerminal()" style="background: #444;">Terminal</button>
+            <button class="btn" onclick="toggleAIPanel()" style="background: #9b59b6;">✨ IA</button>
             <button class="btn" onclick="toggleGitPanel()" style="background: #6f42c1;">Git</button>
             <a href="/desktop" class="btn btn-close" style="text-decoration:none;">Fechar</a>
         </div>
@@ -189,6 +741,43 @@
             <iframe id="preview-frame" class="preview-frame" sandbox="allow-scripts allow-same-origin"></iframe>
         </div>
 
+        
+        <div class="git-panel" id="terminal-panel" style="width: 500px;">
+            <div class="git-header" style="display:flex; justify-content:space-between;">
+                <span>Terminal Integrado</span>
+                <button class="icon-btn" onclick="toggleTerminal()" style="color:#fff;"></button>
+            </div>
+            <div id="terminal-output" style="flex:1; padding: 10px; background: #000; color: #0f0; font-family: monospace; font-size: 13px; overflow-y: auto; white-space: pre-wrap;"></div>
+            <div style="display:flex; border-top: 1px solid #333;">
+                <span style="padding: 8px; background: #1e1e1e; color: #0f0;">$</span>
+                <input type="text" id="terminal-input" style="flex:1; background: #1e1e1e; color: #0f0; border: none; padding: 8px; font-family: monospace; font-size: 13px; outline: none;" placeholder="Digite um comando..." onkeypress="handleTerminalInput(event)">
+            </div>
+        </div>
+
+    
+        <div class="git-panel" id="ai-panel" style="width: 400px;">
+            <div class="git-header" style="display:flex; justify-content:space-between; align-items:center;">
+                <span>✨ Assistente IA (Ana)</span>
+                <button class="icon-btn" onclick="toggleAIPanel()" style="color:#fff;">✕</button>
+            </div>
+            <div style="padding: 10px; border-bottom: 1px solid #3e3e42;">
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-bottom: 10px;">
+                    <button class="git-btn git-btn-secondary" onclick="askAI('explique')" style="font-size: 11px; padding: 6px;">📖 Explicar</button>
+                    <button class="git-btn git-btn-secondary" onclick="askAI('bugs')" style="font-size: 11px; padding: 6px;">🐛 Bugs</button>
+                    <button class="git-btn git-btn-secondary" onclick="askAI('refatore')" style="font-size: 11px; padding: 6px;"> Refatorar</button>
+                    <button class="git-btn git-btn-secondary" onclick="askAI('otimize')" style="font-size: 11px; padding: 6px;"> Otimizar</button>
+                </div>
+                <textarea id="ai-custom-prompt" class="git-input" placeholder="Ou digite sua pergunta personalizada..." style="min-height: 60px; resize: vertical;"></textarea>
+                <button class="git-btn git-btn-primary" onclick="askAICustom()">Enviar Pergunta</button>
+            </div>
+            <div id="ai-response" style="flex:1; padding: 15px; overflow-y: auto; font-size: 13px; line-height: 1.6; color: #d4d4d4;">
+                <p style="color: #858585; font-style: italic;">Selecione um trecho de código no editor e clique em uma das opções acima, ou digite sua pergunta.</p>
+            </div>
+            <div id="ai-actions" style="padding: 10px; border-top: 1px solid #3e3e42; display: none;">
+                <button class="git-btn git-btn-success" onclick="applyAICode()">✓ Aplicar Código</button>
+            </div>
+        </div>
+
         <div class="git-panel" id="git-panel">
             <div class="git-header">Controle de Versao</div>
             <div class="git-section">
@@ -209,16 +798,231 @@
 
     <div class="status-bar">
         <span id="status-file">Nenhum arquivo aberto</span>
-        <span id="status-lang">Python</span>
+        <span id="status-lang">Python</span> <span id="status-save" style="margin-left: 15px; color: #89d185; font-weight: 600;">✓ Salvo</span>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/loader.min.js"></script>
+    <!-- Modal de Busca Rápida (Ctrl+P) -->
+    <div class="search-modal" id="search-modal">
+        <div class="search-container">
+            <input type="text" class="search-input" id="search-input" placeholder="Digite o nome do arquivo...">
+            <div class="search-results" id="search-results"></div>
+            <div class="search-hint">
+                <span><kbd>↑↓</kbd> Navegar</span>
+                <span><kbd>Enter</kbd> Abrir</span>
+                <span><kbd>Esc</kbd> Fechar</span>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/loader.min.js">
+        // === TERMINAL INTEGRADO (SIMPLES) ===
+        let terminalSocket;
+        let isTerminalOpen = false;
+
+        function toggleTerminal() {
+            const panel = document.getElementById('terminal-panel');
+            if (panel.style.display === 'flex') {
+                panel.style.display = 'none';
+                isTerminalOpen = false;
+            } else {
+                panel.style.display = 'flex';
+                isTerminalOpen = true;
+                initSimpleTerminal();
+            }
+        }
+
+        function initSimpleTerminal() {
+            if (terminalSocket) return; // Já inicializado
+
+            const output = document.getElementById('terminal-output');
+            output.innerHTML = 'ThinkinOS Terminal v1.0\nDigite seus comandos...\n\n';
+
+            terminalSocket = io();
+
+            terminalSocket.on('connect', () => {
+                terminalSocket.emit('terminal_init');
+            });
+
+            terminalSocket.on('terminal_output', (data) => {
+                output.innerHTML += data.data;
+                output.scrollTop = output.scrollHeight;
+            });
+        }
+
+        function handleTerminalInput(event) {
+            if (event.key === 'Enter') {
+                const input = document.getElementById('terminal-input');
+                const command = input.value;
+                if (command.trim()) {
+                    const output = document.getElementById('terminal-output');
+                    output.innerHTML += '$ ' + command + '\n';
+                    terminalSocket.emit('terminal_input', { data: command + '\n' });
+                    input.value = '';
+                }
+            }
+        }
+
+    
+        // === PAINEL IA (COPILOT) ===
+        let aiPanelOpen = false;
+        let aiGeneratedCode = '';
+
+        function toggleAIPanel() {
+            const panel = document.getElementById('ai-panel');
+            aiPanelOpen = !aiPanelOpen;
+            panel.style.display = aiPanelOpen ? 'flex' : 'none';
+        }
+
+        function getSelectedCode() {
+            if (!editor) return '';
+            const selection = editor.getSelection();
+            if (selection.isEmpty()) {
+                // Se não há seleção, pega o arquivo inteiro
+                return editor.getValue();
+            }
+            return editor.getModel().getValueInRange(selection);
+        }
+
+        function askAI(action) {
+            const code = getSelectedCode();
+            if (!code.trim()) {
+                alert('Selecione um trecho de código primeiro!');
+                return;
+            }
+
+            let prompt = '';
+            switch(action) {
+                case 'explique':
+                    prompt = 'Explique de forma clara e didática o que este código faz, linha por linha se necessário:\n\n```\n' + code + '\n```';
+                    break;
+                case 'bugs':
+                    prompt = 'Analise este código e identifique possíveis bugs, erros ou problemas. Sugira correções:\n\n```\n' + code + '\n```';
+                    break;
+                case 'refatore':
+                    prompt = 'Refatore este código para melhorar sua legibilidade, estrutura e boas práticas. Mantenha a mesma funcionalidade:\n\n```\n' + code + '\n```';
+                    break;
+                case 'otimize':
+                    prompt = 'Otimize este código para melhor performance e eficiência. Explique as melhorias:\n\n```\n' + code + '\n```';
+                    break;
+            }
+
+            sendToAI(prompt);
+        }
+
+        function askAICustom() {
+            const customPrompt = document.getElementById('ai-custom-prompt').value.trim();
+            if (!customPrompt) {
+                alert('Digite uma pergunta!');
+                return;
+            }
+
+            const code = getSelectedCode();
+            let fullPrompt = customPrompt;
+            if (code) {
+                fullPrompt += '\n\nCódigo de referência:\n```\n' + code + '\n```';
+            }
+
+            sendToAI(fullPrompt);
+        }
+
+        function sendToAI(prompt) {
+            const responseDiv = document.getElementById('ai-response');
+            responseDiv.innerHTML = '<p style="color: #4a9eff;">⏳ Ana está analisando...</p>';
+
+            fetch('/api/chat', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    message: prompt,
+                    assistant: 'Ana',
+                    nivel: 'tecnico',
+                    preserve_markdown: true
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success || data.response) {
+                    const response = data.response || data.message || 'Sem resposta';
+                    
+                    // Renderizar Markdown
+                    let htmlContent = marked.parse(response);
+                    responseDiv.innerHTML = htmlContent;
+                    
+                    // Aplicar syntax highlighting nos blocos de código
+                    responseDiv.querySelectorAll('pre code').forEach((block) => {
+                        hljs.highlightElement(block);
+                        
+                        // Adicionar botão copiar
+                        const pre = block.parentElement;
+                        const copyBtn = document.createElement('button');
+                        copyBtn.className = 'copy-code-btn';
+                        copyBtn.textContent = ' Copiar';
+                        copyBtn.onclick = () => {
+                            navigator.clipboard.writeText(block.textContent);
+                            copyBtn.textContent = '✓ Copiado!';
+                            setTimeout(() => copyBtn.textContent = ' Copiar', 2000);
+                        };
+                        pre.appendChild(copyBtn);
+                    });
+                    
+                    // Tentar extrair código da resposta para o botão "Aplicar"
+                    const codeMatch = response.match(/```[\w]*\n([\s\S]*?)```/);
+                    if (codeMatch) {
+                        aiGeneratedCode = codeMatch[1].trim();
+                        document.getElementById('ai-actions').style.display = 'block';
+                    } else {
+                        aiGeneratedCode = '';
+                        document.getElementById('ai-actions').style.display = 'none';
+                    }
+                } else {
+                    responseDiv.innerHTML = '<p style="color: #f48771;">Erro: ' + (data.error || 'Sem resposta') + '</p>';
+                }
+            })
+            .catch(err => {
+                responseDiv.innerHTML = '<p style="color: #f48771;">Erro de conexão: ' + err.message + '</p>';
+            });
+        }
+
+        function applyAICode() {
+            if (!aiGeneratedCode) {
+                alert('Nenhum código gerado para aplicar!');
+                return;
+            }
+
+            if (!editor) return;
+
+            const selection = editor.getSelection();
+            if (selection.isEmpty()) {
+                // Se não há seleção, adiciona no final
+                const model = editor.getModel();
+                const lastLine = model.getLineCount();
+                const lastCol = model.getLineMaxColumn(lastLine);
+                editor.executeEdits('ai-apply', [{
+                    range: new monaco.Range(lastLine, lastCol, lastLine, lastCol),
+                    text: '\n' + aiGeneratedCode
+                }]);
+            } else {
+                // Substitui a seleção
+                editor.executeEdits('ai-apply', [{
+                    range: selection,
+                    text: aiGeneratedCode
+                }]);
+            }
+
+            alert('Código aplicado com sucesso!');
+            aiGeneratedCode = '';
+            document.getElementById('ai-actions').style.display = 'none';
+        }
+
+    </script>
     <script>
         let editor;
         let currentFile = null;
         let openTabs = [];
         let previewArea, previewFrame;
         let currentMode = 'dev';
+        let allFiles = [];
+        let selectedSearchIndex = 0;
 
         require.config({ paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs' }});
         require(['vs/editor/editor.main'], function() {
@@ -233,6 +1037,18 @@
                 wordWrap: 'on'
             });
 
+            // === AUTO-SAVE INTELIGENTE ===
+            editor.onDidChangeModelContent(() => {
+                isDirty = true;
+                updateSaveStatus();
+                clearTimeout(autoSaveTimer);
+                autoSaveTimer = setTimeout(() => {
+                    if (isDirty && currentFile) {
+                        saveCurrentFile(true); // true = salvamento silencioso
+                    }
+                }, 2000); // Salva 2 segundos após parar de digitar
+            });
+
             previewArea = document.getElementById('preview-area');
             previewFrame = document.getElementById('preview-frame');
             console.log('Monaco e Preview inicializados');
@@ -240,6 +1056,90 @@
             checkUserAndShowModeSelector();
             loadFiles();
         });
+
+        // === BUSCA RÁPIDA (Ctrl+P) ===
+        document.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
+                e.preventDefault();
+                openSearchModal();
+            }
+            if (e.key === 'Escape') {
+                closeSearchModal();
+            }
+        });
+
+        function openSearchModal() {
+            const modal = document.getElementById('search-modal');
+            const input = document.getElementById('search-input');
+            modal.classList.add('active');
+            input.value = '';
+            input.focus();
+            selectedSearchIndex = 0;
+            renderSearchResults(allFiles);
+        }
+
+        function closeSearchModal() {
+            document.getElementById('search-modal').classList.remove('active');
+        }
+
+        document.getElementById('search-modal').addEventListener('click', (e) => {
+            if (e.target.id === 'search-modal') closeSearchModal();
+        });
+
+        document.getElementById('search-input').addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase();
+            const filtered = allFiles.filter(f =>
+                f.name.toLowerCase().includes(query) ||
+                f.path.toLowerCase().includes(query)
+            );
+            selectedSearchIndex = 0;
+            renderSearchResults(filtered);
+        });
+
+        document.getElementById('search-input').addEventListener('keydown', (e) => {
+            const results = document.querySelectorAll('.search-result-item');
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                selectedSearchIndex = (selectedSearchIndex + 1) % results.length;
+                updateSelectedSearchItem(results);
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                selectedSearchIndex = (selectedSearchIndex - 1 + results.length) % results.length;
+                updateSelectedSearchItem(results);
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                if (results[selectedSearchIndex]) {
+                    const path = results[selectedSearchIndex].dataset.path;
+                    const name = results[selectedSearchIndex].dataset.name;
+                    openFile(path, name);
+                    closeSearchModal();
+                }
+            }
+        });
+
+        function updateSelectedSearchItem(results) {
+            results.forEach((item, idx) => {
+                item.classList.toggle('selected', idx === selectedSearchIndex);
+            });
+        }
+
+        function renderSearchResults(files) {
+            const container = document.getElementById('search-results');
+            if (files.length === 0) {
+                container.innerHTML = '<div style="padding: 20px; text-align: center; color: #858585;">Nenhum arquivo encontrado</div>';
+                return;
+            }
+            container.innerHTML = files.map((f, idx) => {
+                const dir = f.path.includes('/') ? f.path.substring(0, f.path.lastIndexOf('/')) : '';
+                return '<div class="search-result-item ' + (idx === selectedSearchIndex ? 'selected' : '') + '" ' +
+                    'data-path="' + f.path + '" data-name="' + f.name + '" ' +
+                    'onclick="openFile(\'' + f.path + '\', \'' + f.name + '\'); closeSearchModal();">' +
+                    '<span class="file-icon">' + getFileIcon(f.name) + '</span>' +
+                    '<span class="file-path">' + f.name + '</span>' +
+                    (dir ? '<span class="file-dir">' + dir + '</span>' : '') +
+                '</div>';
+            }).join('');
+        }
 
         function updatePreview() {
             if (!currentFile || !previewFrame || !editor) return;
@@ -282,10 +1182,15 @@
                     console.log('Dados:', data);
                     const fileList = document.getElementById('file-list');
                     if (data.success && data.files && data.files.length > 0) {
-                        fileList.innerHTML = data.files.map(f => 
+                        allFiles = data.files;
+                        fileList.innerHTML = data.files.map(f =>
                             '<div class="file-item" onclick="openFile(\'' + f.path + '\', \'' + f.name + '\')">' +
                             '<span class="file-icon">' + getFileIcon(f.name) + '</span>' +
-                            '<span>' + f.name + '</span></div>'
+                            '<span style="flex:1;">' + f.name + '</span>' +
+                            '<div class="file-actions">' +
+                            '<button class="icon-btn" style="font-size:11px; padding:2px;" onclick="event.stopPropagation(); renameFile(\'' + f.path + '\')" title="Renomear">✏️</button>' +
+                            '<button class="icon-btn" style="font-size:11px; padding:2px; color:#f48771;" onclick="event.stopPropagation(); deleteFile(\'' + f.path + '\')" title="Excluir">🗑️</button>' +
+                            '</div></div>'
                         ).join('');
                         console.log(data.files.length + ' arquivos carregados');
                     } else {
@@ -299,13 +1204,18 @@
         }
 
         function getFileIcon(filename) {
-            if (filename.endsWith('.py')) return 'PY';
-            if (filename.endsWith('.js')) return 'JS';
-            if (filename.endsWith('.html')) return 'HTML';
-            if (filename.endsWith('.css')) return 'CSS';
-            if (filename.endsWith('.json')) return 'JSON';
-            if (filename.endsWith('.md')) return 'MD';
-            return 'FILE';
+            const ext = filename.split('.').pop().toLowerCase();
+            const name = filename.toLowerCase();
+            if (name === 'dockerfile') return '🐳';
+            if (ext === 'py') return '🐍';
+            if (ext === 'js') return '⚡';
+            if (ext === 'html') return '🌐';
+            if (ext === 'css') return '🎨';
+            if (ext === 'json') return '📦';
+            if (ext === 'md') return '📝';
+            if (ext === 'env' || ext === 'ini' || ext === 'conf') return '⚙️';
+            if (ext === 'txt') return '📄';
+            return '📄';
         }
 
         function openFile(path, name) {
@@ -373,15 +1283,42 @@
             updateTabs();
         }
 
-        function saveCurrentFile() {
-            if (!currentFile) { alert('Nenhum arquivo aberto!'); return; }
+        let autoSaveTimer;
+        let isDirty = false;
+
+        function updateSaveStatus() {
+            const statusSave = document.getElementById('status-save');
+            if (statusSave) {
+                if (isDirty) {
+                    statusSave.textContent = '● Não salvo';
+                    statusSave.className = 'dirty';
+                } else {
+                    statusSave.textContent = '✓ Salvo';
+                    statusSave.className = '';
+                }
+            }
+        }
+
+        function saveCurrentFile(silent = false) {
+            if (!currentFile) { 
+                if (!silent) alert('Nenhum arquivo aberto!'); 
+                return; 
+            }
             fetch('/api/workspace/file?mode=' + currentMode, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({ path: currentFile, content: editor.getValue() })
             }).then(res => res.json()).then(data => {
-                alert(data.success ? 'Salvo!' : 'Erro: ' + data.error);
-            }).catch(e => alert('Erro: ' + e.message));
+                if (data.success) {
+                    isDirty = false;
+                    updateSaveStatus();
+                    if (!silent) alert('Salvo com sucesso!');
+                } else {
+                    if (!silent) alert('Erro: ' + data.error);
+                }
+            }).catch(e => {
+                if (!silent) alert('Erro de rede: ' + e.message);
+            });
         }
 
         function runFile() {
@@ -397,6 +1334,75 @@
             }).catch(e => alert('Erro: ' + e.message));
         }
 
+        // === GERENCIAMENTO DE ARQUIVOS ===
+        async function createNewItem(type) {
+            const name = prompt(type === 'file' ? 'Nome do novo arquivo (ex: teste.html):' : 'Nome da nova pasta:');
+            if (!name) return;
+
+            try {
+                const res = await fetch('/api/workspace/create?mode=' + currentMode, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ path: name, is_dir: type === 'folder' })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    loadFiles();
+                    if (type === 'file') {
+                        setTimeout(() => openFile(name, name.split('/').pop()), 500);
+                    }
+                } else {
+                    alert('Erro: ' + data.error);
+                }
+            } catch(e) {
+                alert('Erro ao criar: ' + e.message);
+            }
+        }
+
+        async function deleteFile(path) {
+            if (!confirm('Tem certeza que deseja excluir ' + path + '?')) return;
+            try {
+                const res = await fetch('/api/workspace/file?mode=' + currentMode + '&path=' + encodeURIComponent(path), {
+                    method: 'DELETE'
+                });
+                const data = await res.json();
+                if (data.success) {
+                    if (currentFile === path) {
+                        currentFile = null;
+                        editor.setValue('');
+                        updateTabs();
+                    }
+                    loadFiles();
+                } else {
+                    alert('Erro: ' + data.error);
+                }
+            } catch(e) {
+                alert('Erro ao excluir: ' + e.message);
+            }
+        }
+
+        async function renameFile(path) {
+            const newName = prompt('Novo nome para ' + path.split('/').pop() + ':', path.split('/').pop());
+            if (!newName || newName === path.split('/').pop()) return;
+
+            try {
+                const res = await fetch('/api/workspace/rename?mode=' + currentMode, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ old_path: path, new_name: newName })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    loadFiles();
+                } else {
+                    alert('Erro: ' + data.error);
+                }
+            } catch(e) {
+                alert('Erro ao renomear: ' + e.message);
+            }
+        }
+
+        // === GIT ===
         function toggleGitPanel() {
             const panel = document.getElementById('git-panel');
             if (panel.classList.contains('active')) {
@@ -412,38 +1418,17 @@
                 const res = await fetch('/api/git/status');
                 const data = await res.json();
                 const fileList = document.getElementById('git-files-list');
-                if (data.success && data.files && data.files.length > 0) {
+                if (data.success && data.files.length > 0) {
                     fileList.innerHTML = data.files.map(f => {
-                        const fileName = f.file || f.path || 'desconhecido';
-                        const status = (f.status || '').trim();
-                        
-                        let statusClass = '';
-                        let statusText = '';
-                        
-                        if (status === 'M' || status === 'M ' || status === 'MM') {
-                            statusClass = 'modified';
-                            statusText = 'Modificado';
-                        } else if (status === 'A' || status === 'A ' || status === 'AM' || status === 'M ') {
-                            statusClass = 'added';
-                            statusText = 'Adicionado';
-                        } else if (status === '??' || status === 'U') {
-                            statusClass = 'untracked';
-                            statusText = 'Novo';
-                        } else if (status === 'D' || status === 'D ' || status === 'AD') {
-                            statusClass = 'deleted';
-                            statusText = 'Excluído';
-                        } else {
-                            statusClass = 'modified';
-                            statusText = status || 'Alterado';
-                        }
-                        
+                        let statusClass = f.type || 'modified';
+                        let statusText = f.status_text || f.status || 'Modificado';
                         return '<div class="git-file ' + statusClass + '">' +
-                            '<span>' + fileName + '</span>' +
+                            '<span>' + f.path + '</span>' +
                             '<span style="font-size: 10px; opacity: 0.7;">' + statusText + '</span>' +
                         '</div>';
                     }).join('');
                 } else {
-                    fileList.innerHTML = '<p style="color: #858585; font-size: 12px; padding: 10px;">Nenhuma mudança pendente</p>';
+                    fileList.innerHTML = '<p style="color: #858585; font-size: 12px; padding: 10px;">Nenhuma mudanca pendente</p>';
                 }
             } catch(e) {
                 console.error('Erro ao carregar status do Git:', e);
@@ -507,73 +1492,203 @@
             }
         }
     
-        // === FUNÇÕES DE GERENCIAMENTO DE ARQUIVOS ===
-        async function createNewItem(type) {
-            const name = prompt(type === 'file' ? 'Nome do novo arquivo (ex: teste.html):' : 'Nome da nova pasta:');
-            if (!name) return;
-            
-            try {
-                const res = await fetch('/api/workspace/create?mode=' + currentMode, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ path: name, is_dir: type === 'folder' })
-                });
-                const data = await res.json();
-                if (data.success) {
-                    loadFiles();
-                    // Se criou um arquivo (não pasta), abre automaticamente
-                    if (type === 'file') {
-                        setTimeout(() => openFile(name, name.split('/').pop()), 500);
-                    }
-                } else {
-                    alert('Erro: ' + data.error);
-                }
-            } catch(e) {
-                alert('Erro ao criar: ' + e.message);
+        // === TERMINAL INTEGRADO (SIMPLES) ===
+        let terminalSocket;
+        let isTerminalOpen = false;
+
+        function toggleTerminal() {
+            const panel = document.getElementById('terminal-panel');
+            if (panel.style.display === 'flex') {
+                panel.style.display = 'none';
+                isTerminalOpen = false;
+            } else {
+                panel.style.display = 'flex';
+                isTerminalOpen = true;
+                initSimpleTerminal();
             }
         }
 
-        async function deleteFile(path) {
-            if (!confirm('Tem certeza que deseja excluir ' + path + '?')) return;
-            try {
-                const res = await fetch('/api/workspace/file?mode=' + currentMode + '&path=' + encodeURIComponent(path), {
-                    method: 'DELETE'
-                });
-                const data = await res.json();
-                if (data.success) {
-                    if (currentFile === path) {
-                        currentFile = null;
-                        editor.setValue('');
-                        updateTabs();
-                    }
-                    loadFiles();
-                } else {
-                    alert('Erro: ' + data.error);
+        function initSimpleTerminal() {
+            if (terminalSocket) return; // Já inicializado
+
+            const output = document.getElementById('terminal-output');
+            output.innerHTML = 'ThinkinOS Terminal v1.0\nDigite seus comandos...\n\n';
+
+            terminalSocket = io();
+
+            terminalSocket.on('connect', () => {
+                terminalSocket.emit('terminal_init');
+            });
+
+            terminalSocket.on('terminal_output', (data) => {
+                output.innerHTML += data.data;
+                output.scrollTop = output.scrollHeight;
+            });
+        }
+
+        function handleTerminalInput(event) {
+            if (event.key === 'Enter') {
+                const input = document.getElementById('terminal-input');
+                const command = input.value;
+                if (command.trim()) {
+                    const output = document.getElementById('terminal-output');
+                    output.innerHTML += '$ ' + command + '\n';
+                    terminalSocket.emit('terminal_input', { data: command + '\n' });
+                    input.value = '';
                 }
-            } catch(e) {
-                alert('Erro ao excluir: ' + e.message);
             }
         }
 
-        async function renameFile(path) {
-            const newName = prompt('Novo nome para ' + path.split('/').pop() + ':', path.split('/').pop());
-            if (!newName || newName === path.split('/').pop()) return;
-            
-            try {
-                const res = await fetch('/api/workspace/rename?mode=' + currentMode, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ old_path: path, new_name: newName })
-                });
-                const data = await res.json();
-                if (data.success) {
-                    loadFiles();
-                } else {
-                    alert('Erro: ' + data.error);
-                }
-            } catch(e) {
-                alert('Erro ao renomear: ' + e.message);
+    
+        // === PAINEL IA (COPILOT) ===
+        let aiPanelOpen = false;
+        let aiGeneratedCode = '';
+
+        function toggleAIPanel() {
+            const panel = document.getElementById('ai-panel');
+            aiPanelOpen = !aiPanelOpen;
+            panel.style.display = aiPanelOpen ? 'flex' : 'none';
+        }
+
+        function getSelectedCode() {
+            if (!editor) return '';
+            const selection = editor.getSelection();
+            if (selection.isEmpty()) {
+                // Se não há seleção, pega o arquivo inteiro
+                return editor.getValue();
             }
+            return editor.getModel().getValueInRange(selection);
+        }
+
+        function askAI(action) {
+            const code = getSelectedCode();
+            if (!code.trim()) {
+                alert('Selecione um trecho de código primeiro!');
+                return;
+            }
+
+            let prompt = '';
+            switch(action) {
+                case 'explique':
+                    prompt = 'Explique de forma clara e didática o que este código faz, linha por linha se necessário:\n\n```\n' + code + '\n```';
+                    break;
+                case 'bugs':
+                    prompt = 'Analise este código e identifique possíveis bugs, erros ou problemas. Sugira correções:\n\n```\n' + code + '\n```';
+                    break;
+                case 'refatore':
+                    prompt = 'Refatore este código para melhorar sua legibilidade, estrutura e boas práticas. Mantenha a mesma funcionalidade:\n\n```\n' + code + '\n```';
+                    break;
+                case 'otimize':
+                    prompt = 'Otimize este código para melhor performance e eficiência. Explique as melhorias:\n\n```\n' + code + '\n```';
+                    break;
+            }
+
+            sendToAI(prompt);
+        }
+
+        function askAICustom() {
+            const customPrompt = document.getElementById('ai-custom-prompt').value.trim();
+            if (!customPrompt) {
+                alert('Digite uma pergunta!');
+                return;
+            }
+
+            const code = getSelectedCode();
+            let fullPrompt = customPrompt;
+            if (code) {
+                fullPrompt += '\n\nCódigo de referência:\n```\n' + code + '\n```';
+            }
+
+            sendToAI(fullPrompt);
+        }
+
+        function sendToAI(prompt) {
+            const responseDiv = document.getElementById('ai-response');
+            responseDiv.innerHTML = '<p style="color: #4a9eff;">⏳ Ana está analisando...</p>';
+
+            fetch('/api/chat', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    message: prompt,
+                    assistant: 'Ana',
+                    nivel: 'tecnico',
+                    preserve_markdown: true
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success || data.response) {
+                    const response = data.response || data.message || 'Sem resposta';
+                    
+                    // Renderizar Markdown
+                    let htmlContent = marked.parse(response);
+                    responseDiv.innerHTML = htmlContent;
+                    
+                    // Aplicar syntax highlighting nos blocos de código
+                    responseDiv.querySelectorAll('pre code').forEach((block) => {
+                        hljs.highlightElement(block);
+                        
+                        // Adicionar botão copiar
+                        const pre = block.parentElement;
+                        const copyBtn = document.createElement('button');
+                        copyBtn.className = 'copy-code-btn';
+                        copyBtn.textContent = ' Copiar';
+                        copyBtn.onclick = () => {
+                            navigator.clipboard.writeText(block.textContent);
+                            copyBtn.textContent = '✓ Copiado!';
+                            setTimeout(() => copyBtn.textContent = ' Copiar', 2000);
+                        };
+                        pre.appendChild(copyBtn);
+                    });
+                    
+                    // Tentar extrair código da resposta para o botão "Aplicar"
+                    const codeMatch = response.match(/```[\w]*\n([\s\S]*?)```/);
+                    if (codeMatch) {
+                        aiGeneratedCode = codeMatch[1].trim();
+                        document.getElementById('ai-actions').style.display = 'block';
+                    } else {
+                        aiGeneratedCode = '';
+                        document.getElementById('ai-actions').style.display = 'none';
+                    }
+                } else {
+                    responseDiv.innerHTML = '<p style="color: #f48771;">Erro: ' + (data.error || 'Sem resposta') + '</p>';
+                }
+            })
+            .catch(err => {
+                responseDiv.innerHTML = '<p style="color: #f48771;">Erro de conexão: ' + err.message + '</p>';
+            });
+        }
+
+        function applyAICode() {
+            if (!aiGeneratedCode) {
+                alert('Nenhum código gerado para aplicar!');
+                return;
+            }
+
+            if (!editor) return;
+
+            const selection = editor.getSelection();
+            if (selection.isEmpty()) {
+                // Se não há seleção, adiciona no final
+                const model = editor.getModel();
+                const lastLine = model.getLineCount();
+                const lastCol = model.getLineMaxColumn(lastLine);
+                editor.executeEdits('ai-apply', [{
+                    range: new monaco.Range(lastLine, lastCol, lastLine, lastCol),
+                    text: '\n' + aiGeneratedCode
+                }]);
+            } else {
+                // Substitui a seleção
+                editor.executeEdits('ai-apply', [{
+                    range: selection,
+                    text: aiGeneratedCode
+                }]);
+            }
+
+            alert('Código aplicado com sucesso!');
+            aiGeneratedCode = '';
+            document.getElementById('ai-actions').style.display = 'none';
         }
 
     </script>

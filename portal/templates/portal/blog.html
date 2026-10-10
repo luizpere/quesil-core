@@ -1,0 +1,26 @@
+{% extends "portal/base.html" %}
+{% block title %}Blog - ThinkinOS{% endblock %}
+{% block content %}
+<section class="hero" style="padding: 3rem 0;">
+    <div class="container">
+        <h1>📝 Blog & Notícias</h1>
+        <p>Últimas novidades, atualizações e artigos sobre o ThinkinOS e o mundo da IA</p>
+    </div>
+</section>
+<section class="content-section">
+    <div class="container">
+        <div class="blog-grid">
+            {% for post_id, post in posts.items() %}
+            <article class="blog-card">
+                <div class="blog-card-content">
+                    <h3>{{ post.title }}</h3>
+                    <div class="meta">{{ post.date }} • {{ post.category }}</div>
+                    <p>{{ post.content | striptags | truncate(150) }}</p>
+                    <a href="{{ url_for('portal.blog_post', post_id=post_id) }}" class="btn btn-primary" style="margin-top: 1rem;">Ler mais →</a>
+                </div>
+            </article>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endblock %}

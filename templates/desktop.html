@@ -2,10 +2,6 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
-    <meta name="version" content="1789321864">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ThinkinOS v2.0</title>
     <style>
@@ -36,7 +32,7 @@
         .grid { 
             display: grid; 
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); 
-            gap: 12px; 
+            gap: 20px; 
             padding: 20px; 
         }
         .card { 
@@ -156,7 +152,7 @@
 }
 
 .vm-overlay {
-    background: rgba(0, 0, 0, 0.65) !important;
+    background: #000000 !important;
     /* backdrop-filter: blur */(4px) !important;
     -webkit-/* backdrop-filter: blur */(4px) !important;
 }
@@ -194,7 +190,7 @@
 
 /* VM List com Glassmorphism */
 .vm-list {
-    background: rgba(0, 0, 0, 0.65) !important;
+    background: #000000 !important;
     /* backdrop-filter: blur */(10px) !important;
     border: 1px solid rgba(255, 255, 255, 0.05) !important;
 }
@@ -211,9 +207,8 @@
 
 /* Terminal Container */
 #terminal-container {
-    background: rgba(0, 0, 0, 0.75) !important;
-    backdrop-filter: blur(10px) !important;
-    -webkit-backdrop-filter: blur(10px) !important;
+    background: #000000 !important;
+    /* backdrop-filter: blur */(5px) !important;
     box-shadow: inset 0 2px 20px rgba(0, 0, 0, 0.5) !important;
     min-height: 500px !important;
     width: 100% !important;
@@ -237,6 +232,179 @@
     border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
 }
 
+
+/* Header Right - Layout Compacto com Linha Única */
+.header-right {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    z-index: 1000;
+}
+
+.clock-display {
+    color: #fff;
+    font-size: 1em;
+    font-family: 'Courier New', monospace;
+    background: rgba(255, 255, 255, 0.08);
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-weight: 500;
+}
+
+.btn-docs {
+    background: linear-gradient(135deg, #3498db, #2980b9);
+    color: white;
+    padding: 6px 12px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+    line-height: 1;
+}
+
+.btn-docs:hover {
+    background: linear-gradient(135deg, #2980b9, #3498db);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(52, 152, 219, 0.3);
+}
+
+.btn-logout {
+    background: linear-gradient(135deg, #e74c3c, #c0392b);
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+    line-height: 1;
+}
+
+.btn-logout:hover {
+    background: linear-gradient(135deg, #c0392b, #e74c3c);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(231, 76, 60, 0.3);
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .header-right {
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 6px;
+    }
+    
+    .clock-display {
+        font-size: 0.9em;
+        padding: 5px 8px;
+    }
+    
+    .btn-docs,
+    .btn-logout {
+        padding: 5px 10px;
+        font-size: 12px;
+    }
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .header-right {
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 6px;
+    }
+    
+    .clock-display {
+        font-size: 0.9em;
+        padding: 5px 8px;
+    }
+    
+    .btn-docs,
+    .btn-logout {
+        padding: 5px 10px;
+        font-size: 12px;
+    }
+}
+
+.clock-display {
+    color: #fff;
+    font-size: 1.1em;
+    font-family: 'Courier New', monospace;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-weight: 500;
+}
+
+.btn-docs {
+    background: linear-gradient(135deg, #3498db, #2980b9);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.btn-docs:hover {
+    background: linear-gradient(135deg, #2980b9, #3498db);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(52, 152, 219, 0.4);
+}
+
+.btn-logout {
+    background: linear-gradient(135deg, #e74c3c, #c0392b);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.btn-logout:hover {
+    background: linear-gradient(135deg, #c0392b, #e74c3c);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(231, 76, 60, 0.4);
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .header-right {
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 8px;
+    }
+    
+    .clock-display {
+        font-size: 0.95em;
+        padding: 6px 10px;
+    }
+    
+    .btn-docs,
+    .btn-logout {
+        padding: 6px 12px;
+        font-size: 13px;
+    }
+}
 </style>
 
     <!-- xterm.js para Terminal Web -->
@@ -586,381 +754,253 @@ function refitTerminal() {
 </script>
 
 
-<!-- === SISTEMA DE TEMAS (CLARO/ESCURO) === -->
 <style>
-/* Variáveis de tema - padrão escuro */
-:root {
-    --bg-primary: #0a0a0a;
-    --bg-secondary: #1a1a1a;
-    --bg-tertiary: #2a2a2a;
-    --bg-card: #1e1e1e;
-    --text-primary: #e0e0e0;
-    --text-secondary: #a0a0a0;
-    --text-muted: #666;
-    --border-color: #333;
-    --accent-color: #4dabf7;
-    --accent-hover: #339af0;
-    --success-color: #51cf66;
-    --error-color: #ff6b6b;
-    --warning-color: #ffd43b;
-    --shadow-color: rgba(0, 0, 0, 0.5);
+/* Sistema de Notificações (Toasts) */
+#toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 99999;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.toast {
+    min-width: 250px;
+    padding: 16px 20px;
+    border-radius: 8px;
+    color: white;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-size: 14px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    animation: slideIn 0.3s ease-out forwards;
+    opacity: 0;
+    transform: translateX(100%);
+}
+.toast.success { background: linear-gradient(135deg, #2ecc71, #27ae60); }
+.toast.error { background: linear-gradient(135deg, #e74c3c, #c0392b); }
+.toast.info { background: linear-gradient(135deg, #3498db, #2980b9); }
+.toast.warning { background: linear-gradient(135deg, #f39c12, #d35400); }
+
+@keyframes slideIn {
+    to { opacity: 1; transform: translateX(0); }
+}
+@keyframes fadeOut {
+    to { opacity: 0; transform: translateX(100%); }
 }
 
-/* Tema claro */
-[data-theme="light"] {
-    --bg-primary: #f5f5f5;
-    --bg-secondary: #ffffff;
-    --bg-tertiary: #e8e8e8;
-    --bg-card: #ffffff;
-    --text-primary: #1a1a1a;
-    --text-secondary: #4a4a4a;
-    --text-muted: #888;
-    --border-color: #ddd;
-    --accent-color: #228be6;
-    --accent-hover: #1971c2;
-    --success-color: #40c057;
-    --error-color: #fa5252;
-    --warning-color: #f59f00;
-    --shadow-color: rgba(0, 0, 0, 0.1);
+/* Header Right - Layout Compacto com Linha Única */
+.header-right {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    z-index: 1000;
 }
 
-/* Transições suaves */
-* {
-    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+.clock-display {
+    color: #fff;
+    font-size: 1em;
+    font-family: 'Courier New', monospace;
+    background: rgba(255, 255, 255, 0.08);
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-weight: 500;
 }
 
-/* Botão de toggle de tema */
-.theme-toggle {
-    background: var(--bg-tertiary) !important;
-    border: 2px solid var(--border-color) !important;
-    color: var(--text-primary) !important;
-    padding: 8px !important;
-    border-radius: 10px !important;
-    cursor: pointer !important;
-    transition: all 0.3s ease !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    width: 48px !important;
-    height: 48px !important;
-    position: relative !important;
-    z-index: 1000 !important;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.2) !important;
+.btn-docs {
+    background: linear-gradient(135deg, #3498db, #2980b9);
+    color: white;
+    padding: 6px 12px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+    line-height: 1;
 }
 
-.theme-toggle:hover {
-    background: var(--accent-color) !important;
-    transform: rotate(180deg) scale(1.15) !important;
-    box-shadow: 0 4px 16px var(--shadow-color) !important;
-    border-color: var(--accent-color) !important;
+.btn-docs:hover {
+    background: linear-gradient(135deg, #2980b9, #3498db);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(52, 152, 219, 0.3);
 }
 
-/* SVG dentro do botão */
-.theme-toggle svg {
-    width: 24px !important;
-    height: 24px !important;
-    fill: currentColor !important;
-    transition: all 0.3s ease !important;
+.btn-logout {
+    background: linear-gradient(135deg, #e74c3c, #c0392b);
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+    line-height: 1;
 }
 
-/* Tema claro */
-[data-theme="light"] .theme-toggle {
-    background: #ffffff !important;
-    border-color: #ddd !important;
-    color: #333333 !important;
+.btn-logout:hover {
+    background: linear-gradient(135deg, #c0392b, #e74c3c);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(231, 76, 60, 0.3);
 }
 
-[data-theme="light"] .theme-toggle:hover {
-    background: #228be6 !important;
-    color: #ffffff !important;
+/* Responsividade */
+@media (max-width: 768px) {
+    .header-right {
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 6px;
+    }
+    
+    .clock-display {
+        font-size: 0.9em;
+        padding: 5px 8px;
+    }
+    
+    .btn-docs,
+    .btn-logout {
+        padding: 5px 10px;
+        font-size: 12px;
+    }
 }
 
-/* Tema escuro */
-[data-theme="dark"] .theme-toggle {
-    background: #2a2a2a !important;
-    border-color: #444 !important;
-    color: #ffd43b !important;
+/* Responsividade */
+@media (max-width: 768px) {
+    .header-right {
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 6px;
+    }
+    
+    .clock-display {
+        font-size: 0.9em;
+        padding: 5px 8px;
+    }
+    
+    .btn-docs,
+    .btn-logout {
+        padding: 5px 10px;
+        font-size: 12px;
+    }
 }
 
-[data-theme="dark"] .theme-toggle:hover {
-    background: #4dabf7 !important;
-    color: #ffffff !important;
+.clock-display {
+    color: #fff;
+    font-size: 1.1em;
+    font-family: 'Courier New', monospace;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-weight: 500;
 }
 
-/* Aplicar tema em elementos existentes */
-body {
-    background: var(--bg-primary);
-    color: var(--text-primary);
+.btn-docs {
+    background: linear-gradient(135deg, #3498db, #2980b9);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
 }
 
-.card {
-    background: var(--bg-card);
-    border: 1px solid var(--border-color);
-    color: var(--text-primary);
-}
-
-.dock {
-    background: var(--bg-secondary);
-    border-top: 1px solid var(--border-color);
-}
-
-.header {
-    background: var(--bg-secondary);
-    border-bottom: 1px solid var(--border-color);
-}
-</style>
-
-
-<style>
-/* Botão de tema no header */
-#theme-toggle-new {
-    background: transparent !important;
-    border: 1px solid rgba(255,255,255,0.2) !important;
-    color: #ffd43b !important;
-    padding: 6px 10px !important;
-    border-radius: 6px !important;
-    cursor: pointer !important;
-    font-size: 18px !important;
-    margin-right: 12px !important;
-    transition: all 0.3s ease !important;
-    display: inline-flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    width: 36px !important;
-    height: 36px !important;
-}
-
-#theme-toggle-new:hover {
-    background: rgba(255,255,255,0.1) !important;
-    border-color: #ffd43b !important;
-    transform: rotate(20deg) scale(1.1) !important;
-}
-
-/* Tema claro - ajustar botão */
-[data-theme="light"] #theme-toggle-new {
-    border-color: rgba(0,0,0,0.2) !important;
-    color: #f59f00 !important;
-}
-
-[data-theme="light"] #theme-toggle-new:hover {
-    background: rgba(0,0,0,0.05) !important;
-    border-color: #f59f00 !important;
-}
-</style>
-
-
-<style>
-.tb-overlay.active { display: block !important; }
-.tb-window.active { display: flex !important; }
-.tb-overlay { display: none !important; }
-.tb-window { display: none !important; }
-</style>
-
-
-<style>
-/* Correção: Botões do Dock nunca devem sobrepor modais */
-.dock-item, #dock-btn-terminal-safe, [id*="web-btn"], [onclick*="openThinkinBrowser"] {
-    z-index: 100 !important; /* Menor que os modais (9999) */
-    position: relative !important;
-}
-/* Esconder botão web duplicado se estiver fora do dock */
-body > a.dock-item:not(.dock a) {
-    display: none !important;
-}
-</style>
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-<style>
-/* FORÇAR: Modais sempre no topo */
-#metrics-modal, #term-modal, #safe-term-modal, #browser-window, .modal, .fm-modal {
-    z-index: 10000 !important;
-}
-/* FORÇAR: Overlays sempre abaixo dos modais */
-#metrics-overlay, #term-overlay, #safe-term-overlay, .overlay {
-    z-index: 9998 !important;
-}
-/* FORÇAR: Dock sempre abaixo de tudo */
-.dock, .dock-item, #dock-btn-terminal-safe {
-    z-index: 100 !important;
-}
-/* ESCONDER: Qualquer botão Web que NÃO esteja dentro do .dock */
-body > a[onclick*="openThinkinBrowser"], 
-body > div[onclick*="openThinkinBrowser"],
-.dock-item[style*="linear-gradient"] {
-    display: none !important;
-}
-</style>
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-
-<style>
-/* Garantir que botões do dock sejam clicáveis */
-.dock-item {
-    cursor: pointer !important;
-    pointer-events: auto !important;
-    z-index: 1000 !important;
-}
-.dock-item:hover {
-    opacity: 0.9;
+.btn-docs:hover {
+    background: linear-gradient(135deg, #2980b9, #3498db);
     transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(52, 152, 219, 0.4);
+}
+
+.btn-logout {
+    background: linear-gradient(135deg, #e74c3c, #c0392b);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.btn-logout:hover {
+    background: linear-gradient(135deg, #c0392b, #e74c3c);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(231, 76, 60, 0.4);
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .header-right {
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 8px;
+    }
+    
+    .clock-display {
+        font-size: 0.95em;
+        padding: 6px 10px;
+    }
+    
+    .btn-docs,
+    .btn-logout {
+        padding: 6px 12px;
+        font-size: 13px;
+    }
 }
 </style>
-
-
-<style>
-/* FIX MODAL FILE MANAGER */
-.drop-zone, #file-drop-area {
-    min-height: 120px !important;
-    max-height: 150px !important;
-    padding: 20px !important;
-    border: 2px dashed #444 !important;
-    border-radius: 10px !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    margin: 10px 0 !important;
-}
-.drop-zone p, #file-drop-area p {
-    font-size: 0.9em !important;
-    margin: 0 !important;
-}
-</style>
-
 </head>
 <body>
-
-<!-- === TERMINAL WEB v3.0 - CARREGAMENTO IMEDIATO === -->
-<script>
-(function() {
-    'use strict';
-    console.log('⌨️ [TERMINAL v3] Carregamento imediato...');
-    
-    // Criar função global IMEDIATAMENTE
-    window.openSafeTerminal = function() {
-        console.log('⌨️ [TERMINAL v3] Abrindo...');
-        
-        // Verificar se xterm.js está carregado
-        if (typeof Terminal === 'undefined') {
-            alert('Terminal está carregando... aguarde 2 segundos e tente novamente.');
-            return;
-        }
-        
-        // Criar overlay
-        let overlay = document.getElementById('term-overlay');
-        if (!overlay) {
-            overlay = document.createElement('div');
-            overlay.id = 'term-overlay';
-            overlay.style.cssText = 'position:fixed;inset:0;background:linear-gradient(135deg, rgba(0,0,0,0.7) 0%, rgba(20,20,40,0.6) 100%);backdrop-filter:blur(15px) saturate(180%);-webkit-backdrop-filter:blur(15px) saturate(180%);z-index:99998;display:none;';
-            overlay.onclick = function(e) { if(e.target === this) { this.style.display='none'; document.getElementById('term-modal').style.display='none'; }};
-            document.body.appendChild(overlay);
-        }
-        
-        // Criar modal
-        let modal = document.getElementById('term-modal');
-        if (!modal) {
-            modal = document.createElement('div');
-            modal.id = 'term-modal';
-            modal.style.cssText = 'position:fixed;top:10%;left:10%;right:10%;bottom:10%;background:rgba(12,12,12,0.85);border:1px solid rgba(255,255,255,0.1);border-radius:12px;box-shadow:0 25px 50px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);z-index:99999;display:none;flex-direction:column;';
-            modal.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 15px;background:rgba(255,255,255,0.08);border-bottom:1px solid rgba(255,255,255,0.15);border-radius:12px 12px 0 0;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);"><div style="display:flex;align-items:center;gap:10px;"><span style="color:#fff;font-family:monospace;font-weight:600;">⌨️ Terminal Web</span><button id="term-clear" style="background:#ffffff;border:none;color:#1e1e1e;padding:5px 12px;border-radius:5px;cursor:pointer;font-size:12px;font-weight:600;transition:all 0.2s;box-shadow:0 2px 5px rgba(0,0,0,0.2);" onmouseover="this.style.background=\'#4a9eff\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'#ffffff\';this.style.color=\'#1e1e1e\'">🧹 Limpar</button></div><button id="term-close" style="background:#ff5f56;border:none;color:#fff;width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:16px;line-height:1;"></button></div><div id="term-container" style="flex:1;padding:15px;background:rgba(0,0,0,0.3);border-radius:0 0 8px 8px;"></div>';
-            document.body.appendChild(modal);
-            
-            document.getElementById('term-close').onclick = function() {
-                document.getElementById('term-overlay').style.display = 'none';
-                document.getElementById('term-modal').style.display = 'none';
-            };
-            document.getElementById('term-clear').onclick = function() {
-                if (window.term) {
-                    window.term.clear();
-                    window.term.write('\r\n\x1b[32m🧹 Tela limpa!\x1b[0m\r\n$ ');
-                }
-            };
-        }
-        
-        // Mostrar
-        overlay.style.display = 'block';
-        modal.style.display = 'flex';
-        
-        // Inicializar terminal
-        if (!window.term) {
-            console.log('⌨️ [TERMINAL v3] Inicializando xterm...');
-            window.term = new Terminal({cursorBlink:true, fontSize:14, fontFamily:'monospace', theme:{background:'transparent',foreground:'#e0e0e0',cursor:'#4a9eff'}});
-            const fit = new FitAddon.FitAddon();
-            window.term.loadAddon(fit);
-            window.term.open(document.getElementById('term-container'));
-            window.termFit = fit;
-            window.term.write('\r\n\x1b[32mThinkinOS Terminal v3.0\x1b[0m\r\n$ ');
-            
-            // Socket
-            if (typeof io !== 'undefined') {
-                window.termSocket = io();
-                window.termSocket.on('connect', () => { console.log('✅ Socket conectado'); window.termSocket.emit('terminal_connect',{user_id:'luperesil'}); });
-                window.termSocket.on('terminal_response', (data) => { window.term.write(data.output); });
-            }
-            
-            let buf = '';
-            window.term.onData(d => {
-                const c = d.charCodeAt(0);
-                if (c === 13) { window.term.write('\r\n'); if(buf && window.termSocket) window.termSocket.emit('terminal_command',{user_id:'luperesil',command:buf}); buf=''; window.term.write('$ '); }
-                else if (c === 127) { if(buf.length>0){buf=buf.slice(0,-1);window.term.write('\b \b');} }
-                else if (c >= 32) { buf+=d; window.term.write(d); }
-            });
-            
-            window.term.writeln('ThinkinOS Terminal v1.0');
-            window.term.writeln('Digite "help" para ver comandos.\n');
-            window.term.write('$ ');
-            setTimeout(() => fit.fit(), 100);
-        } else {
-            window.termFit.fit();
-            window.term.focus();
-        }
-    };
-    
-    console.log('✅ [TERMINAL v3] openSafeTerminal disponível globalmente');
-})();
-</script>
-
     <div class="header">
         <h1>ThinkinOS <span style="color: #4caf50;">v2.0</span></h1>
-        <div style="position: absolute; top: 20px; right: 120px; color: #fff; font-size: 1.1em; font-family: 'Courier New', monospace;" id="clock">00:00:00</div>
-        
-        <button class="logout-btn" onclick="location.href='/logout'">Sair</button>
+        <div class="header-right">
+            <div class="header-right">
+            <div id="clock" class="clock-display">00:00:00</div>
+            <a href="/portal/docs" target="_blank" class="btn-docs">📖 Documentação</a>
+            <button class="btn-logout" onclick="location.href='/logout'">Sair</button>
+        </div>
+    </header>
+        </div>
     </div>
     
     <div id="assistants-container" class="grid"></div>
 
     <!-- DOCK -->
-    
-<!-- BOTÃO TEMA ANTIGO REMOVIDO --> </div>
-
-<div class="dock">
-
-    <a class="dock-item" href="/desktop"><span class="dock-icon">🏠</span><span class="dock-label">Início</span></a>
-        <a class="dock-item" onclick="window.openFM()"><span class="dock-icon">📁</span><span class="dock-label">Arquivos</span></a>
+    <div class="dock">
+        <a class="dock-item" href="/desktop"><span class="dock-icon">🏠</span><span class="dock-label">Início</span></a>
+        <a class="dock-item" onclick="openFM()"><span class="dock-icon">📁</span><span class="dock-label">Arquivos</span></a>
         <a class="dock-item" onclick="openChat('Ana')"><span class="dock-icon">💬</span><span class="dock-label">Chat</span></a>
         <a class="dock-item" href="/perfil"><span class="dock-icon">👤</span><span class="dock-label">Perfil</span></a>
-        <a class="dock-item" onclick="showComingSoon('Gestão')"><span class="dock-icon">⚙️</span><span class="dock-label">Gestão</span></a>
+        <a class="dock-item" onclick="window.location.href='/gestao'"><span class="dock-icon">⚙️</span><span class="dock-label">Gestão</span></a>
+        <a class="dock-item" onclick="window.location.href='/vm'" title="Máquinas Virtuais">
+            <span class="dock-icon">🐧</span>
+            <span class="dock-label">VMs</span>
+        </a>        <a class="dock-item" onclick="openTerminal('local', 'Terminal Local')" title="Terminal">
+            <span class="dock-icon">🖥️</span>
+            <span class="dock-label">Terminal</span>
+        </a>
+        <a class="dock-item" onclick="window.open('/editor', '_blank')" title="Editor de Código">
+            <span class="dock-icon">📝</span>
+            <span class="dock-label">Editor</span>
+        </a>
         <a class="dock-item" onclick="showComingSoon('Novo Assistente')"><span class="dock-icon">➕</span><span class="dock-label">Novo</span></a>
-<a class="dock-item" onclick="openSettings()" title="Configurações">
-    <span class="dock-icon">⚙️</span>
-    <span class="dock-label">Config</span>
-</a>
-    <a class="dock-item" onclick="openEditor()" title="Editor de Código">
-        <span class="dock-icon">📝</span>
-        <span class="dock-label">Editor</span>
-    </a>
-    <a class="dock-item" onclick="openTerminalWeb()" title="Terminal Web">
-        <span class="dock-icon">⌨️</span>
-        <span class="dock-label">Terminal</span>
-    </a>
-
-    
-    <a class="dock-item" onclick="window.open('/browser', '_blank')" title="Browser Integrado">
-        <span class="dock-icon">🌐</span>
-        <span class="dock-label">Web</span>
-    </a>
-</div>
+    </div>
 
     <!-- VM MODAL -->
     <div class="vm-overlay" id="vm-overlay" onclick="closeVMManager()"></div>
@@ -974,10 +1014,7 @@ body > div[onclick*="openThinkinBrowser"],
             <button class="btn btn-primary" onclick="startVM('ubuntu')" style="background: #E95420;">▶ Ligar Ubuntu</button>
             <button class="btn" onclick="loadVMs()" style="background: #555; color: white;">🔄 Atualizar</button>
         </div>
-        <div class="vm-list" id="vm-list"><p style="text-align: center; color: #888;">Carregando...</p><a class="dock-item" onclick="window.open('/browser', '_blank')" title="Browser Integrado" style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);">
-    <span class="dock-icon">🌐</span>
-    <span class="dock-label">Web</span>
-</a></div>
+        <div class="vm-list" id="vm-list"><p style="text-align: center; color: #888;">Carregando...</p></div>
     </div>
 
     
@@ -985,21 +1022,11 @@ body > div[onclick*="openThinkinBrowser"],
 <!-- Modal do Terminal Web -->
 <div class="vm-overlay" id="terminal-overlay" onclick="closeTerminal()"></div>
 <div class="vm-modal" id="terminal-modal" style="max-width: 1000px;">
-    <div class="vm-header" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 15px; background: rgba(255,255,255,0.05); border-bottom: 1px solid rgba(255,255,255,0.1); border-radius: 8px 8px 0 0;">
-        <div style="display: flex; align-items: center; gap: 10px;">
-            <span style="font-size: 15px; font-weight: 600;">💻 Terminal</span>
-            <span id="terminal-container-name" style="opacity: 0.7; font-size: 14px;">Container</span>
-            <button onclick="clearTerminal()" style="background: rgba(74, 158, 255, 0.2); border: 1px solid #4a9eff; color: #4a9eff; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; transition: all 0.2s; display: flex; align-items: center; gap: 4px;" onmouseover="this.style.background='#4a9eff'; this.style.color='white'" onmouseout="this.style.background='rgba(74, 158, 255, 0.2)'; this.style.color='#4a9eff'">🧹 Limpar</button>
-        </div>
-        <button class="close-btn" onclick="closeTerminal()" style="background: transparent; border: none; color: #ff5f56; font-size: 24px; cursor: pointer; padding: 0 5px; line-height: 1;">&times;</button>
+    <div class="vm-header">
+        <h2>💻 Terminal - <span id="terminal-container-name">Container</span></h2>
+        <button class="close-btn" onclick="closeTerminal()">&times;</button>
     </div>
-    <div id="terminal-container" style="height: 500px; background: transparent; padding: 10px; border-radius: 4px;">
-<a class="dock-item" onclick="window.open('/browser', '_blank')" title="Browser Integrado" style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);">
-    <span class="dock-icon">🌐</span>
-    <span class="dock-label">Web</span>
-</a>
-
-</div>
+    <div id="terminal-container" style="height: 500px; background: #000; padding: 10px; border-radius: 4px;"></div>
 </div>
 
 
@@ -1016,13 +1043,7 @@ body > div[onclick*="openThinkinBrowser"],
                style="flex: 1; padding: 10px; border-radius: 4px; border: 1px solid #444; background: #1a1a1a; color: #fff;"
                onkeypress="if(event.key === 'Enter') sendChatMessage()">
         <button class="btn btn-primary" onclick="sendChatMessage()">Enviar</button>
-    
-<a class="dock-item" onclick="window.open('/browser', '_blank')" title="Browser Integrado" style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);">
-    <span class="dock-icon">🌐</span>
-    <span class="dock-label">Web</span>
-</a>
-
-</div>
+    </div>
 </div>
 
 
@@ -1058,22 +1079,7 @@ async function loadAssistants() {
         });
         
         // Card de VMs
-        const vmCard = document.createElement('div');
-        vmCard.className = 'card';
-        vmCard.style.borderLeftColor = '#0db7ed';
-        vmCard.innerHTML = `
-            <div class="card-header"><div class="card-title">Máquinas Virtuais</div><div>🐧</div></div>
         
-        <!-- Card Dashboard V5.0 -->
-            </div>
-            <div class="card-category">SISTEMA</div>
-        </div>
-
-            <div class="card-category">Virtualização</div>
-            <div class="card-desc">Gerencie containers Linux diretamente pelo ThinkinOS.</div>
-        `;
-        vmCard.onclick = openVMManager;
-        container.appendChild(vmCard);
         
         console.log("Total de cards:", document.querySelectorAll('.card').length);
     } catch (e) {
@@ -1493,7 +1499,7 @@ function refitTerminal() {
 <div id="temp-terminal" style="position: fixed; top: 0; left: 0; width: 1200px; height: 700px; visibility: hidden; z-index: -1;"></div>
 
 <!-- Container do terminal no body (fora do modal) -->
-<div id="terminal-body-container" style="position: fixed; top: 100px; left: 100px; width: 1200px; height: 700px; z-index: 9999; display: none; background: transparent; padding: 20px; border: 2px solid #0f0;"></div>
+<div id="terminal-body-container" style="position: fixed; top: 100px; left: 100px; width: 1200px; height: 700px; z-index: 9999; display: none; background: #000; padding: 20px; border: 2px solid #0f0;"></div>
 
 <!-- Iframe para o terminal -->
 <iframe id="terminal-iframe" style="display: none; width: 1200px; height: 700px; border: none; position: fixed; top: 0; left: 0; z-index: 9999;"></iframe>
@@ -1565,7 +1571,7 @@ document.addEventListener('DOMContentLoaded', () => {
             browserCard.className = 'card';
             browserCard.style.cursor = 'pointer';
             browserCard.style.border = '1px solid #00ffff';
-            browserCard.onclick = () => window.open('/browser', '_blank');
+            browserCard.onclick = () => window.location.href = '/browser';
             
             browserCard.innerHTML = `
                 <div class="card-header">
@@ -1606,35 +1612,78 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         if (!bestContainer) bestContainer = document.querySelector('main') || document.body;
-        
-        // Injetar Card Métricas se não existir
-        if (bestContainer && !document.getElementById('metrics-injected-card')) {
-            const metricsCard = document.createElement('div');
-            metricsCard.id = 'metrics-injected-card';
-            metricsCard.className = 'card';
-            metricsCard.style.cursor = 'pointer';
-            metricsCard.style.border = '1px solid #00ff00';
-            metricsCard.onclick = () => window.location.href = '/dashboard';
-            
-            metricsCard.innerHTML = `
-                <div class="card-header">
-                    <div class="card-title"> Métricas</div>
-                    <div></div>
-                </div>
-                <div class="card-category">SISTEMA</div>
-                <div class="card-desc">Monitorar uso de tokens e assistentes.</div>
-            `;
-            
-            bestContainer.appendChild(metricsCard);
-            console.log("✅ Card Métricas injetado via JS");
-        }
     }, 800);
 });
 </script>
 
 
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(() => {
+        // Procurar o container do Dock (barra inferior)
+        const dock = document.querySelector('.dock') || 
+                     document.querySelector('[class*="dock"]') || 
+                     document.querySelector('nav') ||
+                     document.body.querySelector('div:last-child');
+        
+        if (dock && !document.getElementById('dock-terminal-btn')) {
+                const termBtn = document.createElement('div');
+                termBtn.id = 'dock-terminal-btn';
+                termBtn.className = 'dock-item';
+                termBtn.style.cursor = 'pointer';
+                termBtn.onclick = () => openTerminal('local', 'Terminal Local');
+                
+                termBtn.innerHTML = '<div style="font-size: 24px;">🖥️</div><div style="font-size: 10px; margin-top: 2px;">Terminal</div>';
+                
+                // Inserir antes do botão "Novo"
+                const novoBtn = Array.from(dock.children).find(el => el.textContent.includes('Novo') || el.innerHTML.includes('+'));
+                if (novoBtn) {
+                    dock.insertBefore(termBtn, novoBtn);
+                } else {
+                    dock.appendChild(termBtn);
+                }
+            }
+            
+            console.log("✅ Botão Terminal injetado no Dock");
+        }
+    }, 1000);
+});
+</script>
 
 
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(() => {
+        // Procurar o container do Dock
+        const dock = document.querySelector('.dock') || 
+                     document.querySelector('[class*="dock"]') || 
+                     document.querySelector('nav') ||
+                     document.body.querySelector('div:last-child');
+        
+        if (dock && !document.getElementById('dock-editor-btn')) {
+                const editBtn = document.createElement('div');
+                editBtn.id = 'dock-editor-btn';
+                editBtn.className = 'dock-item';
+                editBtn.style.cursor = 'pointer';
+                editBtn.style.textAlign = 'center';
+                editBtn.onclick = () => window.open('/editor?file=app.py', '_blank');
+                
+                editBtn.innerHTML = '<div style="font-size: 24px;">&lt;/&gt;</div><div style="font-size: 10px; margin-top: 2px;">Editor</div>';
+                
+                // Inserir após o botão Terminal
+                const termBtn = document.getElementById('dock-terminal-btn');
+                if (termBtn) {
+                    dock.insertBefore(editBtn, termBtn.nextSibling);
+                } else {
+                    dock.appendChild(editBtn);
+                }
+            }
+            
+            console.log("✅ Botão Editor injetado no Dock");
+        }
+    }, 1200); // Pequeno delay extra para garantir carregamento completo
+});
+</script>
 
 
 <script>
@@ -1784,962 +1833,507 @@ document.addEventListener('DOMContentLoaded', () => {
 })();
 </script>
 
+
+<!-- Container de Notificações -->
+<div id="toast-container"></div>
+
 <script>
-// === FUNÇÃO PARA LANÇAR THINKINBROWSER NATIVO ===
-function launchThinkinBrowser() {
-    console.log('🌐 Abrindo ThinkinBrowser Web...');
-    window.open('/browser', '_blank');
+// Sistema de Notificações Global
+function showToast(message, type = 'info', duration = 3000) {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    
+    // Ícones baseados no tipo
+    const icons = {
+        'success': '✅',
+        'error': '❌',
+        'info': 'ℹ️',
+        'warning': '⚠️'
+    };
+    
+    toast.innerHTML = `<span style="font-size: 18px;">${icons[type] || 'ℹ️'}</span><span>${message}</span>`;
+    container.appendChild(toast);
+
+    // Remover após a duração
+    setTimeout(() => {
+        toast.style.animation = 'fadeOut 0.3s ease-in forwards';
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.parentNode.removeChild(toast);
+            }
+        }, 300);
+    }, duration);
 }
+
+// Substituir alerts antigos por toasts (opcional, mas recomendado)
+// Exemplo: window.oldAlert = window.alert; window.alert = (msg) => showToast(msg, 'info');
 </script>
 
-
-<!-- === FILE MANAGER v7.0 - VERSÃO SEGURA E MINIMALISTA === -->
+<!-- INICIO GERENCIADOR DE ARQUIVOS -->
+<div id="fm-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 9999; justify-content: center; align-items: center;">
+    <div style="background: #1e1e24; border-radius: 12px; width: 850px; max-width: 95%; height: 600px; display: flex; flex-direction: column; border: 1px solid #333;">
+        <div style="display: flex; justify-content: space-between; padding: 15px 20px; border-bottom: 1px solid #333; background: #25252b; border-radius: 12px 12px 0 0;">
+            <h3 style="margin: 0; color: #fff; font-size: 16px;">📁 Arquivos</h3>
+            <div>
+                <button id="fm-upload-btn" style="background: #3498db; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; margin-right: 8px;">️ Upload</button>
+                <button id="fm-newfolder-btn" style="background: #2ecc71; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; margin-right: 8px;">📁 Pasta</button>
+                <button id="fm-close-btn" style="background: #e74c3c; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer;">✖</button>
+            </div>
+            <input type="file" id="fm-file-input" style="display: none;">
+        </div>
+        <div style="flex: 1; overflow-y: auto; padding: 20px; background: #1a1a1f;" id="fm-file-list">
+            <p style="text-align: center; color: #888; margin-top: 50px;">Carregando...</p>
+        </div>
+    </div>
+</div>
 <style>
-/* Animações suaves */
-@keyframes fadeIn {
-    from { opacity: 0; transform: scale(0.95); }
-    to { opacity: 1; transform: scale(1); }
-}
-@keyframes slideUp {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-@keyframes pulse {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.05); }
-}
+.fm-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 15px; }
+.fm-item { background: #2a2a32; border-radius: 8px; padding: 15px 10px; text-align: center; cursor: pointer; border: 2px solid transparent; position: relative; }
+.fm-item:hover { border-color: #3498db; }
+.fm-icon { font-size: 40px; display: block; margin-bottom: 8px; }
+.fm-name { color: #ddd; font-size: 12px; word-break: break-word; }
+.fm-actions { position: absolute; top: 5px; right: 5px; display: none; gap: 4px; }
+.fm-item:hover .fm-actions { display: flex; }
+.fm-actions button { background: rgba(0,0,0,0.8); border: none; padding: 4px 6px; border-radius: 4px; cursor: pointer; color: white; font-size: 12px; }
+.fm-actions button:hover { background: #3498db; }
 
-.fm-overlay {
-    display: none;
-    position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0,0,0,0.8);
-    z-index: 9999;
-    animation: fadeIn 0.3s ease;
-}
-.fm-overlay.active { display: block; }
-
-.fm-modal {
-    display: none;
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background: #1a1a1a;
-    border-radius: 12px;
-    width: 90%;
-    max-width: 1000px;
-    height: 80vh;
-    z-index: 10000;
-    flex-direction: column;
-    animation: fadeIn 0.3s ease;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-}
-.fm-modal.active { display: flex; }
-
-.fm-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 15px 20px;
-    background: #2d2d2d;
-    border-radius: 12px 12px 0 0;
-}
-.fm-header h2 { margin: 0; color: #e0e0e0; }
-.fm-header button {
-    background: none;
-    border: none;
-    color: #fff;
-    font-size: 28px;
-    cursor: pointer;
-}
-
-.fm-toolbar {
-    display: flex;
-    gap: 10px;
-    padding: 15px 20px;
-    background: #252525;
-}
-.fm-toolbar button {
-    background: #4dabf7;
-    color: #fff;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 6px;
-    cursor: pointer;
-    position: relative;
-    transition: all 0.2s ease;
-}
-.fm-toolbar button:hover {
-    background: #339af0;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(77,171,247,0.4);
-}
-.fm-toolbar button.secondary:hover {
-    background: #ced4da;
-}
-.fm-toolbar button::after {
-    content: attr(data-tooltip);
+/* Header Right - Layout Compacto com Linha Única */
+.header-right {
     position: absolute;
-    bottom: 100%;
-    left: 50%;
-    transform: translateX(-50%);
-    background: #333;
-    color: #fff;
-    padding: 5px 10px;
-    border-radius: 4px;
-    font-size: 12px;
-    white-space: nowrap;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.2s;
-    margin-bottom: 5px;
-}
-.fm-toolbar button:hover::after {
-    opacity: 1;
-}
-.fm-toolbar button.secondary {
-    background: #e0e0e0;
-    color: #333;
-}
-
-.fm-upload-area {
-    border: 2px dashed #4dabf7;
-    border-radius: 8px;
-    padding: 40px;
-    text-align: center;
-    margin: 20px;
-    cursor: pointer;
-}
-
-.fm-file-list {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-    gap: 15px;
-    padding: 20px;
-    overflow-y: auto;
-    flex: 1;
-}
-
-.fm-file-item {
-    background: #2a2a2a;
-    border: 2px solid #4dabf7;
-    border-radius: 8px;
-    padding: 15px;
-    text-align: center;
-    cursor: pointer;
-    height: 200px;
+    top: 20px;
+    right: 20px;
     display: flex;
-    flex-direction: column;
     align-items: center;
-    justify-content: space-between;
-}
-.fm-file-item:hover {
-    background: #3a3a3a;
-    transform: translateY(-3px);
-    box-shadow: 0 8px 16px rgba(77,171,247,0.3);
-}
-
-.fm-viewer {
-    display: none;
-    position: absolute;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: #1a1a1a;
+    gap: 8px;
     z-index: 1000;
-    flex-direction: column;
 }
-.fm-viewer.active { display: flex; }
-.fm-viewer-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 15px 20px;
-    background: #2d2d2d;
-}
-.fm-viewer-header button {
-    background: #4dabf7;
+
+.clock-display {
     color: #fff;
+    font-size: 1em;
+    font-family: 'Courier New', monospace;
+    background: rgba(255, 255, 255, 0.08);
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-weight: 500;
+}
+
+.btn-docs {
+    background: linear-gradient(135deg, #3498db, #2980b9);
+    color: white;
+    padding: 6px 12px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.3s ease;
     border: none;
-    padding: 10px 20px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+    line-height: 1;
+}
+
+.btn-docs:hover {
+    background: linear-gradient(135deg, #2980b9, #3498db);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(52, 152, 219, 0.3);
+}
+
+.btn-logout {
+    background: linear-gradient(135deg, #e74c3c, #c0392b);
+    color: white;
+    border: none;
+    padding: 6px 12px;
     border-radius: 6px;
     cursor: pointer;
-    margin-left: 10px;
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+    line-height: 1;
 }
-.fm-viewer-header .fm-btn-close { background: #cc3333; }
-.fm-viewer-content {
-    flex: 1;
-    overflow: auto;
-    background: #0d0d0d;
+
+.btn-logout:hover {
+    background: linear-gradient(135deg, #c0392b, #e74c3c);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(231, 76, 60, 0.3);
 }
-.fm-viewer-content iframe {
-    width: 100%;
-    height: 100%;
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .header-right {
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 6px;
+    }
+    
+    .clock-display {
+        font-size: 0.9em;
+        padding: 5px 8px;
+    }
+    
+    .btn-docs,
+    .btn-logout {
+        padding: 5px 10px;
+        font-size: 12px;
+    }
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .header-right {
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 6px;
+    }
+    
+    .clock-display {
+        font-size: 0.9em;
+        padding: 5px 8px;
+    }
+    
+    .btn-docs,
+    .btn-logout {
+        padding: 5px 10px;
+        font-size: 12px;
+    }
+}
+
+.clock-display {
+    color: #fff;
+    font-size: 1.1em;
+    font-family: 'Courier New', monospace;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-weight: 500;
+}
+
+.btn-docs {
+    background: linear-gradient(135deg, #3498db, #2980b9);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.3s ease;
     border: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.btn-docs:hover {
+    background: linear-gradient(135deg, #2980b9, #3498db);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(52, 152, 219, 0.4);
+}
+
+.btn-logout {
+    background: linear-gradient(135deg, #e74c3c, #c0392b);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.btn-logout:hover {
+    background: linear-gradient(135deg, #c0392b, #e74c3c);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(231, 76, 60, 0.4);
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .header-right {
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 8px;
+    }
+    
+    .clock-display {
+        font-size: 0.95em;
+        padding: 6px 10px;
+    }
+    
+    .btn-docs,
+    .btn-logout {
+        padding: 6px 12px;
+        font-size: 13px;
+    }
 }
 </style>
-
-<div class="fm-overlay" id="fm-overlay"></div>
-<div class="fm-modal" id="fm-modal">
-    <div class="fm-header">
-        <h2>📁 Gerenciador de Arquivos</h2>
-        <button onclick="closeFM()">&times;</button>
-    </div>
-    <div class="fm-toolbar">
-        <button onclick="document.getElementById('fm-upload').click()">⬆️ Upload</button>
-        <button class="secondary" onclick="newFolder()">📁 Nova Pasta</button>
-        <button class="secondary" onclick="newFile()"> Novo Arquivo</button>
-        <button class="secondary" onclick="loadFM()">🔄 Atualizar</button>
-        <input type="file" id="fm-upload" multiple style="display:none;" onchange="uploadFM(this.files)">
-    </div>
-    <div style="display:flex;gap:10px;padding:10px 20px;background:#1a1a1a;border-bottom:1px solid #333;">
-        <input type="text" id="fm-search" placeholder="🔍 Buscar arquivos..." style="flex:1;background:#2a2a2a;border:1px solid #444;color:#fff;padding:8px 12px;border-radius:6px;outline:none;" oninput="filterFM()">
-        <select id="fm-sort" style="background:#2a2a2a;border:1px solid #444;color:#fff;padding:8px 12px;border-radius:6px;cursor:pointer;" onchange="sortFM()">
-            <option value="name">📝 Nome (A-Z)</option>
-            <option value="name-desc">📝 Nome (Z-A)</option>
-            <option value="type">📁 Tipo (pastas primeiro)</option>
-            <option value="ext">📄 Extensão</option>
-        </select>
-    </div>
-    <div class="fm-upload-area" id="fm-upload-area">
-        <div style="color:#e0e0e0;">Arraste arquivos aqui</div>
-    </div>
-    <div class="fm-file-list" id="fm-file-list"></div>
-    <div class="fm-viewer" id="fm-viewer">
-        <div class="fm-viewer-header">
-            <h3 id="fm-viewer-title">Visualizando</h3>
-            <button id="fm-viewer-dl">⬇️ Download</button>
-            <button class="fm-btn-close" id="fm-viewer-close">✕ Fechar</button>
-        </div>
-        <div class="fm-viewer-content" id="fm-viewer-content"></div>
-    
-<a class="dock-item" onclick="window.open('/browser', '_blank')" title="Browser Integrado" style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);">
-    <span class="dock-icon">🌐</span>
-    <span class="dock-label">Web</span>
-</a>
-
-</div>
-</div>
-
 <script>
-// === FILE MANAGER v7.0 - MINIMALISTA ===
-console.log("📦 [FM v7.0] Iniciando...");
+// === GERENCIADOR DE ARQUIVOS - VERSÃO LIMPA SEM ESCAPES ===
+function openFM() {
+    document.getElementById('fm-modal').style.display = 'flex';
+    loadFiles();
+}
 
-// Funções globais explícitas
-window.openFM = function() {
-    console.log(" [FM] Abrindo...");
-    var modal = document.getElementById('fm-modal');
-    var overlay = document.getElementById('fm-overlay');
-    if (modal) {
-        modal.style.display = 'flex';
-        modal.classList.add('active');
-    }
-    if (overlay) {
-        overlay.style.display = 'block';
-        overlay.classList.add('active');
-    }
-    window.loadFM();
-};
+function closeFM() {
+    document.getElementById('fm-modal').style.display = 'none';
+}
 
-window.closeFM = function() {
-    console.log("🔒 [FM] Fechando...");
-    var modal = document.getElementById('fm-modal');
-    var overlay = document.getElementById('fm-overlay');
-    if (modal) {
-        modal.style.display = 'none';
-        modal.classList.remove('active');
-    }
-    if (overlay) {
-        overlay.style.display = 'none';
-        overlay.classList.remove('active');
-    }
-    window.closeViewerFM();
-};
+function isEditable(filename) {
+    var ext = filename.split('.').pop().toLowerCase();
+    var editables = ['py', 'js', 'jsx', 'ts', 'html', 'htm', 'css', 'json', 'xml', 'yaml', 'txt', 'md', 'sh', 'c', 'cpp', 'java', 'go', 'rs', 'rb', 'php', 'sql', 'log', 'csv', 'env', 'gitignore', 'dockerfile', 'ini', 'conf'];
+    return editables.indexOf(ext) !== -1;
+}
 
-window.loadFM = function() {
-    console.log("📁 [FM] Carregando arquivos...");
-    var list = document.getElementById('fm-file-list');
-    if (!list) return;
+function getFileIcon(filename) {
+    var ext = filename.split('.').pop().toLowerCase();
+    var icons = {
+        'jpg': '🖼️', 'jpeg': '🖼️', 'png': '🖼️', 'gif': '🖼️', 'webp': '🖼️', 'svg': '🖼️',
+        'mp3': '🎵', 'wav': '🎵', 'ogg': '🎵', 'mp4': '🎬', 'avi': '', 'mkv': '🎬',
+        'pdf': '📕', 'doc': '📘', 'docx': '📘', 'xls': '📗', 'xlsx': '📗', 'odt': '📘',
+        'txt': '📄', 'md': '📝', 'py': '🐍', 'js': '📜', 'html': '🌐', 'css': '🎨', 'json': '📋',
+        'zip': '', 'rar': '📦', 'tar': '📦', 'gz': '', 'exe': '⚙️', 'sh': '⚙️', 'deb': '📦'
+    };
+    return icons[ext] || '';
+}
+
+function loadFiles() {
+    var listDiv = document.getElementById('fm-file-list');
+    listDiv.innerHTML = '<p style="text-align:center; color:#888; margin-top:50px;">Carregando...</p>';
     
     fetch('/api/files/list')
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-        list.innerHTML = '';
-        var files = data.files || data || [];
-        console.log("📄 [FM] Total:", files.length);
-        
-        if (files.length === 0) {
-            list.innerHTML = '<div style="color:#888;text-align:center;padding:40px;grid-column:1/-1;">Nenhum arquivo</div>';
-            return;
-        }
-        
-        files.forEach(function(file) {
-            var filename = typeof file === 'string' ? file : (file.name || file.filename);
-            var isDir = file.is_dir || false;
-            var ext = (filename.split('.').pop() || '').toLowerCase();
-            var icons = {'pdf':'📕','jpg':'🖼️','png':'🖼️','txt':'📄','folder':'📁'};
-            var icon = isDir ? '' : (icons[ext] || '');
-            
-            var card = document.createElement('div');
-            card.className = 'fm-file-item';
-            card.innerHTML = '<div style="font-size:48px;color:#4dabf7;">' + icon + '</div>' +
-                           '<div style="color:#fff;font-size:12px;">' + filename + '</div>' +
-                           '<div><button style="background:#51cf66;color:#fff;border:none;padding:8px;border-radius:4px;cursor:pointer;">⬇️</button> ' +
-                           '<button style="background:#ff6b6b;color:#fff;border:none;padding:8px;border-radius:4px;cursor:pointer;">️</button></div>';
-            
-            card.onclick = function(e) {
-                if (e.target.tagName !== 'BUTTON') {
-                    window.openViewerFM(filename, isDir);
-                }
-            };
-            
-            var btns = card.querySelectorAll('button');
-            btns[0].onclick = function(e) {
-                e.stopPropagation();
-                window.open('/api/files/download/' + encodeURIComponent(filename), '_blank');
-            };
-            btns[1].onclick = function(e) {
-                e.stopPropagation();
-                if (confirm('Deletar?')) {
-                    fetch('/api/files/delete/' + encodeURIComponent(filename), {method:'DELETE'})
-                    .then(function() { window.loadFM(); });
-                }
-            };
-            
-            list.appendChild(card);
-        });
-        console.log("✅ [FM] Renderizado");
-        
-        // Salvar arquivos globais para busca/ordenação
-        window._fm_all_files = files;
-        window._fm_current_files = files;
-        
-        // Aplicar filtros/ordenação atuais
-        window.filterFM();
-    });
-};
-
-// Busca
-window.filterFM = function() {
-    var search = document.getElementById('fm-search');
-    if (!search) return;
-    
-    var query = search.value.toLowerCase();
-    var list = document.getElementById('fm-file-list');
-    if (!list || !window._fm_all_files) return;
-    
-    var filtered = window._fm_all_files.filter(function(file) {
-        var filename = typeof file === 'string' ? file : (file.name || file.filename);
-        return filename.toLowerCase().includes(query);
-    });
-    
-    window._fm_current_files = filtered;
-    window.renderFMFiles(filtered);
-    console.log(" [FM] Busca:", query, "->", filtered.length, "resultados");
-};
-
-// Ordenação
-window.sortFM = function() {
-    var sort = document.getElementById('fm-sort');
-    if (!sort || !window._fm_current_files) return;
-    
-    var criteria = sort.value;
-    var sorted = window._fm_current_files.slice();
-    
-    sorted.sort(function(a, b) {
-        var nameA = (typeof a === 'string' ? a : (a.name || a.filename)).toLowerCase();
-        var nameB = (typeof b === 'string' ? b : (b.name || b.filename)).toLowerCase();
-        var extA = nameA.split('.').pop().toLowerCase();
-        var extB = nameB.split('.').pop().toLowerCase();
-        
-        if (criteria === 'name') return nameA.localeCompare(nameB);
-        if (criteria === 'name-desc') return nameB.localeCompare(nameA);
-        if (criteria === 'type') {
-            var isDirA = a.is_dir || false;
-            var isDirB = b.is_dir || false;
-            if (isDirA !== isDirB) return isDirA ? -1 : 1;
-            return nameA.localeCompare(nameB);
-        }
-        if (criteria === 'ext') return extA.localeCompare(extB);
-        return 0;
-    });
-    
-    window.renderFMFiles(sorted);
-    console.log("📊 [FM] Ordenado por:", criteria);
-};
-
-// Renderizar arquivos (função auxiliar)
-window.renderFMFiles = function(files) {
-    var list = document.getElementById('fm-file-list');
-    if (!list) return;
-    
-    list.innerHTML = '';
-    
-    if (files.length === 0) {
-        list.innerHTML = '<div style="color:#888;text-align:center;padding:40px;grid-column:1/-1;">Nenhum arquivo encontrado</div>';
-        return;
-    }
-    
-    files.forEach(function(file) {
-        var filename = typeof file === 'string' ? file : (file.name || file.filename);
-        var isDir = file.is_dir || false;
-        var ext = (filename.split('.').pop() || '').toLowerCase();
-        var icons = {'pdf':'📕','jpg':'🖼️','jpeg':'️','png':'🖼️','gif':'🖼️','svg':'🖼️','txt':'📄','md':'','py':'🐍','js':'📜','json':'📋','folder':'📁','odt':'','doc':'📄','docx':'','xls':'📊','xlsx':'','csv':'📊'};
-        var icon = isDir ? '📁' : (icons[ext] || '📄');
-        
-        var card = document.createElement('div');
-        card.className = 'fm-file-item';
-        card.setAttribute('data-tooltip', filename);
-        card.innerHTML = '<div style="font-size:48px;color:#4dabf7;animation:pulse 2s infinite;">' + icon + '</div>' +
-                       '<div style="color:#fff;font-size:12px;word-break:break-word;max-height:40px;overflow:hidden;">' + filename + '</div>' +
-                       '<div><button style="background:#51cf66;color:#fff;border:none;padding:8px;border-radius:4px;cursor:pointer;" data-tooltip="Download">⬇️</button> ' +
-                       '<button style="background:#ff6b6b;color:#fff;border:none;padding:8px;border-radius:4px;cursor:pointer;" data-tooltip="Deletar">🗑️</button></div>';
-        
-        card.onclick = function(e) {
-            if (e.target.tagName !== 'BUTTON') {
-                window.openViewerFM(filename, isDir);
-            }
-        };
-        
-        var btns = card.querySelectorAll('button');
-        btns[0].onclick = function(e) {
-            e.stopPropagation();
-            window.open('/api/files/download/' + encodeURIComponent(filename), '_blank');
-        };
-        btns[1].onclick = function(e) {
-            e.stopPropagation();
-            if (confirm('Deletar "' + filename + '"?')) {
-                fetch('/api/files/delete/' + encodeURIComponent(filename), {method:'DELETE'})
-                .then(function() { window.loadFM(); });
-            }
-        };
-        
-        list.appendChild(card);
-    });
-};
-
-window.openViewerFM = function(filename, isDir) {
-    console.log("👁️ [FM] Abrindo viewer:", filename);
-    if (isDir) { alert('Pastas não podem ser visualizadas'); return; }
-    
-    document.querySelector('.fm-toolbar').style.display = 'none';
-    document.getElementById('fm-upload-area').style.display = 'none';
-    document.getElementById('fm-file-list').style.display = 'none';
-    
-    var viewer = document.getElementById('fm-viewer');
-    var content = document.getElementById('fm-viewer-content');
-    
-    if (viewer && content) {
-        viewer.style.display = 'flex';
-        viewer.classList.add('active');
-        document.getElementById('fm-viewer-title').textContent = filename;
-        
-        var ext = filename.split('.').pop().toLowerCase();
-        var url = '/api/files/view/' + encodeURIComponent(filename);
-        
-        if (ext === 'pdf') {
-            content.innerHTML = '<iframe src="' + url + '" type="application/pdf" style="width:100%;height:100%;border:none;"></iframe>';
-        } else if (['jpg','jpeg','png','gif','svg','webp','bmp'].includes(ext)) {
-            content.innerHTML = '<img src="' + url + '" style="max-width:100%;max-height:100%;display:block;margin:auto;">';
-        } else if (['txt','md','py','js','json','html','css','xml','csv','log','sh','bat'].includes(ext)) {
-            fetch(url).then(function(r) { return r.text(); })
-            .then(function(text) {
-                content.innerHTML = '<pre style="color:#e0e0e0;padding:20px;overflow:auto;white-space:pre-wrap;font-family:monospace;font-size:13px;">' + text.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</pre>';
-            });
-        } else if (['mp4','webm','ogg'].includes(ext)) {
-            content.innerHTML = '<video src="' + url + '" controls style="max-width:100%;max-height:100%;display:block;margin:auto;"></video>';
-        } else if (['mp3','wav','ogg'].includes(ext)) {
-            content.innerHTML = '<audio src="' + url + '" controls style="width:100%;margin-top:50px;"></audio><div style="color:#888;text-align:center;margin-top:20px;">🎵 ' + filename + '</div>';
-        } else if (['odt','doc','docx'].includes(ext)) {
-            content.innerHTML = '<div style="color:#888;text-align:center;padding:40px;">📄 Documento Office<br><br>Use o botão Download para abrir no seu editor preferido</div>';
-        } else if (['xls','xlsx','csv'].includes(ext)) {
-            content.innerHTML = '<div style="color:#888;text-align:center;padding:40px;"> Planilha<br><br>Use o botão Download para abrir no seu editor preferido</div>';
-        } else {
-            content.innerHTML = '<div style="color:#888;text-align:center;padding:40px;">📄 Formato não suportado para visualização<br><br>Use o botão Download</div>';
-        }
-        
-        document.getElementById('fm-viewer-close').onclick = window.closeViewerFM;
-        document.getElementById('fm-viewer-dl').onclick = function() {
-            window.open('/api/files/download/' + encodeURIComponent(filename), '_blank');
-        };
-    }
-};
-
-window.closeViewerFM = function() {
-    console.log("🔒 [FM] Fechando viewer...");
-    var viewer = document.getElementById('fm-viewer');
-    var content = document.getElementById('fm-viewer-content');
-    
-    if (viewer) {
-        viewer.style.display = 'none';
-        viewer.classList.remove('active');
-    }
-    if (content) content.innerHTML = '';
-    
-    document.querySelector('.fm-toolbar').style.display = 'flex';
-    document.getElementById('fm-upload-area').style.display = 'flex';
-    document.getElementById('fm-file-list').style.display = 'grid';
-};
-
-window.uploadFM = function(files) {
-    if (!files || !files.length) return;
-    var uploaded = 0;
-    
-    function uploadNext(i) {
-        if (i >= files.length) {
-            alert(uploaded + ' arquivo(s) enviado(s)');
-            window.loadFM();
-            return;
-        }
-        var fd = new FormData();
-        fd.append('file', files[i]);
-        fetch('/api/files/upload', {method:'POST', body:fd})
-        .then(function(r) { return r.json(); })
+        .then(function(res) { return res.json(); })
         .then(function(data) {
-            if (data.success || data.status === 'success') uploaded++;
-            uploadNext(i+1);
+            if (data.files) {
+                if (data.files.length === 0) {
+                    listDiv.innerHTML = '<p style="text-align:center; color:#888; margin-top:50px;">📂 Pasta vazia</p>';
+                    return;
+                }
+                
+                var gridDiv = document.createElement('div');
+                gridDiv.className = 'fm-grid';
+                
+                data.files.forEach(function(f) {
+                    var isDir = f.is_dir;
+                    var size = isDir ? '' : (f.size / 1024).toFixed(1) + ' KB';
+                    var icon = isDir ? '📁' : getFileIcon(f.name);
+                    var editable = !isDir && isEditable(f.name);
+                    
+                    console.log('Arquivo:', f.name, '| Editável:', editable);
+                    
+                    var itemDiv = document.createElement('div');
+                    itemDiv.className = 'fm-item';
+                    itemDiv.dataset.filename = f.name;
+                    itemDiv.dataset.editable = editable;
+                    
+                    // Clique simples
+                    itemDiv.addEventListener('click', function(e) {
+                        console.log('Clique em:', f.name, '| Editável:', editable);
+                        if (e.target.closest('.fm-actions')) {
+                            console.log('Clicou em botão de ação, ignorando');
+                            return;
+                        }
+                        if (!isDir && editable) {
+                            console.log('Abrindo editor para:', f.name);
+                            window.open('/editor?file=uploads/' + encodeURIComponent(f.name), '_blank');
+                        }
+                    });
+                    
+                    // Duplo clique
+                    itemDiv.addEventListener('dblclick', function(e) {
+                        console.log('Duplo clique em:', f.name);
+                        if (!isDir && editable) {
+                            window.open('/editor?file=uploads/' + encodeURIComponent(f.name), '_blank');
+                        }
+                    });
+                    
+                    // Container de ações
+                    var actionsDiv = document.createElement('div');
+                    actionsDiv.className = 'fm-actions';
+                    
+                    // Botão Editar (se editável)
+                    if (editable) {
+                        var editBtn = document.createElement('button');
+                        editBtn.innerHTML = '✏️';
+                        editBtn.title = 'Editar';
+                        editBtn.addEventListener('click', function(e) {
+                            e.stopPropagation();
+                            e.preventDefault();
+                            console.log('Botão Editar clicado:', f.name);
+                            window.open('/editor?file=uploads/' + encodeURIComponent(f.name), '_blank');
+                        });
+                        actionsDiv.appendChild(editBtn);
+                        console.log('Botão Editar adicionado para:', f.name);
+                    }
+                    
+                    // Botão Download (forçar download)
+                    var downBtn = document.createElement('button');
+                    downBtn.innerHTML = '⬇️';
+                    downBtn.title = 'Download';
+                    downBtn.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        console.log('Download clicado:', f.name);
+                        // Usar fetch para forçar download
+                        fetch('/api/files/download/' + encodeURIComponent(f.name))
+                            .then(function(res) { return res.blob(); })
+                            .then(function(blob) {
+                                var url = window.URL.createObjectURL(blob);
+                                var a = document.createElement('a');
+                                a.href = url;
+                                a.download = f.name;
+                                document.body.appendChild(a);
+                                a.click();
+                                window.URL.revokeObjectURL(url);
+                                a.remove();
+                            })
+                            .catch(function(err) {
+                                console.error('Erro no download:', err);
+                                showToast('Erro ao baixar arquivo', 'error');
+                            });
+                    });
+                    actionsDiv.appendChild(downBtn);
+                    
+                    // Botão Excluir
+                    var delBtn = document.createElement('button');
+                    delBtn.innerHTML = '🗑️';
+                    delBtn.title = 'Excluir';
+                    delBtn.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        if (confirm('Excluir "' + f.name + '"?')) {
+                            deleteFile(f.name);
+                        }
+                    });
+                    actionsDiv.appendChild(delBtn);
+                    
+                    // Ícone
+                    var iconSpan = document.createElement('span');
+                    iconSpan.className = 'fm-icon';
+                    iconSpan.innerHTML = icon;
+                    
+                    // Nome
+                    var nameDiv = document.createElement('div');
+                    nameDiv.className = 'fm-name';
+                    nameDiv.innerHTML = f.name;
+                    
+                    // Montar item
+                    itemDiv.appendChild(actionsDiv);
+                    itemDiv.appendChild(iconSpan);
+                    itemDiv.appendChild(nameDiv);
+                    
+                    // Tamanho
+                    if (size) {
+                        var sizeDiv = document.createElement('div');
+                        sizeDiv.style.color = '#888';
+                        sizeDiv.style.fontSize = '10px';
+                        sizeDiv.innerHTML = size;
+                        itemDiv.appendChild(sizeDiv);
+                    }
+                    
+                    gridDiv.appendChild(itemDiv);
+                });
+                
+                listDiv.innerHTML = '';
+                listDiv.appendChild(gridDiv);
+            }
+        })
+        .catch(function(e) {
+            listDiv.innerHTML = '<p style="text-align:center; color:#e74c3c;">Erro de conexão</p>';
+            console.error(e);
         });
-    }
-    uploadNext(0);
-};
+}
 
-window.newFolder = function() {
-    var name = prompt('Nome da pasta:');
-    if (name) {
-        fetch('/api/files/create', {
-            method:'POST',
-            headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({filename:name+'/.folder',content:'folder'})
-        }).then(function() { window.loadFM(); });
-    }
-};
+function uploadFile(input) {
+    if (!input.files.length) return;
+    var formData = new FormData();
+    formData.append('file', input.files[0]);
+    fetch('/api/files/upload', { method: 'POST', body: formData })
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+            if (data.status === 'success' || data.filename) {
+                showToast('Arquivo enviado!', 'success');
+                loadFiles();
+            } else {
+                showToast(data.error || 'Erro', 'error');
+            }
+        })
+        .catch(function(e) {
+            showToast('Erro de conexão', 'error');
+        });
+    input.value = '';
+}
 
-window.newFile = function() {
-    var name = prompt('Nome do arquivo:');
-    if (name) {
-        fetch('/api/files/create', {
-            method:'POST',
-            headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({filename:name,content:''})
-        }).then(function() { window.loadFM(); });
-    }
-};
-
-// Drag and drop
-document.addEventListener('DOMContentLoaded', function() {
-    var area = document.getElementById('fm-upload-area');
-    if (area) {
-        area.addEventListener('dragover', function(e) {
-            e.preventDefault();
-            area.style.background = 'rgba(77,171,247,0.2)';
-        });
-        area.addEventListener('dragleave', function() {
-            area.style.background = '';
-        });
-        area.addEventListener('drop', function(e) {
-            e.preventDefault();
-            area.style.background = '';
-            var files = e.dataTransfer.files;
-            if (files.length) window.uploadFM(files);
-        });
-    }
-    
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') window.closeFM();
+function createNewFolder() {
+    var name = prompt('Nome da nova pasta:');
+    if (!name) return;
+    fetch('/api/files/mkdir', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name })
+    })
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+        if (data.status === 'success') {
+            showToast('Pasta criada!', 'success');
+            loadFiles();
+        } else {
+            showToast(data.error || 'Erro', 'error');
+        }
+    })
+    .catch(function(e) {
+        showToast('Erro de conexão', 'error');
     });
+}
+
+function deleteFile(name) {
+    fetch('/api/files/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name })
+    })
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+        if (data.status === 'success') {
+            showToast('Excluído!', 'success');
+            loadFiles();
+        } else {
+            showToast(data.error || 'Erro', 'error');
+        }
+    })
+    .catch(function(e) {
+        showToast('Erro de conexão', 'error');
+    });
+}
+
+// Event listeners para botões
+document.addEventListener('DOMContentLoaded', function() {
+    var uploadBtn = document.getElementById('fm-upload-btn');
+    var fileInput = document.getElementById('fm-file-input');
+    if (uploadBtn && fileInput) {
+        uploadBtn.onclick = function() { fileInput.click(); };
+        fileInput.onchange = function() { uploadFile(this); };
+    }
     
-    console.log("✅ [FM v7.0] Pronto!");
+    var newFolderBtn = document.getElementById('fm-newfolder-btn');
+    if (newFolderBtn) {
+        newFolderBtn.onclick = createNewFolder;
+    }
+    
+    var closeBtn = document.getElementById('fm-close-btn');
+    if (closeBtn) {
+        closeBtn.onclick = closeFM;
+    }
 });
 </script>
+<!-- FIM GERENCIADOR DE ARQUIVOS -->
+
+</body>
+</html>
 
 
-<!-- === ESCONDER PAINEL ANTIGO DE MÉTRICAS === -->
-<style>
-/* Esconder painéis de métricas soltos no desktop */
-#metrics-panel,
-.metrics-container,
-.metric-card:not(.metrics-modal .metric-card) {
-    display: none !important;
-}
-
-/* Garantir que o modal funcione */
-.metrics-overlay {
-    display: none;
-    position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0,0,0,0.8);
-    z-index: 9999;
-}
-.metrics-overlay.active { display: block; }
-
-.metrics-modal {
-    display: none;
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background: #1a1a1a;
-    border-radius: 12px;
-    width: 90%;
-    max-width: 800px;
-    z-index: 10000;
-    flex-direction: column;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-    animation: fadeIn 0.3s ease;
-}
-.metrics-modal.active { display: flex !important; }
-
-.metrics-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 20px;
-    background: #2d2d2d;
-    border-radius: 12px 12px 0 0;
-}
-.metrics-header h2 {
-    margin: 0;
-    color: #e0e0e0;
-    font-size: 20px;
-}
-.metrics-header button {
-    background: none;
-    border: none;
-    color: #fff;
-    font-size: 28px;
-    cursor: pointer;
-    padding: 0;
-    width: 36px;
-    height: 36px;
-}
-
-.metrics-content {
-    padding: 20px;
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 12px;
-}
-
-.metric-card-modal {
-    background: #2a2a2a;
-    border-radius: 8px;
-    padding: 20px;
-    border: 1px solid #444;
-}
-
-.metric-header-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 12px;
-}
-
-.metric-title {
-    color: #e0e0e0;
-    font-size: 14px;
-    font-weight: bold;
-}
-
-.metric-value {
-    color: #4dabf7;
-    font-size: 20px;
-    font-weight: bold;
-}
-
-.metric-bar {
-    height: 10px;
-    background: #1a1a1a;
-    border-radius: 5px;
-    overflow: hidden;
-    margin-top: 10px;
-}
-
-.metric-bar-fill {
-    height: 100%;
-    border-radius: 5px;
-    transition: width 0.5s ease, background 0.5s ease;
-}
-
-.metric-bar-fill.low { background: linear-gradient(90deg, #51cf66, #40c057); }
-.metric-bar-fill.medium { background: linear-gradient(90deg, #ffd43b, #fab005); }
-.metric-bar-fill.high { background: linear-gradient(90deg, #ff6b6b, #fa5252); }
-
-.metric-details {
-    color: #888;
-    font-size: 12px;
-    margin-top: 8px;
-}
-
-.cpu-chart {
-    width: 100%;
-    height: 60px;
-    margin-top: 12px;
-}
-
-.cpu-chart svg {
-    width: 100%;
-    height: 100%;
-}
-
-.cpu-chart path {
-    fill: none;
-    stroke: #4dabf7;
-    stroke-width: 2;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-}
-
-.metrics-footer {
-    padding: 15px 20px;
-    background: #252525;
-    border-top: 1px solid #333;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-radius: 0 0 12px 12px;
-}
-
-.metrics-status {
-    color: #888;
-    font-size: 12px;
-}
-
-.metrics-status .dot {
-    display: inline-block;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: #51cf66;
-    margin-right: 6px;
-    animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
-}
-@keyframes fadeIn {
-    from { opacity: 0; transform: translate(-50%, -60%); }
-    to { opacity: 1; transform: translate(-50%, -50%); }
-}
-</style>
-
-
-<!-- === MODAL DE MÉTRICAS === -->
-<div class="metrics-overlay" id="metrics-overlay" onclick="closeMetrics()"></div>
-<div class="metrics-modal" id="metrics-modal">
-    <div class="metrics-header">
-        <h2>📊 Métricas do Sistema</h2>
-        <button onclick="closeMetrics()">&times;</button>
-    </div>
-    <div class="metrics-content">
-        <div class="metric-card-modal">
-            <div class="metric-header-row">
-                <span class="metric-title">🖥️ CPU</span>
-                <span class="metric-value" id="cpu-value">0%</span>
-            </div>
-            <div class="metric-bar">
-                <div class="metric-bar-fill low" id="cpu-bar" style="width: 0%"></div>
-            </div>
-            <div class="cpu-chart">
-                <svg id="cpu-chart-svg" viewBox="0 0 100 60" preserveAspectRatio="none">
-                    <path id="cpu-chart-path" d="M0,60"></path>
-                </svg>
-            </div>
-        </div>
-        
-        <div class="metric-card-modal">
-            <div class="metric-header-row">
-                <span class="metric-title">💾 RAM</span>
-                <span class="metric-value" id="ram-value">0%</span>
-            </div>
-            <div class="metric-bar">
-                <div class="metric-bar-fill low" id="ram-bar" style="width: 0%"></div>
-            </div>
-            <div class="metric-details" id="ram-details">0 GB / 0 GB</div>
-        </div>
-        
-        <div class="metric-card-modal">
-            <div class="metric-header-row">
-                <span class="metric-title">💽 Disco</span>
-                <span class="metric-value" id="disk-value">0%</span>
-            </div>
-            <div class="metric-bar">
-                <div class="metric-bar-fill low" id="disk-bar" style="width: 0%"></div>
-            </div>
-            <div class="metric-details" id="disk-details">0 GB / 0 GB</div>
-        </div>
-    </div>
-    <div class="metrics-footer">
-        <div class="metrics-status">
-            <span class="dot"></span>
-            <span><span style="font-size: 11px; color: #666;">Atualizando a cada 2s</span></span>
-        </div>
-        <button onclick="updateMetrics()" style="background:#4dabf7;color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;">🔄 
-<!-- GRÁFICOS DETALHADOS (TEMA ESCURO) -->
-
-        
-        <!-- Uso de VMs e Containers -->
-        <div style="background: rgba(255,255,255,0.03); padding: 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
-            <h3 style="margin: 0 0 10px 0; color: #0af; font-size: 13px; font-weight: 600;">🖥️ VMs & Containers</h3>
-            <div style="display: flex; justify-content: space-around; align-items: center; height: 150px;">
-                <div style="text-align: center;">
-                    <div style="font-size: 36px; color: #0f0; font-weight: bold;" id="vm-active">3</div>
-                    <div style="font-size: 11px; color: #888; margin-top: 5px;">VMs Ativas</div>
-                </div>
-                <div style="text-align: center;">
-                    <div style="font-size: 36px; color: #0af; font-weight: bold;" id="container-active">8</div>
-                    <div style="font-size: 11px; color: #888; margin-top: 5px;">Containers</div>
-                </div>
-                <div style="text-align: center;">
-                    <div style="font-size: 36px; color: #fa0; font-weight: bold;" id="process-active">142</div>
-                    <div style="font-size: 11px; color: #888; margin-top: 5px;">Processos</div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Estatísticas Rápidas -->
-    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
-        <div style="background: rgba(0,255,0,0.08); padding: 12px; border-radius: 8px; text-align: center; border: 1px solid rgba(0,255,0,0.2);">
-            <div style="font-size: 20px; color: #0f0; font-weight: bold;" id="uptime-display">15d 7h</div>
-            <div style="font-size: 10px; color: #888; margin-top: 3px;">UPTIME</div>
-        </div>
-        <div style="background: rgba(0,170,255,0.08); padding: 12px; border-radius: 8px; text-align: center; border: 1px solid rgba(0,170,255,0.2);">
-            <div style="font-size: 20px; color: #0af; font-weight: bold;" id="users-display">1</div>
-            <div style="font-size: 10px; color: #888; margin-top: 3px;">USUÁRIOS</div>
-        </div>
-        <div style="background: rgba(255,170,0,0.08); padding: 12px; border-radius: 8px; text-align: center; border: 1px solid rgba(255,170,0,0.2);">
-            <div style="font-size: 20px; color: #fa0; font-weight: bold;" id="requests-display">247</div>
-            <div style="font-size: 10px; color: #888; margin-top: 3px;">REQ/MIN</div>
-        </div>
-    </div>
-</div>
-
-            
-
-        
-        <!-- 
-<!-- === FUNÇÕES DOCK GARANTIDAS === -->
-<script>
-window.openEditor = function() {
-    console.log('📝 [EDITOR] Abrindo...');
-    window.location.href = '/editor';
-};
-
-window.openTerminalWeb = function() {
-    console.log('⌨️ [TERMINAL] Abrindo...');
-    if (typeof window.openSafeTerminal === 'function') {
-        window.openSafeTerminal();
-    } else {
-        alert('Terminal Web está carregando. Aguarde alguns segundos e tente novamente.');
-    }
-};
-console.log('✅ [DOCK] Funções globais carregadas');
-</script>
-
-<!-- === CORREÇÕES DOCK E BUSCA === -->
-<script>
-// 1. Funções do Dock
-window.openSettings = window.openSettings || function() { 
-    console.log('️ Abrindo Configurações...');
-    window.location.href = '/configuracoes'; 
-};
-
-window.openThinkinBrowser = window.openThinkinBrowser || function() { 
-    console.log('🌐 Abrindo Navegador...');
-    var cards = document.querySelectorAll('.card');
-    for(var i=0; i<cards.length; i++) {
-        if(cards[i].innerText.includes('Browser')) {
-            cards[i].click();
-            return;
-        }
-    }
-    window.location.href = '/browser';
-};
-
-console.log('✅ Funções Dock definidas');
-
-// 2. Barra de Busca
-(function() {
-    function initSearch() {
-        var container = document.getElementById('assistants-container');
-        if (!container || document.getElementById('search-input-final')) return;
-        
-        var input = document.createElement('input');
-        input.type = 'text';
-        input.id = 'search-input-final';
-        input.placeholder = '🔍 Buscar assistentes... (Ctrl+K)';
-        input.autocomplete = 'off';
-        input.style.cssText = 'grid-column: 1 / -1; width: 100%; max-width: 100%; padding: 14px 24px; margin-bottom: 20px; border-radius: 30px; border: 2px solid #444; background: #1a1a1a; color: #fff; font-size: 1.05em; outline: none; box-sizing: border-box; display: block;';
-        
-        if (container.firstChild) {
-            container.insertBefore(input, container.firstChild);
-        } else {
-            container.appendChild(input);
-        }
-        
-        input.addEventListener('input', function() {
-            var q = this.value.toLowerCase().trim();
-            container.querySelectorAll('.card').forEach(function(card) {
-                if (card.id === 'system-metrics-card') return;
-                card.style.display = (q === '' || card.innerText.toLowerCase().includes(q)) ? '' : 'none';
-            });
-        });
-        
-        document.addEventListener('keydown', function(e) {
-            if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-                e.preventDefault();
-                input.focus();
-                input.select();
-            }
-        });
-        
-        console.log('✅ Busca injetada no topo do grid');
-    }
-    
-    setTimeout(initSearch, 500);
-})();
-</script>
-<!-- === FIM CORREÇÕES === -->
-<script>
-(function() {
-    console.log(' Sistema de Tema Desktop carregado');
-    
-    function applyTheme(color) {
-        console.log('🎨 Aplicando tema:', color);
-        
-        var h1s = document.querySelectorAll('h1');
-        h1s.forEach(function(h1) {
-            if (h1.innerText.includes('ThinkinOS')) {
-                h1.style.color = color;
-                h1.style.textShadow = '0 0 20px ' + color + '40';
-            }
-        });
-        
-        var cards = document.querySelectorAll('.card');
-        cards.forEach(function(card) {
-            card.style.border = '2px solid ' + color + '40';
-            card.style.boxShadow = '0 4px 15px ' + color + '20';
-        });
-        
-        console.log('✅ ' + cards.length + ' cards atualizados');
-        
-        var style = document.getElementById('theme-style');
-        if (!style) {
-            style = document.createElement('style');
-            style.id = 'theme-style';
-            document.head.appendChild(style);
-        }
-        
-        style.textContent = 'h1 { color: ' + color + ' !important; } .card { border: 2px solid ' + color + '40 !important; } :root { --primary-color: ' + color + ' !important; }';
-    }
-    
-    var savedColor = localStorage.getItem('theme-color');
-    if (savedColor) {
-        console.log('🎨 Tema salvo:', savedColor);
-        setTimeout(function() { applyTheme(savedColor); }, 500);
-    }
-    
-    console.log('✅ Sistema de Tema Desktop inicializado');
-})();
-</script>

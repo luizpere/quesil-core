@@ -1,0 +1,88 @@
+{% extends "portal/base.html" %}
+{% block title %}Plugins - ThinkinOS{% endblock %}
+{% block content %}
+<section class="hero" style="padding: 3rem 0;">
+    <div class="container">
+        <h1>🧩 Marketplace de Plugins</h1>
+        <p>Extensões e funcionalidades adicionais para o ThinkinOS</p>
+    </div>
+</section>
+
+<section class="content-section">
+    <div class="container">
+        <div style="text-align: center; margin-bottom: 3rem;">
+            <h2>Plugins Disponíveis</h2>
+            <p style="color: var(--gray); margin-top: 1rem;">Em breve: sistema completo de instalação e gerenciamento de plugins</p>
+        </div>
+        
+        <div class="features-grid">
+            <div class="feature-card">
+                <h3>🎨 Temas Personalizados</h3>
+                <p>Mude a aparência do ThinkinOS com temas customizados.</p>
+                <div style="margin-top: 1rem;">
+                    <span style="background: var(--primary); color: white; padding: 4px 12px; border-radius: 12px; font-size: 0.85rem;">Cosmético</span>
+                </div>
+                <div style="margin-top: 1rem; color: var(--gray);">
+                    ⭐⭐⭐⭐ (42 instalações)
+                </div>
+            </div>
+            <div class="feature-card">
+                <h3>📊 Analytics Avançado</h3>
+                <p>Dashboards personalizados com métricas avançadas do sistema.</p>
+                <div style="margin-top: 1rem;">
+                    <span style="background: var(--secondary); color: white; padding: 4px 12px; border-radius: 12px; font-size: 0.85rem;">Produtividade</span>
+                </div>
+                <div style="margin-top: 1rem; color: var(--gray);">
+                    ⭐⭐⭐⭐ (28 instalações)
+                </div>
+            </div>
+            <div class="feature-card">
+                <h3>🔔 Notificações Push</h3>
+                <p>Receba notificações do ThinkinOS mesmo com o navegador fechado.</p>
+                <div style="margin-top: 1rem;">
+                    <span style="background: var(--accent); color: white; padding: 4px 12px; border-radius: 12px; font-size: 0.85rem;">Sistema</span>
+                </div>
+                <div style="margin-top: 1rem; color: var(--gray);">
+                    ⭐⭐⭐⭐⭐ (67 instalações)
+                </div>
+            </div>
+            <div class="feature-card">
+                <h3>🌐 Integração Cloud</h3>
+                <p>Sincronize arquivos com Google Drive, Dropbox e OneDrive.</p>
+                <div style="margin-top: 1rem;">
+                    <span style="background: #f39c12; color: white; padding: 4px 12px; border-radius: 12px; font-size: 0.85rem;">Integração</span>
+                </div>
+                <div style="margin-top: 1rem; color: var(--gray);">
+                    ⭐⭐⭐⭐ (35 instalações)
+                </div>
+            </div>
+            <div class="feature-card">
+                <h3>🤖 Mais Assistentes IA</h3>
+                <p>Pacote com 10+ assistentes especializados adicionais.</p>
+                <div style="margin-top: 1rem;">
+                    <span style="background: #e74c3c; color: white; padding: 4px 12px; border-radius: 12px; font-size: 0.85rem;">IA</span>
+                </div>
+                <div style="margin-top: 1rem; color: var(--gray);">
+                    ⭐⭐⭐⭐⭐ (89 instalações)
+                </div>
+            </div>
+            <div class="feature-card">
+                <h3>📝 Editor Markdown</h3>
+                <p>Editor Markdown completo com preview em tempo real.</p>
+                <div style="margin-top: 1rem;">
+                    <span style="background: #3498db; color: white; padding: 4px 12px; border-radius: 12px; font-size: 0.85rem;">Produtividade</span>
+                </div>
+                <div style="margin-top: 1rem; color: var(--gray);">
+                    ⭐⭐⭐⭐⭐ (54 instalações)
+                </div>
+            </div>
+        </div>
+
+        <div style="text-align: center; margin-top: 4rem; padding: 3rem; background: var(--card-bg); border-radius: 12px;">
+            <h3>🛠️ Quer criar um plugin?</h3>
+            <p style="color: var(--gray); margin: 1rem 0;">Contribua com a comunidade ThinkinOS criando seu próprio plugin!</p>
+            <a href="{{ url_for('portal.contribute') }}" class="btn btn-primary">Ver guia de contribuição</a>
+        </div>
+    </div>
+</section>
+{% endblock %}

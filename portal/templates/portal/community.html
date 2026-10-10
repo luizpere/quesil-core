@@ -1,0 +1,84 @@
+{% extends "portal/base.html" %}
+{% block title %}Comunidade - ThinkinOS{% endblock %}
+{% block content %}
+<section class="hero" style="padding: 3rem 0;">
+    <div class="container">
+        <h1>👥 Comunidade</h1>
+        <p>Conecte-se com outros usuários e desenvolvedores do ThinkinOS</p>
+    </div>
+</section>
+
+<section class="content-section">
+    <div class="container">
+        <div class="features-grid">
+            <div class="feature-card" style="text-align: center;">
+                <div style="font-size: 4rem; margin-bottom: 1rem;">💬</div>
+                <h3>Discord</h3>
+                <p>Entre no nosso servidor Discord para conversar em tempo real com a comunidade.</p>
+                <a href="#" class="btn btn-primary" style="margin-top: 1rem;">Entrar no Discord</a>
+            </div>
+            <div class="feature-card" style="text-align: center;">
+                <div style="font-size: 4rem; margin-bottom: 1rem;"></div>
+                <h3>GitHub Discussions</h3>
+                <p>Participe de discussões técnicas, tire dúvidas e compartilhe ideias.</p>
+                <a href="#" class="btn btn-primary" style="margin-top: 1rem;">Ver Discussões</a>
+            </div>
+            <div class="feature-card" style="text-align: center;">
+                <div style="font-size: 4rem; margin-bottom: 1rem;"></div>
+                <h3>Reportar Bugs</h3>
+                <p>Encontrou um problema? Abra uma issue no GitHub para nos ajudar a melhorar.</p>
+                <a href="#" class="btn btn-primary" style="margin-top: 1rem;">Reportar Bug</a>
+            </div>
+        </div>
+
+        <div style="margin-top: 4rem;">
+            <h2 style="text-align: center; margin-bottom: 2rem;">🌟 Projetos da Comunidade</h2>
+            <div class="blog-grid">
+                <article class="blog-card">
+                    <div class="blog-card-content">
+                        <h3>ThinkinOS Mobile</h3>
+                        <div class="meta">por @dev_mobile</div>
+                        <p>Adaptação do ThinkinOS para dispositivos móveis com interface touch-optimized.</p>
+                    </div>
+                </article>
+                <article class="blog-card">
+                    <div class="blog-card-content">
+                        <h3>Plugin de Tradução</h3>
+                        <div class="meta">por @translator_pro</div>
+                        <p>Assistente IA especializado em tradução de documentos com suporte a 50+ idiomas.</p>
+                    </div>
+                </article>
+                <article class="blog-card">
+                    <div class="blog-card-content">
+                        <h3>Dashboard Financeiro</h3>
+                        <div class="meta">por @finance_guru</div>
+                        <p>Plugin para gerenciamento financeiro pessoal integrado ao ThinkinOS.</p>
+                    </div>
+                </article>
+            </div>
+        </div>
+
+        <div style="margin-top: 4rem; text-align: center; padding: 3rem; background: var(--card-bg); border-radius: 12px;">
+            <h3>📊 Estatísticas da Comunidade</h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 2rem; margin-top: 2rem;">
+                <div>
+                    <div style="font-size: 2.5rem; font-weight: bold; color: var(--primary);">1,247</div>
+                    <div style="color: var(--gray);">Membros no Discord</div>
+                </div>
+                <div>
+                    <div style="font-size: 2.5rem; font-weight: bold; color: var(--secondary);">89</div>
+                    <div style="color: var(--gray);">Contribuidores</div>
+                </div>
+                <div>
+                    <div style="font-size: 2.5rem; font-weight: bold; color: var(--accent);">342</div>
+                    <div style="color: var(--gray);">Issues Resolvidas</div>
+                </div>
+                <div>
+                    <div style="font-size: 2.5rem; font-weight: bold; color: #f39c12;">56</div>
+                    <div style="color: var(--gray);">Plugins Criados</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

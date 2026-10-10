@@ -1,0 +1,113 @@
+{% extends "portal/base.html" %}
+{% block title %}Contribuir - ThinkinOS{% endblock %}
+{% block content %}
+<section class="hero" style="padding: 3rem 0;">
+    <div class="container">
+        <h1>🤝 Contribua com o ThinkinOS</h1>
+        <p>Ajude a construir o futuro dos sistemas operacionais pessoais com IA</p>
+    </div>
+</section>
+
+<section class="content-section">
+    <div class="container">
+        <div class="features-grid">
+            <div class="feature-card">
+                <h3>💻 Código</h3>
+                <p>Contribua com código Python, JavaScript, HTML/CSS para novas funcionalidades.</p>
+                <div style="margin-top: 1rem; padding: 1rem; background: var(--darker); border-radius: 8px;">
+                    <strong>Como começar:</strong>
+                    <ol style="margin-top: 0.5rem; padding-left: 1.5rem; color: var(--gray);">
+                        <li>Fork o repositório no GitHub</li>
+                        <li>Crie uma branch para sua feature</li>
+                        <li>Implemente e teste suas mudanças</li>
+                        <li>Abra um Pull Request</li>
+                    </ol>
+                </div>
+            </div>
+            <div class="feature-card">
+                <h3>📝 Documentação</h3>
+                <p>Ajude a melhorar guias, tutoriais e documentação técnica.</p>
+                <div style="margin-top: 1rem; padding: 1rem; background: var(--darker); border-radius: 8px;">
+                    <strong>Precisamos de:</strong>
+                    <ul style="margin-top: 0.5rem; padding-left: 1.5rem; color: var(--gray);">
+                        <li>Traduções para outros idiomas</li>
+                        <li>Tutoriais passo a passo</li>
+                        <li>Exemplos de uso</li>
+                        <li>Correções de erros</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="feature-card">
+                <h3>🎨 Design</h3>
+                <p>Crie temas, ícones e melhorias na interface do usuário.</p>
+                <div style="margin-top: 1rem; padding: 1rem; background: var(--darker); border-radius: 8px;">
+                    <strong>Áreas de atuação:</strong>
+                    <ul style="margin-top: 0.5rem; padding-left: 1.5rem; color: var(--gray);">
+                        <li>Temas visuais</li>
+                        <li>Ícones e assets</li>
+                        <li>UX/UI improvements</li>
+                        <li>Animações e transições</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="feature-card">
+                <h3>🐛 Testing</h3>
+                <p>Teste novas funcionalidades e reporte bugs para melhorar a estabilidade.</p>
+                <div style="margin-top: 1rem; padding: 1rem; background: var(--darker); border-radius: 8px;">
+                    <strong>Como ajudar:</strong>
+                    <ul style="margin-top: 0.5rem; padding-left: 1.5rem; color: var(--gray);">
+                        <li>Teste versões beta</li>
+                        <li>Reporte bugs no GitHub</li>
+                        <li>Sugira melhorias</li>
+                        <li>Valide fixes</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div style="margin-top: 4rem; padding: 3rem; background: var(--card-bg); border-radius: 12px; text-align: center;">
+            <h2>🚀 Pronto para contribuir?</h2>
+            <p style="color: var(--gray); margin: 1.5rem 0; font-size: 1.1rem;">
+                Junte-se a nós na construção do futuro dos sistemas operacionais pessoais com IA!
+            </p>
+            <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+                <a href="#" class="btn btn-primary">Ver Issues no GitHub</a>
+                <a href="#" class="btn btn-secondary">Guia de Contribuição</a>
+            </div>
+        </div>
+
+        <div style="margin-top: 3rem;">
+            <h2 style="text-align: center; margin-bottom: 2rem;"> Guia Rápido de Estilo</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <h3>Python</h3>
+                    <ul style="padding-left: 1.5rem; color: var(--gray);">
+                        <li>PEP 8 compliant</li>
+                        <li>Type hints obrigatórios</li>
+                        <li>Docstrings em todas as funções</li>
+                        <li>Testes unitários necessários</li>
+                    </ul>
+                </div>
+                <div class="feature-card">
+                    <h3>JavaScript</h3>
+                    <ul style="padding-left: 1.5rem; color: var(--gray);">
+                        <li>ES6+ moderno</li>
+                        <li>Async/await preferencial</li>
+                        <li>Comentários em português</li>
+                        <li>Sem dependências desnecessárias</li>
+                    </ul>
+                </div>
+                <div class="feature-card">
+                    <h3>Commits</h3>
+                    <ul style="padding-left: 1.5rem; color: var(--gray);">
+                        <li>Mensagens claras e descritivas</li>
+                        <li>Uma mudança por commit</li>
+                        <li>Referencie issues quando aplicável</li>
+                        <li>Em português ou inglês</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

@@ -1053,6 +1053,40 @@ toggleTerminal = function() {
         outline: none !important;
     }
 </style>
+
+<script>
+// Auto-carregar arquivo via parâmetro URL (?file=...)
+(function() {
+    var params = new URLSearchParams(window.location.search);
+    var fileParam = params.get('file');
+    if (fileParam) {
+        console.log('Auto-carregando arquivo:', fileParam);
+        var checkInterval = setInterval(function() {
+            if (typeof editor !== 'undefined' && editor) {
+                clearInterval(checkInterval);
+                fetch('/api/file/read?file=' + encodeURIComponent(fileParam))
+                    .then(function(res) { return res.json(); })
+                    .then(function(data) {
+                        console.log('Resposta da API:', data);
+                        // A API retorna { content: "...", filename: "..." } direto
+                        if (data.content !== undefined) {
+                            editor.setValue(data.content);
+                            console.log('Arquivo carregado com sucesso:', fileParam);
+                            var titleEl = document.querySelector('title');
+                            if (titleEl) titleEl.textContent = fileParam.split('/').pop() + ' - ThinkinOS Editor';
+                        } else {
+                            console.error('Resposta inesperada:', data);
+                        }
+                    })
+                    .catch(function(err) {
+                        console.error('Erro de conexão:', err);
+                    });
+            }
+        }, 200);
+    }
+})();
+</script>
+
 </body>
 </html>
 

@@ -1,0 +1,73 @@
+{% extends "portal/base.html" %}
+
+{% block title %}ThinkinOS - Sistema Operacional Pessoal com IA{% endblock %}
+
+{% block content %}
+<section class="hero">
+    <div class="container">
+        <h1>ThinkinOS v2.0</h1>
+        <p>O primeiro Sistema Operacional Pessoal com Inteligência Artificial integrada</p>
+        <div class="hero-buttons">
+            <a href="/desktop" class="btn btn-primary">🚀 Acessar ThinkinOS</a>
+            <a href="{{ url_for('portal.docs') }}" class="btn btn-secondary">📖 Documentação</a>
+        </div>
+    </div>
+</section>
+
+<section class="features">
+    <div class="container">
+        <h2 style="text-align: center; font-size: 2rem; margin-bottom: 1rem;">Recursos Principais</h2>
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon">🤖</div>
+                <h3>Múltiplos Assistentes IA</h3>
+                <p>Pedro (Lógica), Ana (Pessoal), Lena (Produtividade), ThinkinIA (Núcleo) e mais. Cada um especializado em diferentes áreas.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">📁</div>
+                <h3>Gerenciador de Arquivos</h3>
+                <p>Interface moderna em grid, upload/download, edição integrada de código e organização inteligente.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">💻</div>
+                <h3>Editor de Código Monaco</h3>
+                <p>Editor profissional com suporte a múltiplas linguagens, terminal integrado e Git.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">📊</div>
+                <h3>Dashboard de Métricas</h3>
+                <p>Monitoramento em tempo real de CPU, RAM e Disco com gráficos dinâmicos.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🐳</div>
+                <h3>Virtualização Docker</h3>
+                <p>Gerencie containers Docker com acesso gráfico via noVNC/WebRTC.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🔒</div>
+                <h3>HTTPS & Segurança</h3>
+                <p>Deploy em produção com Nginx, Gunicorn e certificados SSL válidos.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="content-section" style="background: var(--dark); padding: 4rem 0;">
+    <div class="container">
+        <h2 style="text-align: center;">Por que ThinkinOS?</h2>
+        <div style="max-width: 800px; margin: 2rem auto; text-align: center;">
+            <p style="font-size: 1.1rem; margin-bottom: 1.5rem;">
+                ThinkinOS não é apenas mais um chatbot. É um <strong>Sistema Operacional Pessoal completo</strong> 
+                que integra inteligência artificial em cada aspecto da sua experiência digital.
+            </p>
+            <p style="font-size: 1.1rem; margin-bottom: 1.5rem;">
+                Desde gerenciamento de arquivos até virtualização de containers, 
+                desde edição de código até monitoramento de sistema - tudo em uma interface unificada e elegante.
+            </p>
+            <p style="font-size: 1.1rem;">
+                <strong>Seu SO. Suas regras. Sua IA.</strong>
+            </p>
+        </div>
+    </div>
+</section>
+{% endblock %}

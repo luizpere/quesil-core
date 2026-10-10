@@ -523,7 +523,152 @@
             link.click();
             document.body.removeChild(link);
         }
+        
+    
+    // === DRAG & DROP MELHORADO ===
+    const dropZone = document.getElementById('drop-zone');
+    let dragCounter = 0;
+    console.log('🎯 [DRAG&DROP] Sistema inicializado e pronto para detectar arrastos');
 
-    </script>
+    // Prevenir comportamento padrão em toda a página
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        document.body.addEventListener(eventName, preventDefaults, false);
+    });
+
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
+    // Mostrar zona de drop quando arrastar algo
+    ['dragenter', 'dragover'].forEach(eventName => {
+        document.body.addEventListener(eventName, highlight, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        document.body.addEventListener(eventName, unhighlight, false);
+    });
+
+    function highlight(e) {
+        dragCounter++;
+        if (dropZone) {
+            dropZone.style.display = 'block';
+            dropZone.style.background = 'rgba(102, 126, 234, 0.3)';
+            dropZone.style.borderColor = '#fff';
+        }
+        console.log('Drag detectado! Counter:', dragCounter);
+    }
+
+    function unhighlight(e) {
+        dragCounter--;
+        if (dragCounter <= 0) {
+            dragCounter = 0;
+            if (dropZone) {
+                dropZone.style.display = 'none';
+                dropZone.style.background = 'rgba(102, 126, 234, 0.1)';
+                dropZone.style.borderColor = '#667eea';
+            }
+        }
+    }
+
+    // Handler de drop
+    document.body.addEventListener('drop', handleDrop, false);
+
+    function handleDrop(e) {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        
+        console.log('Arquivos detectados:', files.length);
+        
+        if (files.length > 0) {
+            uploadFiles(files);
+        }
+    }
+
+    function uploadFiles(files) {
+        console.log('Enviando', files.length, 'arquivo(s)...');
+        
+        const formData = new FormData();
+        for (let file of files) {
+            formData.append('files', file);
+        }
+        
+        // Mostrar loading
+        const loading = document.getElementById('loading');
+        if (loading) {
+            loading.style.display = 'block';
+            loading.textContent = `Enviando ${files.length} arquivo(s)...`;
+        }
+        
+        fetch('/api/files/upload', {
+            method: 'POST',
+            body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+            console.log('Resposta do upload:', data);
+            if (data.success) {
+                alert(`✅ ${files.length} arquivo(s) enviado(s) com sucesso!`);
+                loadFiles();
+            } else {
+                alert('❌ Erro: ' + (data.error || 'Falha no upload'));
+            }
+        })
+        .catch(err => {
+            console.error('Erro de conexão:', err);
+            alert('❌ Erro de conexão: ' + err.message);
+        });
+    }
+
+    // Adicionar botão de upload manual também
+    const uploadBtn = document.querySelector('input[type="file"]');
+    if (uploadBtn) {
+        uploadBtn.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                uploadFiles(e.target.files);
+            }
+        });
+    }
+
+    // === VISUALIZAÇÃO DE PDF/IMAGEM ===
+    function viewFile(filename) {
+        const ext = filename.split('.').pop().toLowerCase();
+        
+        if (['pdf', 'jpg', 'jpeg', 'png', 'gif', 'svg'].includes(ext)) {
+            const modal = document.getElementById('file-viewer-modal');
+            const viewer = document.getElementById('file-viewer-content');
+            
+            if (ext === 'pdf') {
+                viewer.innerHTML = `<iframe src="/api/files/download/${filename}" style="width:100%;height:100%;border:none;"></iframe>`;
+            } else {
+                viewer.innerHTML = `<img src="/api/files/download/${filename}" style="max-width:100%;max-height:100%;object-fit:contain;">`;
+            }
+            
+            modal.style.display = 'flex';
+        } else {
+            // Para outros arquivos, fazer download
+            window.location.href = `/api/files/download/${filename}`;
+        }
+    }
+
+    console.log('✅ DRAG & DROP SCRIPT CARREGADO COM SUCESSO');
+</script>
+
+<!-- Modal de Visualização de Arquivo -->
+<div id="file-viewer-modal" class="modal" onclick="if(event.target === this) this.style.display='none'">
+    <div class="modal-content" style="min-width: 800px; min-height: 600px; position: relative;">
+        <button onclick="document.getElementById('file-viewer-modal').style.display='none'" style="position: absolute; top: 10px; right: 10px; background: #ff5f56; border: none; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; color: white; font-size: 16px;">✕</button>
+        <div id="file-viewer-content" style="width: 100%; height: 100%;"></div>
+    </div>
+</div>
+
+
+<!-- Overlay de Drag & Drop -->
+<div id="drag-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(102, 126, 234, 0.9); z-index: 99999; justify-content: center; align-items: center; flex-direction: column;">
+    <div style="font-size: 120px; margin-bottom: 20px;">📥</div>
+    <h2 style="color: white; font-size: 32px; margin-bottom: 10px;">Solte os arquivos aqui</h2>
+    <p style="color: rgba(255,255,255,0.9); font-size: 18px;">para fazer upload automático</p>
+</div>
+
 </body>
 </html>

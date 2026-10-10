@@ -16,7 +16,7 @@ print("🟢 [INÍCIO] app.py começou a carregar...")
 import re
 from dotenv import load_dotenv, set_key, find_dotenv
 from flask_socketio import SocketIO, emit
-from flask import redirect,  session, request, jsonify,  session, Flask, session, request, jsonify, render_template, send_from_directory
+from flask import Flask, redirect, render_template, request, jsonify, session, send_from_directory
 from dotenv import load_dotenv
 from groq import Groq
 import json
@@ -50,6 +50,7 @@ def get_cursor():
 load_dotenv()
 
 app = Flask(__name__)
+socketio = SocketIO(app, cors_allowed_origins='*', async_mode='gevent')
 
 # Flask-Login Configuration
 login_manager = LoginManager()
@@ -426,8 +427,10 @@ def chat():
     print("️ DEBUG: Texto da pergunta (prompt):", repr(prompt))
     assistant = data.get('assistant', 'Ana')
     nivel = data.get('nivel', 'leigo')  # Nível do usuário
+    preserve_markdown = data.get('preserve_markdown', False)  # Preservar markdown para IDE
     print(f" Assistente selecionado: '{assistant}' | Nível: '{nivel}'")
     base_prompt = AGENTS_CONFIG.get(assistant, {}).get('prompt', '')
+    preserve_markdown = data.get('preserve_markdown', False)
     
     # === FALLBACK: Buscar prompt de agente personalizado no banco ===
     if not base_prompt and assistant:
@@ -448,6 +451,12 @@ def chat():
                 print(f"️ Agente '{assistant}' não encontrado em AGENTS_CONFIG nem em custom_agents")
         except Exception as e:
             print(f"️ Erro ao buscar agente personalizado: {e}")
+    
+    # === INSTRUÇÃO DE MARKDOWN CONDICIONAL ===
+    if preserve_markdown:
+        markdown_instruction = "\n\n[INSTRUÇÃO ESPECIAL - MODO IDE]: Você está respondendo dentro de um editor de código. USE MARKDOWN para formatar sua resposta. Use **negrito** para destacar termos importantes, `código` para trechos curtos, e ```linguagem\ncódigo\n``` para blocos de código com syntax highlighting. Use headers (#, ##, ###) para organizar seções. Use listas (- ou 1.) para itens."
+        base_prompt = base_prompt + markdown_instruction
+        print("✅ Modo IDE ativado: Markdown habilitado para esta resposta")
     if not base_prompt:
         print(f"⚠️ AVISO: Prompt vazio para '{assistant}'! Verifique AGENTS_CONFIG")
         print(f"   Chaves disponíveis: {list(AGENTS_CONFIG.keys())}")
@@ -490,10 +499,11 @@ def chat():
         response = client.chat.completions.create(
             model="qwen/qwen3.8-27b",
             messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": prompt}]
-        , max_tokens=4096, reasoning_effort="none")
+        , max_tokens=8192, reasoning_effort="none")
         ai_response = response.choices[0].message.content
         cleaned = clean_response(ai_response)
-        cleaned = clean_markdown(cleaned)  # Remove formatação markdown
+        if not preserve_markdown:
+            cleaned = clean_markdown(cleaned)  # Remove formatação markdown apenas para chat normal
         
         # EXTRAIR E SALVAR MEMÓRIAS
         extract_and_save_memories(prompt, cleaned, assistant)  # Reativado na V2.1
@@ -1173,62 +1183,50 @@ def delete_assistant(name):
 
 
 
-@app.route('/api/assistants/create', methods=['POST'])
-def handle_create_assistant():
-    """Rota dedicada para criação - nome único para evitar conflitos"""
+def api_create_assistant():
     try:
-        import json, random, os
-        from datetime import datetime
-        
-        if not request.is_json:
-            return jsonify({'error': 'Content-Type deve ser application/json'}), 400
-        
-        data = request.get_json(silent=True)
-        if not data or not isinstance(data, dict):
-            return jsonify({'error': 'JSON inválido'}), 400
-        
-        name = str(data.get('name', '')).strip()
-        specialty = str(data.get('specialty', '')).strip()
-        prompt = str(data.get('prompt', '')).strip()
-        
-        if not name or not specialty:
-            return jsonify({'error': 'Nome e especialidade obrigatórios'}), 400
-        
-        base_dir = os.path.dirname(os.path.abspath(__file__))
-        assistants_file = os.path.join(base_dir, 'assistants.json')
-        
-        assistants = []
-        if os.path.exists(assistants_file):
-            try:
-                with open(assistants_file, 'r', encoding='utf-8') as f:
-                    txt = f.read().strip()
-                    if txt: assistants = json.loads(txt)
-            except: assistants = []
-        
-        new_asst = {
-            'id': str(len(assistants) + 1),
-            'name': name,
-            'specialty': specialty.upper(),
-            'prompt': prompt if prompt else f'Especialista em {specialty}',
-            'color': '#' + ''.join([random.choice('0123456789ABCDEF') for _ in range(6)]),
-            'created_at': datetime.now().isoformat(),
-            'active': True,
-            'profile': 'devops',
-            'icon': '🤖'
-        }
-        
-        assistants.append(new_asst)
-        
-        with open(assistants_file, 'w', encoding='utf-8') as f:
-            json.dump(assistants, f, indent=2, ensure_ascii=False)
-        
-        print(f"✅ Assistente criado: {name}")
-        return jsonify({'status': 'success', 'assistant': new_asst}), 201
-        
+        data_req = request.get_json()
+        name = data_req.get('name', '').strip()
+        specialty = data_req.get('specialty', '').strip()
+        prompt = data_req.get('prompt', '').strip()
+        color = data_req.get('color', '#0e639c')
+        icon = data_req.get('icon', '🤖')
+
+        if not name:
+            return jsonify({'status': 'error', 'error': 'Nome é obrigatório'})
+
+        assistants_path = '/home/lps/thinkinos-platform/assistants.json'
+        with open(assistants_path, 'r', encoding='utf-8') as f:
+            assistants = json.load(f)
+
+        # Verificar duplicatas (funciona para dict e list)
+        if isinstance(assistants, dict):
+            for existing_name in assistants.keys():
+                if existing_name.strip().lower() == name.lower():
+                    return jsonify({'status': 'error', 'error': f'Já existe um assistente chamado "{existing_name}"'})
+            
+            assistants[name] = {
+                "name": name, "specialty": specialty, "prompt": prompt,
+                "color": color, "icon": icon, "active": True
+            }
+        elif isinstance(assistants, list):
+            for item in assistants:
+                if item.get('name', '').strip().lower() == name.lower():
+                    return jsonify({'status': 'error', 'error': f'Já existe um assistente chamado "{item.get("name")}"'})
+            
+            assistants.append({
+                "name": name, "specialty": specialty, "prompt": prompt,
+                "color": color, "icon": icon, "active": True
+            })
+        else:
+            return jsonify({'status': 'error', 'error': 'Formato do JSON inválido'})
+
+        with open(assistants_path, 'w', encoding='utf-8') as f:
+            json.dump(assistants, f, ensure_ascii=False, indent=2)
+
+        return jsonify({'status': 'success', 'name': name})
     except Exception as e:
-        import traceback
-        print(f"❌ ERRO CREATE: {traceback.format_exc()}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'status': 'error', 'error': str(e)}), 500
 
 # ==========================================================
 # ROTAS DE NAVEGAÇÃO DA DOCK (Inseridas antes do app.run)
@@ -1871,19 +1869,6 @@ def stop_container(container_id):
 
 # === WEBSOCKET PARA TERMINAL WEB ===
 # === WEBSOCKET PARA TERMINAL WEB (V4.0 - SocketIO) ===
-@socketio.on('terminal_input')
-def handle_terminal_input(data):
-    import subprocess
-    container_id = data.get('container_id')
-    command = data.get('command')
-    
-    print(f"🔍 [TERMINAL] Recebido: container={container_id}, command={command}")
-    
-    if not container_id or not command:
-        print("❌ [TERMINAL] Dados inválidos")
-        emit('terminal_output', {'output': 'Erro: Dados inválidos\r\n'})
-        return
-    
     try:
         # Verificar se container existe e está rodando
         container = docker_client.containers.get(container_id)
@@ -1919,8 +1904,6 @@ def handle_terminal_input(data):
 
 
 # === ROTAS PLACEHOLDER (Páginas do Dock) ===
-@app.route('/gestao')
-@login_required
 def gestao():
     return "<h1 style='color: white; text-align: center; margin-top: 50px;'>Gestão - Em Desenvolvimento</h1><p style='text-align: center; color: #888;'>Esta funcionalidade estará disponível em breve.</p><a href='/desktop' style='display: block; text-align: center; margin-top: 20px;'>← Voltar ao Desktop</a>"
 
@@ -1946,7 +1929,7 @@ def _calculate_real_tokens_from_messages(msg_count):
     try:
         import sqlite3, os
         db_path = os.path.join(os.path.dirname(__file__), 'chat_history.db')
-        conn = sqlite3.connect(db_path)
+        conn = get_db()
         cursor = conn.cursor()
         cursor.execute("SELECT COALESCE(SUM(LENGTH(user_msg)), 0) FROM messages")
         total_chars = cursor.fetchone()[0] or 0
@@ -1964,7 +1947,7 @@ def _calculate_real_tokens_from_messages(msg_count):
 def _get_real_token_estimate(msg_count):
     try:
         db_path = os.path.join(os.path.dirname(__file__), 'chat_history.db')
-        conn = sqlite3.connect(db_path)
+        conn = get_db()
         cursor = conn.cursor()
         # Soma o tamanho real do texto de todas as mensagens
         cursor.execute("SELECT COALESCE(SUM(LENGTH(content)), 0) FROM messages")
@@ -2444,8 +2427,6 @@ import fcntl
 import termios
 
 # Dicionário para armazenar sessões de terminal ativas
-terminal_sessions = {}
-
 @app.route('/api/terminal/create', methods=['POST'])
 def create_terminal():
     """Cria uma nova sessão de terminal"""
@@ -2599,170 +2580,6 @@ def save_chat_message():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
-
-
-# === TERMINAL WEB ===
-from subprocess import Popen, PIPE, TimeoutExpired
-import shlex
-import os
-
-terminal_sessions = {}
-
-@socketio.on('terminal_connect')
-def handle_terminal_connect(data):
-    user_id = data.get('user_id', 'default')
-    if user_id not in terminal_sessions:
-        terminal_sessions[user_id] = {
-            'cwd': '/home/lps',
-            'history': [],
-            'env': {'PATH': '/usr/bin:/bin:/usr/local/bin'}
-        }
-    print(f" [TERMINAL] Usuario {user_id} conectado")
-    emit('terminal_response', {'output': 'ThinkinOS Terminal v1.0\nUsuario: ' + user_id + '\nDiretorio: /home/lps\n\nDigite "help" para ver os comandos.\n$ '})
-
-@socketio.on('terminal_command')
-def handle_terminal_command(data):
-    user_id = data.get('user_id', 'default')
-    command = data.get('command', '').strip()
-    
-    if not command:
-        emit('terminal_response', {'output': '$ '})
-        return
-    
-    if user_id not in terminal_sessions:
-        terminal_sessions[user_id] = {'cwd': '/home/lps', 'history': [], 'env': {'PATH': '/usr/bin:/bin:/usr/local/bin'}}
-    
-    session = terminal_sessions[user_id]
-    session['history'].append(command)
-    
-    if command == 'help':
-        output = "Comandos disponiveis:\n  help - Mostra esta ajuda\n  clear - Limpa a tela\n  pwd - Mostra diretorio atual\n  ls - Lista arquivos\n  cd <dir> - Muda de diretorio\n  cat <file> - Mostra conteudo do arquivo\n  echo <text> - Imprime texto\n  whoami - Mostra usuario atual\n  date - Mostra data/hora\n  history - Mostra historico\n"
-        emit('terminal_response', {'output': output + '$ '})
-        return
-    
-    if command == 'clear':
-        emit('terminal_response', {'output': '\x1b[2J\x1b[H$ '})
-        return
-    
-    if command == 'pwd':
-        emit('terminal_response', {'output': session['cwd'] + '\n$ '})
-        return
-    
-    if command == 'whoami':
-        emit('terminal_response', {'output': 'luperesil\n$ '})
-        return
-    
-    if command == 'date':
-        from datetime import datetime
-        emit('terminal_response', {'output': datetime.now().strftime('%Y-%m-%d %H:%M:%S') + '\n$ '})
-        return
-    
-    if command == 'history':
-        hist = '\n'.join([str(i+1) + '  ' + cmd for i, cmd in enumerate(session['history'][-20:])])
-        emit('terminal_response', {'output': hist + '\n$ '})
-        return
-    
-    if command.startswith('cd '):
-        new_dir = command[3:].strip()
-        if new_dir == '..':
-            session['cwd'] = '/'.join(session['cwd'].split('/')[:-1]) or '/'
-        elif new_dir.startswith('/'):
-            session['cwd'] = new_dir
-        else:
-            session['cwd'] = session['cwd'] + '/' + new_dir
-        emit('terminal_response', {'output': '$ '})
-        return
-    
-    if command.startswith('ls'):
-        try:
-            path = command[2:].strip() if len(command) > 2 else session['cwd']
-            if not path.startswith('/'):
-                path = session['cwd'] + '/' + path
-            files = os.listdir(path)
-            
-            # Separar pastas e arquivos
-            folders = []
-            files_only = []
-            for f in files:
-                full_path = os.path.join(path, f)
-                if os.path.isdir(full_path):
-                    folders.append(f)
-                else:
-                    files_only.append(f)
-            
-            # Ordenar
-            folders.sort()
-            files_only.sort()
-            
-            # Formatar com cores ANSI
-            output = ''
-            all_items = []
-            for f in folders:
-                # Truncar se muito longo
-                display = f[:20] + '...' if len(f) > 20 else f
-                all_items.append('[1;34m' + display + '/[0m')  # Azul para pastas
-            for f in files_only:
-                display = f[:20] + '...' if len(f) > 20 else f
-                all_items.append(display)  # Branco para arquivos
-            
-            # Formatar em colunas
-            if all_items:
-                col_width = 25
-                cols = 3
-                rows = (len(all_items) + cols - 1) // cols
-                for i in range(rows):
-                    row = ''
-                    for j in range(cols):
-                        idx = i + j * rows
-                        if idx < len(all_items):
-                            row += all_items[idx].ljust(col_width)
-                    output += row + '\n'
-            else:
-                output = '(vazio)\n'
-            
-            emit('terminal_response', {'output': output + '$ '})
-        except Exception as e:
-            emit('terminal_response', {'output': 'Erro: ' + str(e) + '\n\\$ '})
-        return
-    
-    if command.startswith('cat '):
-        filename = command[4:].strip()
-        if not filename.startswith('/'):
-            filename = session['cwd'] + '/' + filename
-        try:
-            with open(filename, 'r', encoding='utf-8', errors='ignore') as f:
-                content = f.read()
-            emit('terminal_response', {'output': content + '\n$ '})
-        except Exception as e:
-            emit('terminal_response', {'output': 'Erro: ' + str(e) + '\n$ '})
-        return
-    
-    if command.startswith('echo '):
-        text = command[5:]
-        emit('terminal_response', {'output': text + '\n$ '})
-        return
-    
-    blocked_commands = ['rm -rf /', 'mkfs', 'dd if=', 'shutdown', 'reboot', 'halt', 'poweroff']
-    if any(blocked in command for blocked in blocked_commands):
-        emit('terminal_response', {'output': 'Comando bloqueado por seguranca!\n$ '})
-        return
-    
-    try:
-        full_command = 'cd ' + session['cwd'] + ' && ' + command
-        process = Popen(full_command, shell=True, stdout=PIPE, stderr=PIPE)
-        stdout, stderr = process.communicate(timeout=10)
-        output = stdout.decode('utf-8', errors='ignore')
-        error = stderr.decode('utf-8', errors='ignore')
-        result = output if output else ''
-        if error:
-            result += error
-        emit('terminal_response', {'output': result + '$ '})
-    except TimeoutExpired:
-        emit('terminal_response', {'output': 'Comando expirou (timeout 10s)\n$ '})
-    except Exception as e:
-        emit('terminal_response', {'output': 'Erro: ' + str(e) + '\n$ '})
-
-print("✅ Terminal Web backend adicionado")
 
 
 @app.route('/api/quick-metrics')
@@ -3329,5 +3146,1275 @@ def rename_file():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
+
+@app.route('/api/terminal/execute', methods=['POST'])
+def execute_terminal_command():
+    import subprocess
+    import os
+    
+    data = request.get_json()
+    command = data.get('command', '').strip()
+    
+    if not command:
+        return jsonify({'success': False, 'error': 'Comando vazio'})
+    
+    # Segurança: limitar comandos perigosos
+    dangerous_commands = ['rm -rf /', 'mkfs', 'dd if=', '> /dev/sda']
+    if any(dangerous in command for dangerous in dangerous_commands):
+        return jsonify({'success': False, 'error': 'Comando bloqueado por segurança'})
+    
+    try:
+        # Executar comando no diretório do projeto
+        result = subprocess.run(
+            command,
+            shell=True,
+            capture_output=True,
+            text=True,
+            timeout=10,
+            cwd=os.path.expanduser('~/thinkinos-platform')
+        )
+        
+        output = result.stdout
+        if result.stderr:
+            output += '\n' + result.stderr
+        
+        return jsonify({
+            'success': True,
+            'output': output,
+            'returncode': result.returncode
+        })
+    except subprocess.TimeoutExpired:
+        return jsonify({'success': False, 'error': 'Comando expirou (timeout de 10s)'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+
+# === TERMINAL INTEGRADO (ÚNICO E SEGURO) ===
+import subprocess
+import os
+
+@socketio.on('terminal_init')
+def handle_terminal_init():
+    emit('terminal_output', {'data': 'ThinkinOS Terminal v1.0\nPronto para comandos.\n\n$ '})
+
+@socketio.on('terminal_input')
+def handle_terminal_input(data):
+    # O frontend envia: { data: "comando\n" }
+    command = data.get('data', '').strip()
+    if not command:
+        return
+    
+    try:
+        # Executar comando no shell de forma segura
+        result = subprocess.run(
+            command,
+            shell=True,
+            capture_output=True,
+            text=True,
+            cwd=os.path.expanduser('~/thinkinos-platform'),
+            timeout=15
+        )
+        
+        output = result.stdout
+        if result.stderr:
+            output += '\n' + result.stderr
+        if result.returncode != 0 and not output.strip():
+            output = f'Comando não encontrado ou falhou (código {result.returncode})\n'
+        
+        # Adicionar o prompt no final
+        emit('terminal_output', {'data': output + '\n$ '})
+        
+    except subprocess.TimeoutExpired:
+        emit('terminal_output', {'data': '\n[Erro] Comando expirou (timeout 15s)\n$ '})
+    except Exception as e:
+        emit('terminal_output', {'data': f'\n[Erro] {str(e)}\n$ '})
+
+
+# === TERMINAL INTEGRADO (LIMPO E FUNCIONAL) ===
+import subprocess
+
+@socketio.on('terminal_init')
+def handle_terminal_init():
+    emit('terminal_output', {'data': 'ThinkinOS Terminal v1.0\nPronto para comandos.\n\n$ '})
+
+@socketio.on('terminal_input')
+def handle_terminal_input(data):
+    command = data.get('data', '').strip()
+    if not command:
+        return
+    
+    try:
+        result = subprocess.run(
+            command,
+            shell=True,
+            capture_output=True,
+            text=True,
+            cwd=os.path.expanduser('~/thinkinos-platform'),
+            timeout=15
+        )
+        
+        output = result.stdout
+        if result.stderr:
+            output += '\n' + result.stderr
+        if result.returncode != 0 and not output.strip():
+            output = f'Comando não encontrado ou falhou (código {result.returncode})\n'
+        
+        emit('terminal_output', {'data': output + '\n$ '})
+    except subprocess.TimeoutExpired:
+        emit('terminal_output', {'data': '\n[Erro] Comando expirou (timeout 15s)\n$ '})
+    except Exception as e:
+        emit('terminal_output', {'data': f'\n[Erro] {str(e)}\n$ '})
+
+
+
+@app.route('/fm-lab')
+@login_required
+def fm_lab():
+    return render_template('fm-lab.html')
+
+@app.route('/lab-assistente')
+def lab_assistente():
+    edit_id = request.args.get('edit')
+    edit_agent = None
+    
+    if edit_id:
+        try:
+            conn = get_db()
+            cursor = conn.cursor()
+            user_id = session.get('user_id', 6)
+            cursor.execute("SELECT id, name, system_prompt, color FROM custom_agents WHERE id = ? AND user_id = ?", (edit_id, user_id))
+            row = cursor.fetchone()
+            conn.close()
+            
+            if row:
+                # Extrair specialty do prompt (formato: "Especialidade: X\n\nY")
+                prompt_full = row[2]
+                specialty = ""
+                prompt_clean = prompt_full
+                match = re.search(r'Especialidade:\s*(.*?)\n\n(.*)', prompt_full, re.DOTALL)
+                if match:
+                    specialty = match.group(1).strip()
+                    prompt_clean = match.group(2).strip()
+                
+                edit_agent = {
+                    'id': row[0], 'name': row[1], 'specialty': specialty, 
+                    'prompt': prompt_clean, 'color': row[3] or '#0e639c'
+                }
+        except Exception as e:
+            print(f'⚠️ Erro ao carregar assistente para edição: {e}')
+            
+    return render_template('lab-assistente.html', edit_agent=edit_agent)
+
+
+def lab_assistente():
+    return render_template('lab-assistente.html')
+
+def api_create_assistant():
+    try:
+        data_req = request.get_json()
+        name = data_req.get('name', '').strip()
+        specialty = data_req.get('specialty', '').strip()
+        prompt = data_req.get('prompt', '').strip()
+        color = data_req.get('color', '#0e639c')
+        icon = data_req.get('icon', '🤖')
+
+        if not name:
+            return jsonify({'status': 'error', 'error': 'Nome é obrigatório'})
+
+        assistants_path = '/home/lps/thinkinos-platform/assistants.json'
+        with open(assistants_path, 'r', encoding='utf-8') as f:
+            assistants = json.load(f)
+
+        # Verificar duplicatas (funciona para dict e list)
+        if isinstance(assistants, dict):
+            for existing_name in assistants.keys():
+                if existing_name.strip().lower() == name.lower():
+                    return jsonify({'status': 'error', 'error': f'Já existe um assistente chamado "{existing_name}"'})
+            
+            assistants[name] = {
+                "name": name, "specialty": specialty, "prompt": prompt,
+                "color": color, "icon": icon, "active": True
+            }
+        elif isinstance(assistants, list):
+            for item in assistants:
+                if item.get('name', '').strip().lower() == name.lower():
+                    return jsonify({'status': 'error', 'error': f'Já existe um assistente chamado "{item.get("name")}"'})
+            
+            assistants.append({
+                "name": name, "specialty": specialty, "prompt": prompt,
+                "color": color, "icon": icon, "active": True
+            })
+        else:
+            return jsonify({'status': 'error', 'error': 'Formato do JSON inválido'})
+
+        with open(assistants_path, 'w', encoding='utf-8') as f:
+            json.dump(assistants, f, ensure_ascii=False, indent=2)
+
+        return jsonify({'status': 'success', 'name': name})
+    except Exception as e:
+        return jsonify({'status': 'error', 'error': str(e)})
+
+def api_create_assistant():
+    try:
+        data_req = request.get_json()
+        name = data_req.get('name', '').strip()
+        specialty = data_req.get('specialty', '').strip()
+        prompt = data_req.get('prompt', '').strip()
+        color = data_req.get('color', '#0e639c')
+        icon = data_req.get('icon', '🤖')
+
+        if not name:
+            return jsonify({'status': 'error', 'error': 'Nome é obrigatório'})
+
+        assistants_path = '/home/lps/thinkinos-platform/assistants.json'
+        with open(assistants_path, 'r', encoding='utf-8') as f:
+            assistants = json.load(f)
+
+        # Verificar duplicatas (funciona para dict e list)
+        if isinstance(assistants, dict):
+            for existing_name in assistants.keys():
+                if existing_name.strip().lower() == name.lower():
+                    return jsonify({'status': 'error', 'error': f'Já existe um assistente chamado "{existing_name}"'})
+            
+            assistants[name] = {
+                "name": name, "specialty": specialty, "prompt": prompt,
+                "color": color, "icon": icon, "active": True
+            }
+        elif isinstance(assistants, list):
+            for item in assistants:
+                if item.get('name', '').strip().lower() == name.lower():
+                    return jsonify({'status': 'error', 'error': f'Já existe um assistente chamado "{item.get("name")}"'})
+            
+            assistants.append({
+                "name": name, "specialty": specialty, "prompt": prompt,
+                "color": color, "icon": icon, "active": True
+            })
+        else:
+            return jsonify({'status': 'error', 'error': 'Formato do JSON inválido'})
+
+        with open(assistants_path, 'w', encoding='utf-8') as f:
+            json.dump(assistants, f, ensure_ascii=False, indent=2)
+
+        return jsonify({'status': 'success', 'name': name})
+    except Exception as e:
+        return jsonify({'status': 'error', 'error': str(e)})
+
+def api_create_assistant():
+    try:
+        import sqlite3
+        data_req = request.get_json()
+        name = data_req.get('name', '').strip()
+        specialty = data_req.get('specialty', '').strip()
+        prompt = data_req.get('prompt', '').strip()
+        color = data_req.get('color', '#7c4dff')
+        
+        if not name:
+            return jsonify({'status': 'error', 'error': 'Nome é obrigatório'})
+
+        # Gerar name interno (slug) e display_name
+        name_slug = name.lower().replace(' ', '-').replace('(', '').replace(')', '')
+        display_name = name
+
+        # Combinar specialty + prompt no system_prompt
+        if specialty:
+            full_prompt = "Especialidade: " + specialty + "\n\n" + prompt
+        else:
+            full_prompt = prompt
+
+        # Conectar ao DB
+        # Usar get_db() do Flask (aponta para thinkinos.db)
+        conn = get_db()
+        cursor = conn.cursor()
+
+        # Verificar duplicata por name (slug)
+        cursor.execute("SELECT name FROM assistants WHERE name = ?", (name_slug,))
+        if cursor.fetchone():
+            conn.close()
+            return jsonify({'status': 'error', 'error': 'Já existe um assistente com este nome (interno)'})
+
+        # Verificar duplicata por display_name
+        cursor.execute("SELECT name FROM assistants WHERE display_name = ?", (display_name,))
+        if cursor.fetchone():
+            conn.close()
+            return jsonify({'status': 'error', 'error': f'Já existe um assistente chamado "{display_name}"'})
+
+        # Inserir novo assistente
+        cursor.execute("""
+            INSERT INTO assistants (name, display_name, color, system_prompt, is_active, category, profile)
+            VALUES (?, ?, ?, ?, 1, 'general', 'personal')
+        """, (name_slug, display_name, color, full_prompt))
+
+        conn.commit()
+        conn.close()
+
+        print(f'✅ Assistente criado no DB: {display_name} (slug: {name_slug})')
+        return jsonify({'status': 'success', 'name': display_name})
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'status': 'error', 'error': str(e)})
+
+
+def api_create_assistant():
+    try:
+        data_req = request.get_json()
+        name = data_req.get('name', '').strip()
+        specialty = data_req.get('specialty', '').strip()
+        prompt = data_req.get('prompt', '').strip()
+        icon = data_req.get('icon', '🤖')
+
+        if not name:
+            return jsonify({'status': 'error', 'error': 'Nome é obrigatório'})
+
+        if specialty:
+            full_prompt = "Especialidade: " + specialty + "\n\n" + prompt
+        else:
+            full_prompt = prompt
+
+        # USAR A FUNÇÃO get_db() DO FLASK (que aponta para thinkinos.db)
+        conn = get_db()
+        cursor = conn.cursor()
+        user_id = session.get('user_id', 6)
+
+        # Verificar duplicata
+        cursor.execute("SELECT name FROM custom_agents WHERE user_id = ? AND name = ?", (user_id, name))
+        if cursor.fetchone():
+            conn.close()
+            return jsonify({'status': 'error', 'error': f'Já existe um assistente chamado "{name}"'})
+
+        # Inserir no banco correto
+        cursor.execute("""
+            INSERT INTO custom_agents (user_id, name, icon, system_prompt)
+            VALUES (?, ?, ?, ?)
+        """, (user_id, name, icon, full_prompt))
+
+        conn.commit()
+        conn.close()
+
+        print(f'✅ Assistente customizado criado em thinkinos.db: {name} (user_id={user_id})')
+        return jsonify({'status': 'success', 'name': name})
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'status': 'error', 'error': str(e)})
+
+def api_create_assistant():
+    try:
+        data_req = request.get_json()
+        name = data_req.get('name', '').strip()
+        specialty = data_req.get('specialty', '').strip()
+        prompt = data_req.get('prompt', '').strip()
+        icon = data_req.get('icon', '🤖')
+
+        if not name:
+            return jsonify({'status': 'error', 'error': 'Nome é obrigatório'})
+
+        # Construir o prompt de forma segura, sem quebras de linha na definição da variável
+        if specialty:
+            full_prompt = "Especialidade: " + specialty + "\n\n" + prompt
+        else:
+            full_prompt = prompt
+
+        # Usar a função get_db() do Flask (que aponta para thinkinos.db)
+        conn = get_db()
+        cursor = conn.cursor()
+        user_id = session.get('user_id', 6)
+
+        # Verificar duplicata
+        cursor.execute("SELECT name FROM custom_agents WHERE user_id = ? AND name = ?", (user_id, name))
+        if cursor.fetchone():
+            conn.close()
+            return jsonify({'status': 'error', 'error': 'Já existe um assistente com este nome'})
+
+        # Inserir no banco correto
+        cursor.execute("""
+            INSERT INTO custom_agents (user_id, name, icon, system_prompt)
+            VALUES (?, ?, ?, ?)
+        """, (user_id, name, icon, full_prompt))
+
+        conn.commit()
+        conn.close()
+
+        print(f'✅ Assistente customizado criado em thinkinos.db: {name} (user_id={user_id})')
+        return jsonify({'status': 'success', 'name': name})
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'status': 'error', 'error': str(e)})
+
+def api_create_assistant():
+    try:
+        data_req = request.get_json()
+        name = data_req.get('name', '').strip()
+        specialty = data_req.get('specialty', '').strip()
+        prompt = data_req.get('prompt', '').strip()
+        icon = data_req.get('icon', '🤖')
+
+        if not name:
+            return jsonify({'status': 'error', 'error': 'Nome é obrigatório'})
+
+        # Construir prompt de forma segura (sem f-string com quebra de linha)
+        if specialty:
+            full_prompt = "Especialidade: " + specialty + "\n\n" + prompt
+        else:
+            full_prompt = prompt
+
+        # Usar get_db() do Flask (aponta para thinkinos.db)
+        conn = get_db()
+        cursor = conn.cursor()
+        user_id = session.get('user_id', 6)
+
+        # Verificar duplicata
+        cursor.execute("SELECT name FROM custom_agents WHERE user_id = ? AND name = ?", (user_id, name))
+        if cursor.fetchone():
+            conn.close()
+            return jsonify({'status': 'error', 'error': 'Já existe um assistente com este nome'})
+
+        # Inserir
+        cursor.execute("""
+            INSERT INTO custom_agents (user_id, name, icon, system_prompt)
+            VALUES (?, ?, ?, ?)
+        """, (user_id, name, icon, full_prompt))
+
+        conn.commit()
+        conn.close()
+
+        print('✅ Assistente customizado criado em thinkinos.db: ' + name + ' (user_id=' + str(user_id) + ')')
+        return jsonify({'status': 'success', 'name': name})
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'status': 'error', 'error': str(e)})
+
+
+def api_create_assistant():
+    try:
+        data_req = request.get_json()
+        name = data_req.get('name', '').strip()
+        specialty = data_req.get('specialty', '').strip()
+        prompt = data_req.get('prompt', '').strip()
+        icon = data_req.get('icon', '🤖')
+
+        if not name:
+            return jsonify({'status': 'error', 'error': 'Nome é obrigatório'})
+
+        if specialty:
+            full_prompt = "Especialidade: " + specialty + "\n\n" + prompt
+        else:
+            full_prompt = prompt
+
+        conn = get_db()
+        cursor = conn.cursor()
+        user_id = session.get('user_id', 6)
+
+        cursor.execute("SELECT name FROM custom_agents WHERE user_id = ? AND name = ?", (user_id, name))
+        if cursor.fetchone():
+            conn.close()
+            return jsonify({'status': 'error', 'error': 'Já existe um assistente com este nome'})
+
+        cursor.execute("INSERT INTO custom_agents (user_id, name, icon, system_prompt) VALUES (?, ?, ?, ?)", (user_id, name, icon, full_prompt))
+        conn.commit()
+        conn.close()
+
+        print('✅ Assistente criado no DB: ' + name)
+        return jsonify({'status': 'success', 'name': name})
+    except Exception as e:
+        return jsonify({'status': 'error', 'error': str(e)})
+
+def api_create_assistant():
+    try:
+        data_req = request.get_json()
+        name = data_req.get('name', '').strip()
+        specialty = data_req.get('specialty', '').strip()
+        prompt = data_req.get('prompt', '').strip()
+        icon = data_req.get('icon', '🤖')
+
+        if not name:
+            return jsonify({'status': 'error', 'error': 'Nome é obrigatório'})
+
+        if specialty:
+            full_prompt = "Especialidade: " + specialty + "\n\n" + prompt
+        else:
+            full_prompt = prompt
+
+        conn = get_db()
+        cursor = conn.cursor()
+        user_id = session.get('user_id', 6)
+
+        cursor.execute("SELECT name FROM custom_agents WHERE user_id = ? AND name = ?", (user_id, name))
+        if cursor.fetchone():
+            conn.close()
+            return jsonify({'status': 'error', 'error': 'Já existe um assistente com este nome'})
+
+        cursor.execute("INSERT INTO custom_agents (user_id, name, icon, system_prompt) VALUES (?, ?, ?, ?)", (user_id, name, icon, full_prompt))
+        conn.commit()
+        conn.close()
+
+        print('✅ Assistente criado no DB: ' + name)
+        return jsonify({'status': 'success', 'name': name})
+    except Exception as e:
+        return jsonify({'status': 'error', 'error': str(e)})
+
+
+
+@app.route('/api/assistants/create', methods=['POST'])
+def api_create_assistant():
+    try:
+        data_req = request.get_json()
+        agent_id = data_req.get('id')
+        name = data_req.get('name', '').strip()
+        specialty = data_req.get('specialty', '').strip()
+        prompt = data_req.get('prompt', '').strip()
+        color = data_req.get('color', '#0e639c')
+        icon = data_req.get('icon', '')
+
+        if not name:
+            return jsonify({'status': 'error', 'error': 'Nome é obrigatório'})
+
+        full_prompt = "Especialidade: " + specialty + "\n\n" + prompt if specialty else prompt
+
+        conn = get_db()
+        cursor = conn.cursor()
+        user_id = session.get('user_id', 6)
+
+        if agent_id:
+            cursor.execute("UPDATE custom_agents SET name=?, system_prompt=?, color=? WHERE id=? AND user_id=?", 
+                           (name, full_prompt, color, agent_id, user_id))
+            conn.commit()
+            print(f'✅ Assistente atualizado: {name} (ID: {agent_id})')
+        else:
+            cursor.execute("SELECT name FROM custom_agents WHERE user_id = ? AND name = ?", (user_id, name))
+            if cursor.fetchone():
+                conn.close()
+                return jsonify({'status': 'error', 'error': 'Já existe um assistente com este nome'})
+            
+            cursor.execute("INSERT INTO custom_agents (user_id, name, icon, system_prompt, color, is_active) VALUES (?, ?, ?, ?, ?, 1)", 
+                           (user_id, name, icon, full_prompt, color))
+            conn.commit()
+            print(f'✅ Assistente criado: {name}')
+            
+        conn.close()
+        return jsonify({'status': 'success', 'name': name})
+    except Exception as e:
+        return jsonify({'status': 'error', 'error': str(e)})
+
+
+def api_create_assistant():
+    try:
+        data_req = request.get_json()
+        name = data_req.get('name', '').strip()
+        specialty = data_req.get('specialty', '').strip()
+        prompt = data_req.get('prompt', '').strip()
+        icon = data_req.get('icon', '')
+
+        if not name:
+            return jsonify({'status': 'error', 'error': 'Nome é obrigatório'})
+
+        if specialty:
+            full_prompt = "Especialidade: " + specialty + "\n\n" + prompt
+        else:
+            full_prompt = prompt
+
+        conn = get_db()
+        cursor = conn.cursor()
+        user_id = session.get('user_id', 6)
+
+        cursor.execute("SELECT name FROM custom_agents WHERE user_id = ? AND name = ?", (user_id, name))
+        if cursor.fetchone():
+            conn.close()
+            return jsonify({'status': 'error', 'error': 'Já existe um assistente com este nome'})
+
+        cursor.execute("INSERT INTO custom_agents (user_id, name, icon, system_prompt) VALUES (?, ?, ?, ?)", (user_id, name, icon, full_prompt))
+        conn.commit()
+        conn.close()
+
+        print('✅ Assistente criado no DB: ' + name)
+        return jsonify({'status': 'success', 'name': name})
+    except Exception as e:
+        return jsonify({'status': 'error', 'error': str(e)})
+
+
+
+
+
+
+def gestao():
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        user_id = session.get('user_id', 6)
+        
+        # Buscar estatísticas
+        cursor.execute("SELECT COUNT(*) FROM assistants")
+        total_assistants = cursor.fetchone()[0]
+        
+        cursor.execute("SELECT COUNT(*) FROM custom_agents WHERE user_id = ?", (user_id,))
+        custom_count = cursor.fetchone()[0]
+        
+        cursor.execute("SELECT COUNT(*) FROM messages")
+        total_messages = cursor.fetchone()[0]
+        
+        cursor.execute("SELECT COALESCE(SUM(prompt_tokens), 0) FROM token_usage")
+        total_tokens = cursor.fetchone()[0]
+        
+        # Buscar assistentes personalizados
+        cursor.execute("SELECT id, name, system_prompt, is_active FROM custom_agents WHERE user_id = ? ORDER BY name", (user_id,))
+        custom_agents = cursor.fetchall()
+        
+        conn.close()
+        
+        # Formatar tokens (ex: 85400 -> 85.4K)
+        if total_tokens >= 1000:
+            tokens_display = f"{total_tokens / 1000:.1f}K"
+        else:
+            tokens_display = str(total_tokens)
+        
+        return render_template('lab-gestao.html', 
+                             total_assistants=total_assistants,
+                             custom_count=custom_count,
+                             total_messages=total_messages,
+                             tokens_display=tokens_display,
+                             custom_agents=custom_agents)
+    except Exception as e:
+        print(f'❌ Erro ao carregar gestão: {e}')
+        return render_template('lab-gestao.html', 
+                             total_assistants=0, custom_count=0,
+                             total_messages=0, tokens_display='0',
+                             custom_agents=[], error=str(e))
+
+@app.route('/api/assistants/delete', methods=['POST'])
+def api_delete_assistant():
+    try:
+        data = request.get_json()
+        agent_id = data.get('id')
+        
+        if not agent_id:
+            return jsonify({'status': 'error', 'error': 'ID é obrigatório'})
+        
+        conn = get_db()
+        cursor = conn.cursor()
+        user_id = session.get('user_id', 6)
+        
+        # Verificar se o assistente pertence ao usuário
+        cursor.execute("SELECT name FROM custom_agents WHERE id = ? AND user_id = ?", (agent_id, user_id))
+        agent = cursor.fetchone()
+        
+        if not agent:
+            conn.close()
+            return jsonify({'status': 'error', 'error': 'Assistente não encontrado ou não pertence a você'})
+        
+        # Deletar
+        cursor.execute("DELETE FROM custom_agents WHERE id = ? AND user_id = ?", (agent_id, user_id))
+        conn.commit()
+        conn.close()
+        
+        print(f'✅ Assistente excluído: {agent[0]} (ID: {agent_id})')
+        return jsonify({'status': 'success'})
+    except Exception as e:
+        return jsonify({'status': 'error', 'error': str(e)})
+
+
+def gestao():
+    try:
+        import sqlite3
+        
+        # Banco principal (thinkinos.db) - para assistants e custom_agents
+        conn_main = get_db()
+        cursor_main = conn_main.cursor()
+        user_id = session.get('user_id', 6)
+        
+        # Buscar estatísticas do thinkinos.db
+        cursor_main.execute("SELECT COUNT(*) FROM assistants")
+        total_assistants = cursor_main.fetchone()[0]
+        
+        cursor_main.execute("SELECT COUNT(*) FROM custom_agents WHERE user_id = ?", (user_id,))
+        custom_count = cursor_main.fetchone()[0]
+        
+        # Buscar assistentes personalizados
+        cursor_main.execute("SELECT id, name, system_prompt, is_active FROM custom_agents WHERE user_id = ? ORDER BY name", (user_id,))
+        custom_agents = cursor_main.fetchall()
+        
+        conn_main.close()
+        
+        # Banco de chat (chat_history.db) - para messages e token_usage
+        chat_db_path = '/home/lps/thinkinos-platform/chat_history.db'
+        total_messages = 0
+        total_tokens = 0
+        
+        try:
+            conn_chat = sqlite3.connect(chat_db_path)
+            cursor_chat = conn_chat.cursor()
+            
+            cursor_chat.execute("SELECT COUNT(*) FROM messages")
+            total_messages = cursor_chat.fetchone()[0]
+            
+            cursor_chat.execute("SELECT COALESCE(SUM(prompt_tokens), 0) FROM token_usage")
+            total_tokens = cursor_chat.fetchone()[0]
+            
+            conn_chat.close()
+        except Exception as e:
+            print(f'⚠️ Erro ao buscar dados do chat_history.db: {e}')
+        
+        # Formatar tokens
+        if total_tokens >= 1000:
+            tokens_display = f"{total_tokens / 1000:.1f}K"
+        else:
+            tokens_display = str(total_tokens)
+        
+        return render_template('lab-gestao.html', 
+                             total_assistants=total_assistants,
+                             custom_count=custom_count,
+                             total_messages=total_messages,
+                             tokens_display=tokens_display,
+                             custom_agents=custom_agents)
+    except Exception as e:
+        print(f'❌ Erro ao carregar gestão: {e}')
+        return render_template('lab-gestao.html', 
+                             total_assistants=0, custom_count=0,
+                             total_messages=0, tokens_display='0',
+                             custom_agents=[], error=str(e))
+
+
+def lab_gestao():
+    try:
+        import sqlite3
+        
+        # Banco principal (thinkinos.db) - para assistants e custom_agents
+        conn_main = get_db()
+        cursor_main = conn_main.cursor()
+        user_id = session.get('user_id', 6)
+        
+        # Buscar estatísticas do thinkinos.db
+        cursor_main.execute("SELECT COUNT(*) FROM assistants")
+        total_assistants = cursor_main.fetchone()[0]
+        
+        cursor_main.execute("SELECT COUNT(*) FROM custom_agents WHERE user_id = ?", (user_id,))
+        custom_count = cursor_main.fetchone()[0]
+        
+        # Buscar assistentes personalizados
+        cursor_main.execute("SELECT id, name, system_prompt, is_active FROM custom_agents WHERE user_id = ? ORDER BY name", (user_id,))
+        custom_agents = cursor_main.fetchall()
+        
+        conn_main.close()
+        
+        # Banco de chat (chat_history.db) - para messages e token_usage
+        chat_db_path = '/home/lps/thinkinos-platform/chat_history.db'
+        total_messages = 0
+        total_tokens = 0
+        
+        try:
+            conn_chat = sqlite3.connect(chat_db_path)
+            cursor_chat = conn_chat.cursor()
+            
+            cursor_chat.execute("SELECT COUNT(*) FROM messages")
+            total_messages = cursor_chat.fetchone()[0]
+            
+            cursor_chat.execute("SELECT COALESCE(SUM(prompt_tokens), 0) FROM token_usage")
+            total_tokens = cursor_chat.fetchone()[0]
+            
+            conn_chat.close()
+        except Exception as e:
+            print(f'⚠️ Erro ao buscar dados do chat_history.db: {e}')
+        
+        # Formatar tokens
+        if total_tokens >= 1000:
+            tokens_display = f"{total_tokens / 1000:.1f}K"
+        else:
+            tokens_display = str(total_tokens)
+        
+        return render_template('lab-gestao.html', 
+                             total_assistants=total_assistants,
+                             custom_count=custom_count,
+                             total_messages=total_messages,
+                             tokens_display=tokens_display,
+                             custom_agents=custom_agents)
+    except Exception as e:
+        print(f'❌ Erro ao carregar gestão: {e}')
+        return render_template('lab-gestao.html', 
+                             total_assistants=0, custom_count=0,
+                             total_messages=0, tokens_display='0',
+                             custom_agents=[], error=str(e))
+
+@app.route('/gestao')
+def lab_gestao():
+    try:
+        conn_main = get_db()
+        cursor_main = conn_main.cursor()
+        user_id = session.get('user_id', 6)
+        
+        cursor_main.execute("SELECT COUNT(*) FROM assistants")
+        base_count = cursor_main.fetchone()[0]
+        
+        cursor_main.execute("SELECT COUNT(*) FROM custom_agents WHERE user_id = ?", (user_id,))
+        custom_count = cursor_main.fetchone()[0]
+        
+        cursor_main.execute("SELECT id, name, system_prompt, is_active FROM custom_agents WHERE user_id = ? ORDER BY name", (user_id,))
+        custom_agents = cursor_main.fetchall()
+        conn_main.close()
+        
+        chat_db_path = '/home/lps/thinkinos-platform/chat_history.db'
+        total_messages = 0
+        total_tokens = 0
+        most_used = "Nenhum"
+        chart_labels = []
+        chart_data = []
+        
+        try:
+            conn_chat = sqlite3.connect(chat_db_path)
+            cursor_chat = conn_chat.cursor()
+            
+            cursor_chat.execute("SELECT COUNT(*) FROM messages")
+            total_messages = cursor_chat.fetchone()[0]
+            
+            cursor_chat.execute("SELECT COALESCE(SUM(total_tokens), 0) FROM token_usage")
+            total_tokens = cursor_chat.fetchone()[0]
+            
+            cursor_chat.execute("SELECT assistant, COUNT(*) as cnt FROM messages GROUP BY assistant ORDER BY cnt DESC LIMIT 1")
+            top_row = cursor_chat.fetchone()
+            if top_row and top_row[0]:
+                most_used = top_row[0]
+            
+            # Gráfico: mensagens dos últimos 7 dias
+            cursor_chat.execute("""
+                SELECT strftime('%d/%m', timestamp) as date, COUNT(*) 
+                FROM messages 
+                WHERE timestamp >= datetime('now', '-7 days')
+                GROUP BY date ORDER BY date ASC
+            """)
+            chart_rows = cursor_chat.fetchall()
+            chart_labels = [row[0] for row in chart_rows]
+            chart_data = [row[1] for row in chart_rows]
+            
+            conn_chat.close()
+        except Exception as e:
+            print(f'⚠️ Erro chat_history.db: {e}')
+        
+        tokens_display = f"{total_tokens / 1000:.1f}K" if total_tokens >= 1000 else str(total_tokens)
+        
+        return render_template('lab-gestao.html', 
+                             total_assistants=base_count + custom_count, 
+                             custom_count=custom_count,
+                             total_messages=total_messages, 
+                             tokens_display=tokens_display,
+                             most_used=most_used,
+                             chart_labels=json.dumps(chart_labels),
+                             chart_data=json.dumps(chart_data),
+                             custom_agents=custom_agents)
+    except Exception as e:
+        print(f'❌ Erro gestão: {e}')
+        return render_template('lab-gestao.html', total_assistants=0, custom_count=0, total_messages=0, tokens_display='0', most_used='N/A', chart_labels='[]', chart_data='[]', custom_agents=[], error=str(e))
+
+
+def lab_gestao():
+    try:
+        conn_main = get_db()
+        cursor_main = conn_main.cursor()
+        user_id = session.get('user_id', 6)
+        
+        cursor_main.execute("SELECT COUNT(*) FROM assistants")
+        base_count = cursor_main.fetchone()[0]
+        
+        cursor_main.execute("SELECT COUNT(*) FROM custom_agents WHERE user_id = ?", (user_id,))
+        custom_count = cursor_main.fetchone()[0]
+        
+        # TOTAL GERAL = Base + Personalizados
+        total_assistants = base_count + custom_count
+        
+        cursor_main.execute("SELECT id, name, system_prompt, is_active FROM custom_agents WHERE user_id = ? ORDER BY name", (user_id,))
+        custom_agents = cursor_main.fetchall()
+        conn_main.close()
+        
+        chat_db_path = '/home/lps/thinkinos-platform/chat_history.db'
+        total_messages = 0
+        total_tokens = 0
+        
+        try:
+            conn_chat = sqlite3.connect(chat_db_path)
+            cursor_chat = conn_chat.cursor()
+            cursor_chat.execute("SELECT COUNT(*) FROM messages")
+            total_messages = cursor_chat.fetchone()[0]
+            cursor_chat.execute("SELECT COALESCE(SUM(prompt_tokens), 0) FROM token_usage")
+            total_tokens = cursor_chat.fetchone()[0]
+            conn_chat.close()
+        except Exception as e:
+            print(f'⚠️ Erro chat_history.db: {e}')
+        
+        tokens_display = f"{total_tokens / 1000:.1f}K" if total_tokens >= 1000 else str(total_tokens)
+        
+        return render_template('lab-gestao.html', 
+                             total_assistants=total_assistants, custom_count=custom_count,
+                             total_messages=total_messages, tokens_display=tokens_display,
+                             custom_agents=custom_agents)
+    except Exception as e:
+        print(f'❌ Erro gestão: {e}')
+        return render_template('lab-gestao.html', total_assistants=0, custom_count=0, total_messages=0, tokens_display='0', custom_agents=[], error=str(e))
+
+
+def lab_gestao():
+    try:
+        import sqlite3
+        
+        conn_main = get_db()
+        cursor_main = conn_main.cursor()
+        user_id = session.get('user_id', 6)
+        
+        cursor_main.execute("SELECT COUNT(*) FROM assistants")
+        total_assistants = cursor_main.fetchone()[0]
+        
+        cursor_main.execute("SELECT COUNT(*) FROM custom_agents WHERE user_id = ?", (user_id,))
+        custom_count = cursor_main.fetchone()[0]
+        
+        cursor_main.execute("SELECT id, name, system_prompt, is_active FROM custom_agents WHERE user_id = ? ORDER BY name", (user_id,))
+        custom_agents = cursor_main.fetchall()
+        
+        conn_main.close()
+        
+        chat_db_path = '/home/lps/thinkinos-platform/chat_history.db'
+        total_messages = 0
+        total_tokens = 0
+        
+        try:
+            conn_chat = sqlite3.connect(chat_db_path)
+            cursor_chat = conn_chat.cursor()
+            
+            cursor_chat.execute("SELECT COUNT(*) FROM messages")
+            total_messages = cursor_chat.fetchone()[0]
+            
+            cursor_chat.execute("SELECT COALESCE(SUM(prompt_tokens), 0) FROM token_usage")
+            total_tokens = cursor_chat.fetchone()[0]
+            
+            conn_chat.close()
+        except Exception as e:
+            print(f'⚠️ Erro ao buscar dados do chat_history.db: {e}')
+        
+        if total_tokens >= 1000:
+            tokens_display = f"{total_tokens / 1000:.1f}K"
+        else:
+            tokens_display = str(total_tokens)
+        
+        return render_template('lab-gestao.html', 
+                             total_assistants=total_assistants,
+                             custom_count=custom_count,
+                             total_messages=total_messages,
+                             tokens_display=tokens_display,
+                             custom_agents=custom_agents)
+    except Exception as e:
+        print(f'❌ Erro ao carregar gestão: {e}')
+        return render_template('lab-gestao.html', 
+                             total_assistants=0, custom_count=0,
+                             total_messages=0, tokens_display='0',
+                             custom_agents=[], error=str(e))
+
+@app.route('/api/assistants/toggle', methods=['POST'])
+def api_toggle_assistant():
+    try:
+        data = request.get_json()
+        agent_id = data.get('id')
+        conn = get_db()
+        cursor = conn.cursor()
+        user_id = session.get('user_id', 6)
+        cursor.execute("UPDATE custom_agents SET is_active = NOT is_active WHERE id = ? AND user_id = ?", (agent_id, user_id))
+        conn.commit()
+        cursor.execute("SELECT is_active FROM custom_agents WHERE id = ?", (agent_id,))
+        row = cursor.fetchone()
+        conn.close()
+        return jsonify({'status': 'success', 'is_active': bool(row[0]) if row else False})
+    except Exception as e:
+        return jsonify({'status': 'error', 'error': str(e)})
+
+@app.route('/api/assistants/export', methods=['GET'])
+def api_export_assistants():
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        user_id = session.get('user_id', 6)
+        cursor.execute("SELECT name, icon, system_prompt, color, is_active FROM custom_agents WHERE user_id = ?", (user_id,))
+        rows = cursor.fetchall()
+        conn.close()
+        export_data = [{"name": r[0], "icon": r[1] or '', "system_prompt": r[2], "color": r[3] or '#0e639c', "is_active": bool(r[4])} for r in rows]
+        return jsonify({'status': 'success', 'data': export_data})
+    except Exception as e:
+        return jsonify({'status': 'error', 'error': str(e)})
+
+@app.route('/api/assistants/import', methods=['POST'])
+def api_import_assistants():
+    try:
+        data = request.get_json()
+        assistants = data.get('assistants', [])
+        conn = get_db()
+        cursor = conn.cursor()
+        user_id = session.get('user_id', 6)
+        imported_count = 0
+        for agent in assistants:
+            try:
+                cursor.execute("""
+                    INSERT OR REPLACE INTO custom_agents (user_id, name, icon, system_prompt, color, is_active) 
+                    VALUES (?, ?, ?, ?, ?, ?)
+                """, (user_id, agent['name'], agent.get('icon', ''), agent.get('system_prompt', ''), agent.get('color', '#0e639c'), 1 if agent.get('is_active', True) else 0))
+                imported_count += 1
+            except Exception as e:
+                print(f"Erro ao importar {agent.get('name')}: {e}")
+        conn.commit()
+        conn.close()
+        return jsonify({'status': 'success', 'count': imported_count})
+    except Exception as e:
+        return jsonify({'status': 'error', 'error': str(e)})
+
+# ==========================================
+# GERENCIAMENTO DE MÁQUINAS VIRTUAIS (DOCKER)
+# ==========================================
+@app.route('/vm')
+def vm():
+    try:
+        client = docker.from_env()
+        containers = client.containers.list(all=True)
+        vm_list = []
+        running_count = 0
+        stopped_count = 0
+        
+        for c in containers:
+            status = c.status
+            if status == 'running':
+                running_count += 1
+            else:
+                stopped_count += 1
+            
+            name = c.name.lstrip('/')
+            image_name = c.image.tags[0] if c.image.tags else 'unknown'
+            
+            vm_list.append({
+                'id': c.id[:12],
+                'name': name,
+                'image': image_name,
+                'status': status,
+                'ports': c.ports
+            })
+        
+        return render_template('lab-vm.html', 
+                               vm_list=vm_list, 
+                               total=len(vm_list), 
+                               running=running_count, 
+                               stopped=stopped_count)
+    except Exception as e:
+        print(f'❌ Erro ao conectar ao Docker: {e}')
+        return render_template('lab-vm.html', error=str(e), vm_list=[], total=0, running=0, stopped=0)
+
+@app.route('/api/vm/<action>', methods=['POST'])
+def api_vm_action(action):
+    try:
+        data = request.get_json()
+        container_id = data.get('id')
+        if not container_id:
+            return jsonify({'status': 'error', 'error': 'ID do container é obrigatório'})
+            
+        client = docker.from_env()
+        container = client.containers.get(container_id)
+        
+        if action == 'start':
+            container.start()
+            msg = 'iniciado'
+        elif action == 'stop':
+            container.stop()
+            msg = 'parado'
+        elif action == 'restart':
+            container.restart()
+            msg = 'reiniciado'
+        else:
+            return jsonify({'status': 'error', 'error': 'Ação inválida'})
+            
+        print(f'✅ Container {container.name} {msg} com sucesso (ID: {container_id})')
+        return jsonify({'status': 'success', 'message': f'Container {msg} com sucesso'})
+    except Exception as e:
+        print(f'❌ Erro na ação {action}: {e}')
+        return jsonify({'status': 'error', 'error': str(e)})
+
+
+@app.route('/lab-gestao')
+def lab_gestao_redirect():
+    return redirect('/gestao')
+
+@app.route('/lab-vm')
+def lab_vm_redirect():
+    return redirect('/vm')
+
+
+# ==========================================
+# API: noVNC - Acesso Gráfico às VMs
+# ==========================================
+@app.route('/api/vm/novnc/<container_id>')
+def api_vm_novnc(container_id):
+    try:
+        client = docker.from_env()
+        container = client.containers.get(container_id)
+        
+        # Verificar portas expostas
+        ports = container.ports
+        novnc_url = None
+        
+        # Procurar porta 3000 (noVNC padrão do linuxserver/webtop)
+        if '3000/tcp' in ports and ports['3000/tcp']:
+            host_port = ports['3000/tcp'][0]['HostPort']
+            novnc_url = f'http://localhost:{host_port}/'
+        # Fallback: porta 6080 (noVNC padrão genérico)
+        elif '6080/tcp' in ports and ports['6080/tcp']:
+            host_port = ports['6080/tcp'][0]['HostPort']
+            novnc_url = f'http://localhost:{host_port}/'
+        
+        if novnc_url:
+            return jsonify({
+                'status': 'success',
+                'url': novnc_url,
+                'container': container.name
+            })
+        else:
+            return jsonify({
+                'status': 'error',
+                'error': f'Container {container.name} não possui noVNC configurado. Use imagens como linuxserver/webtop.'
+            }), 400
+    except docker.errors.NotFound:
+        return jsonify({'status': 'error', 'error': 'Container não encontrado'}), 404
+    except Exception as e:
+        return jsonify({'status': 'error', 'error': str(e)}), 500
+
+
+# ==========================================
+# API: Gerenciador de Arquivos (Pasta uploads/)
+# ==========================================
+import os
+import shutil
+from werkzeug.utils import secure_filename
+
+UPLOAD_DIR = os.path.join(os.path.dirname(__file__), 'uploads')
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+def is_safe_path(basedir, path):
+    req_path = os.path.abspath(os.path.join(basedir, path))
+    return req_path.startswith(os.path.abspath(basedir) + os.sep) or req_path == os.path.abspath(basedir)
+
+@app.route('/api/files/list')
+def api_files_list():
+    try:
+        files = []
+        for item in os.listdir(UPLOAD_DIR):
+            item_path = os.path.join(UPLOAD_DIR, item)
+            stat = os.stat(item_path)
+            files.append({
+                'name': item,
+                'type': 'folder' if os.path.isdir(item_path) else 'file',
+                'size': stat.st_size if os.path.isfile(item_path) else 0,
+                'modified': datetime.fromtimestamp(stat.st_mtime).strftime('%d/%m/%Y %H:%M')
+            })
+        return jsonify({'status': 'success', 'files': sorted(files, key=lambda x: (x['type'] == 'file', x['name'].lower()))})
+    except Exception as e:
+        return jsonify({'status': 'error', 'error': str(e)}), 500
+
+@app.route('/api/files/upload', methods=['POST'])
+def api_files_upload():
+    try:
+        if 'file' not in request.files:
+            return jsonify({'status': 'error', 'error': 'Nenhum arquivo enviado'}), 400
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({'status': 'error', 'error': 'Nome de arquivo vazio'}), 400
+        
+        filename = secure_filename(file.filename)
+        filepath = os.path.join(UPLOAD_DIR, filename)
+        file.save(filepath)
+        return jsonify({'status': 'success', 'message': f'Arquivo {filename} enviado com sucesso!'})
+    except Exception as e:
+        return jsonify({'status': 'error', 'error': str(e)}), 500
+
+@app.route('/api/files/mkdir', methods=['POST'])
+def api_files_mkdir():
+    try:
+        data = request.get_json()
+        dirname = secure_filename(data.get('name', 'nova_pasta'))
+        dirpath = os.path.join(UPLOAD_DIR, dirname)
+        os.makedirs(dirpath, exist_ok=True)
+        return jsonify({'status': 'success', 'message': f'Pasta {dirname} criada!'})
+    except Exception as e:
+        return jsonify({'status': 'error', 'error': str(e)}), 500
+
+@app.route('/api/files/delete', methods=['POST'])
+def api_files_delete():
+    try:
+        data = request.get_json()
+        filename = data.get('name')
+        if not filename or not is_safe_path(UPLOAD_DIR, filename):
+            return jsonify({'status': 'error', 'error': 'Acesso negado ou nome inválido'}), 403
+        
+        filepath = os.path.join(UPLOAD_DIR, filename)
+        if os.path.isdir(filepath):
+            shutil.rmtree(filepath)
+        else:
+            os.remove(filepath)
+        return jsonify({'status': 'success', 'message': f'{filename} excluído!'})
+    except Exception as e:
+        return jsonify({'status': 'error', 'error': str(e)}), 500
+
+@app.route('/api/files/download/<filename>')
+def api_files_download(filename):
+    if not is_safe_path(UPLOAD_DIR, filename):
+        return "Acesso negado", 403
+    filepath = os.path.join(UPLOAD_DIR, secure_filename(filename))
+    if os.path.exists(filepath):
+        return send_file(filepath, as_attachment=True)
+    return "Arquivo não encontrado", 404
+
+
+# ==========================================
+# Dashboard de Métricas do Sistema
+# ==========================================
+import psutil
+
+@app.route('/system')
+def system_dashboard():
+    return render_template('system.html')
+
+@app.route('/api/system/metrics')
+def api_system_metrics():
+    try:
+        # CPU
+        cpu_percent = psutil.cpu_percent(interval=0.1)
+        
+        # RAM
+        ram = psutil.virtual_memory()
+        
+        # Disco (partição raiz)
+        disk = psutil.disk_usage('/')
+        
+        return jsonify({
+            'status': 'success',
+            'cpu': cpu_percent,
+            'ram': {
+                'percent': ram.percent,
+                'used_mb': round(ram.used / (1024**2), 1),
+                'total_mb': round(ram.total / (1024**2), 1)
+            },
+            'disk': {
+                'percent': disk.percent,
+                'used_gb': round(disk.used / (1024**3), 1),
+                'total_gb': round(disk.total / (1024**3), 1)
+            }
+        })
+    except Exception as e:
+        return jsonify({'status': 'error', 'error': str(e)}), 500
+
+
+# Importar Portal
+from portal import portal_bp
+app.register_blueprint(portal_bp, url_prefix='/portal')
+
 if __name__ == '__main__':
     socketio.run(app, host='0.0.0.0', port=5000, debug=True, allow_unsafe_werkzeug=True)
+
+
+# === TERMINAL INTEGRADO (SocketIO + PTY) ===
+import pty
+import os
+import select
+import threading

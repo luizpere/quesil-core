@@ -1,0 +1,33 @@
+{% extends "portal/base.html" %}
+{% block title %}Documentação - ThinkinOS{% endblock %}
+{% block content %}
+<section class="hero" style="padding: 3rem 0;">
+    <div class="container">
+        <h1>📖 Documentação</h1>
+        <p>Guias completos para instalar, configurar e usar o ThinkinOS</p>
+    </div>
+</section>
+<section class="content-section">
+    <div class="container">
+        <div class="features-grid">
+            {% for doc_id, doc in docs.items() %}
+            <div class="feature-card">
+                <h3>{{ doc.title }}</h3>
+                <p>{{ doc.content | striptags | truncate(120) }}</p>
+                <a href="{{ url_for('portal.doc_detail', topic=doc_id) }}" class="btn btn-primary" style="margin-top: 1rem;">Ler documentação →</a>
+            </div>
+            {% endfor %}
+            <div class="feature-card">
+                <h3>🏗️ Arquitetura do Sistema</h3>
+                <p>Entenda como o Flask, Gunicorn, Nginx e Docker trabalham juntos no ThinkinOS.</p>
+                <a href="#" class="btn btn-secondary" style="margin-top: 1rem;">Em breve</a>
+            </div>
+            <div class="feature-card">
+                <h3>🔒 Segurança e HTTPS</h3>
+                <p>Como configuramos certificados SSL locais e boas práticas de hardening.</p>
+                <a href="#" class="btn btn-secondary" style="margin-top: 1rem;">Em breve</a>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

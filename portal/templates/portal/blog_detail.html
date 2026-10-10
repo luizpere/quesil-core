@@ -1,0 +1,21 @@
+{% extends "portal/base.html" %}
+{% block title %}{{ post.title }} - ThinkinOS{% endblock %}
+{% block content %}
+<section class="hero" style="padding: 3rem 0;">
+    <div class="container">
+        <a href="{{ url_for('portal.blog') }}" style="color: var(--gray); text-decoration: none; margin-bottom: 1rem; display: inline-block;">← Voltar para o Blog</a>
+        <h1>{{ post.title }}</h1>
+        <div class="meta" style="margin-top: 1rem; font-size: 1.1rem;">
+            <span style="background: var(--primary); color: white; padding: 4px 12px; border-radius: 12px; font-size: 0.85rem;">{{ post.category }}</span>
+            <span style="margin-left: 1rem; color: var(--gray);">{{ post.date }}</span>
+        </div>
+    </div>
+</section>
+<section class="content-section">
+    <div class="container" style="max-width: 800px;">
+        <div style="background: var(--card-bg); padding: 2rem; border-radius: 12px; border: 1px solid var(--border); line-height: 1.8;">
+            {{ post.content | safe }}
+        </div>
+    </div>
+</section>
+{% endblock %}

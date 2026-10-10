@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}ThinkinOS Portal{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('portal.static', filename='css/portal.css') }}">
+    <link rel="icon" type="image/png" href="{{ url_for('portal.static', filename='images/logo.png') }}">
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-brand">
+                <h1>ThinkinOS</h1>
+                <span class="version">v2.0</span>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="{{ url_for('portal.portal_home') }}" class="{% if request.endpoint == 'portal.portal_home' %}active{% endif %}">Início</a></li>
+                <li><a href="{{ url_for('portal.docs') }}" class="{% if request.endpoint == 'portal.docs' %}active{% endif %}">Documentação</a></li>
+                <li><a href="{{ url_for('portal.blog') }}" class="{% if request.endpoint == 'portal.blog' %}active{% endif %}">Blog</a></li>
+                <li><a href="{{ url_for('portal.tutorials') }}" class="{% if request.endpoint == 'portal.tutorials' %}active{% endif %}">Tutoriais</a></li>
+                <li><a href="{{ url_for('portal.plugins') }}" class="{% if request.endpoint == 'portal.plugins' %}active{% endif %}">Plugins</a></li>
+                <li><a href="{{ url_for('portal.community') }}" class="{% if request.endpoint == 'portal.community' %}active{% endif %}">Comunidade</a></li>
+                <li><a href="{{ url_for('portal.contribute') }}" class="{% if request.endpoint == 'portal.contribute' %}active{% endif %}">Contribuir</a></li>
+            </ul>
+            <div class="nav-actions">
+                <a href="/desktop" class="btn-primary">Acessar ThinkinOS</a>
+            </div>
+        </div>
+    </nav>
+
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>ThinkinOS</h3>
+                    <p>Sistema Operacional Pessoal com IA</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Links</h4>
+                    <ul>
+                        <li><a href="{{ url_for('portal.docs') }}">Documentação</a></li>
+                        <li><a href="{{ url_for('portal.blog') }}">Blog</a></li>
+                        <li><a href="{{ url_for('portal.community') }}">Comunidade</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Recursos</h4>
+                    <ul>
+                        <li><a href="{{ url_for('portal.tutorials') }}">Tutoriais</a></li>
+                        <li><a href="{{ url_for('portal.plugins') }}">Plugins</a></li>
+                        <li><a href="{{ url_for('portal.contribute') }}">Contribuir</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Status</h4>
+                    <div id="system-status">
+                        <span class="status-indicator online"></span>
+                        <span>Online</span>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 ThinkinOS. Desenvolvido com ❤️ por Luiz Pereira.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="{{ url_for('portal.static', filename='js/portal.js') }}"></script>
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>
