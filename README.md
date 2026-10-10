@@ -1,22 +1,47 @@
-# ThinkinOS v2.0 - Sistema Adaptativo
+# 🐧 ThinkinOS v2.0
 
-## Visao Geral
-Plataforma de chat inteligente com assistentes virtuais adaptativos (Leigo, Intermediario ou Avancado).
-Status: Producao Estavel (Porta 5000) | Ambiente DEV (Porta 5002)
+> **O primeiro Sistema Operacional Pessoal com Inteligência Artificial integrada.**
 
-## Funcionalidades
-1. Sistema de 3 Niveis: Leigo (Ana), Intermediario (Carlos), Avancado (ThinkinIA).
-2. Assistentes com Personalidades Distintas: Empatico, Mentor, Tecnico.
-3. Sistema de Desafios Dinamicos: 17 desafios categorizados com filtro via API.
-4. Interface Adaptativa: O botao do editor some automaticamente para usuarios leigos.
-5. Identidade Visual: Cores distintas para cada assistente (Rosa, Azul, Roxo).
+ThinkinOS não é apenas mais um chatbot. É um ambiente de trabalho web completo que integra assistentes de IA especializados, gerenciamento de arquivos, editor de código profissional e virtualização de containers em uma interface unificada, elegante e responsiva.
 
-## Como Rodar
-cd ~/thinkinos-platform
-source venv/bin/activate
-python app.py
+### 🖥️ Desktop Principal
+![ThinkinOS Desktop](images/Screenshot_2026-10-09_21-18-22.png)
 
-## URLs de Acesso
-- Leigo: http://192.168.3.7:5000/chat?assistant=Ana&nivel=leigo
-- Intermediario: http://192.168.3.7:5000/chat?assistant=Carlos&nivel=intermediario
-- Avancado: http://192.168.3.7:5000/chat?assistant=ThinkinIA&nivel=avancado
+### 📁 Gerenciador de Arquivos Moderno
+![Gerenciador de Arquivos](images/Screenshot_2026-10-09_21-19-00.png)
+
+### 🌐 Portal de Documentação
+![Portal ThinkinOS](images/Screenshot_2026-10-09_21-21-20.png)
+
+---
+
+## ✨ Funcionalidades Principais
+- 🤖 **Múltiplos Assistentes de IA**: Pedro, Ana, Lena, ThinkinIA, Mentor Python, Dev e mais.
+- 📁 **Gerenciador de Arquivos**: Interface em grid, upload/download e edição integrada.
+- 💻 **Editor de Código**: Suporte a múltiplas linguagens e Live Preview.
+- 📊 **Dashboard de Métricas**: Monitoramento em tempo real de CPU, RAM e Disco.
+- 🐳 **Virtualização Docker**: Gerenciamento de containers com acesso gráfico.
+- 🔒 **Deploy Profissional**: Nginx, Gunicorn, Systemd e HTTPS.
+- 📖 **Portal de Documentação**: Site integrado com tutoriais, blog e comunidade.
+
+---
+
+## 🏗️ Arquitetura
+- **Backend**: Python 3 + Flask
+- **Servidor**: Gunicorn (4 workers) + Nginx (Proxy Reverso)
+- **Frontend**: HTML5, CSS3, JavaScript Vanilla + Socket.io
+- **Segurança**: HTTPS local via `mkcert`
+
+---
+
+## 🚀 Instalação Rápida
+1. Clone o repositório: `git clone https://github.com/luizpere/thinkinos-platform.git`
+2. Entre na pasta: `cd thinkinos-platform`
+3. Ative o ambiente: `source venv/bin/activate`
+4. Instale dependências: `pip install -r requirements.txt`
+5. Configure o `.env` com suas chaves de API.
+6. Inicie: `python3 app.py`
+
+---
+
+**Feito com ❤️ e muita IA por Luiz Pereira.**
