@@ -324,7 +324,7 @@ Responda estritamente em formato JSON:
         
         print(' [MEMÓRIA] Chamando API...')
         response = client.chat.completions.create(
-            model='qwen/qwen3.8-27b',
+            model="qwen/qwen3.8-27b",
             messages=[
                 {'role': 'system', 'content': 'Você é um extrator de dados JSON. Responda APENAS o JSON ou NENHUMA_MEMORIA.'},
                 {'role': 'user', 'content': extraction_prompt}
@@ -4408,6 +4408,76 @@ def api_system_metrics():
 # Importar Portal
 from portal import portal_bp
 app.register_blueprint(portal_bp, url_prefix='/portal')
+
+
+# ==========================================
+# THINKINIA ANALYST HUB - SUPERPOWERS
+# ==========================================
+@app.route('/api/analyst/system-health', methods=['GET'])
+def analyst_system_health():
+    import psutil
+    try:
+        cpu = psutil.cpu_percent(interval=0.5)
+        ram = psutil.virtual_memory()
+        disk = psutil.disk_usage('/')
+        
+        prompt = f"""Você é o ThinkinIA, Arquiteto de Sistemas Sênior do ThinkinOS. 
+        Analise estas métricas em tempo real:
+        - CPU: {cpu}%
+        - RAM: {ram.percent}% (Usado: {ram.used/(1024**3):.1f}GB / Total: {ram.total/(1024**3):.1f}GB)
+        - Disco: {disk.percent}% (Usado: {disk.used/(1024**3):.1f}GB / Total: {disk.total/(1024**3):.1f}GB)
+        
+        Forneça um laudo técnico curto e direto em português.
+        Se algo estiver acima de 80%, dê um alerta 🚨 e uma dica de otimização 💡.
+        Se estiver saudável, confirme com ✅.
+        Seja conciso (máximo 150 palavras)."""
+        
+        # NOTA: Certifique-se de que a variável 'client' (Groq) está inicializada no topo do seu app.py
+        # Ex: from groq import Groq; client = Groq(api_key=os.environ.get('GROQ_API_KEY'))
+        response = client.chat.completions.create(
+            model="qwen/qwen3.8-27b", # Ou o modelo que você estiver usando
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.3,
+            max_tokens=300
+        )
+        return jsonify({'status': 'success', 'analysis': response.choices[0].message.content})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@app.route('/api/analyst/code-review', methods=['POST'])
+def analyst_code_review():
+    try:
+        data = request.get_json()
+        code = data.get('code', '')
+        language = data.get('language', 'Desconhecido')
+        
+        if not code.strip():
+            return jsonify({'status': 'error', 'message': 'Código vazio'}), 400
+
+        prompt = f"""Você é o ThinkinIA com SUPERPOWERS de Revisão de Código.
+        Linguagem: {language}
+        
+        Analise este código e responda de forma EXTREMAMENTE CONCISA (limite de 500 palavras) devido a restrições de API.
+        
+        Formato OBRIGATÓRIO de resposta:
+        🚨 **PROBLEMAS**: (Máximo 3 bullet points. Seja direto).
+        💡 **OTIMIZAÇÃO**: (1 dica prática de performance ou segurança).
+        ✅ **CORREÇÃO**: (Mostre APENAS as linhas alteradas ou o bloco de código corrigido. NÃO repita o código original inteiro).
+        
+        Código para analisar:
+        ```{language}
+        {code[:3000]}  # Limita o input a 3000 chars para economizar tokens de entrada também
+        ```"""
+
+        response = client.chat.completions.create(
+            model="qwen/qwen3.8-27b",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.2,
+            max_tokens=800  # REDUZIDO para ficar abaixo do limite de 1000 do plano gratuito
+        )
+        return jsonify({'status': 'success', 'review': response.choices[0].message.content})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
 
 if __name__ == '__main__':
     socketio.run(app, host='0.0.0.0', port=5000, debug=True, allow_unsafe_werkzeug=True)
