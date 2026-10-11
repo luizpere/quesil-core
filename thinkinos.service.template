@@ -1,0 +1,13 @@
+[Unit]
+Description=ThinkinOS Gunicorn Service
+After=network.target
+
+[Service]
+User=lps
+Group=www-data
+WorkingDirectory=/home/lps/thinkinos-platform
+Environment="PATH=/home/lps/thinkinos-platform/venv/bin"
+ExecStart=/home/lps/thinkinos-platform/venv/bin/gunicorn --workers 3 --bind unix:thinkinos.sock -m 007 wsgi:app
+
+[Install]
+WantedBy=multi-user.target

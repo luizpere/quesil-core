@@ -24,3 +24,14 @@ Thumbs.db
 # Banco de dados (opcional, mas recomendado não versionar DB local)
 *.db
 *.sqlite3
+
+# Segurança e Produção
+.env
+.env.local
+instance/
+__pycache__/
+*.pyc
+*.pyo
+*.db
+venv/
+env/
