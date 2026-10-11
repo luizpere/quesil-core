@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% if edit_agent %}Editar Assistente{% else %}Novo Assistente{% endif %} | ThinkinOS</title>
+    <style>
+        body { background: #1e1e1e; color: #fff; font-family: 'Segoe UI', Tahoma, sans-serif; margin: 0; padding: 40px; display: flex; justify-content: center; }
+        .lab-container { background: #2d2d30; border-radius: 12px; padding: 30px; width: 100%; max-width: 600px; box-shadow: 0 10px 40px rgba(0,0,0,0.5); }
+        .lab-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 1px solid #3e3e42; padding-bottom: 15px; }
+        .lab-header h2 { margin: 0; font-size: 20px; }
+        .btn-back { background: #3c3c3c; color: #ccc; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; text-decoration: none; font-size: 13px; }
+        .btn-back:hover { background: #4c4c4c; color: #fff; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; font-size: 13px; font-weight: 600; color: #ccc; }
+        .form-group input, .form-group textarea { width: 100%; background: #1e1e1e; border: 1px solid #3e3e42; color: #fff; padding: 10px 12px; border-radius: 6px; font-size: 14px; outline: none; box-sizing: border-box; }
+        .form-group input:focus, .form-group textarea:focus { border-color: #0e639c; }
+        .form-group textarea { min-height: 120px; resize: vertical; font-family: inherit; }
+        .color-picker { display: flex; gap: 10px; margin-top: 8px; }
+        .color-option { width: 32px; height: 32px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; transition: transform 0.2s; }
+        .color-option:hover { transform: scale(1.1); }
+        .color-option.selected { border-color: #fff; box-shadow: 0 0 0 2px #0e639c; }
+        .icon-picker { display: flex; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
+        .icon-option { width: 40px; height: 40px; background: #1e1e1e; border: 1px solid #3e3e42; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px; cursor: pointer; }
+        .icon-option:hover { background: #3c3c3c; }
+        .icon-option.selected { border-color: #0e639c; background: #0e639c; }
+        .form-actions { display: flex; gap: 15px; margin-top: 30px; justify-content: flex-end; }
+        .btn { padding: 10px 24px; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; }
+        .btn-primary { background: #0e639c; color: white; }
+        .btn-primary:hover { background: #1177bb; }
+        .btn-secondary { background: #3c3c3c; color: #ccc; }
+        .btn-secondary:hover { background: #4c4c4c; color: #fff; }
+        #lab-status { margin-top: 20px; padding: 12px; border-radius: 6px; font-size: 13px; display: none; }
+        .status-success { background: rgba(46, 204, 113, 0.2); color: #2ecc71; border: 1px solid #2ecc71; }
+        .status-error { background: rgba(231, 76, 60, 0.2); color: #e74c3c; border: 1px solid #e74c3c; }
+    </style>
+</head>
+<body>
+    <div class="lab-container">
+        <div class="lab-header">
+            <h2 id="form-title">{% if edit_agent %}✏️ Editar Assistente{% else %}🤖 Criar Novo Assistente{% endif %}</h2>
+            <a href="/desktop" class="btn-back">← Voltar ao Desktop</a>
+        </div>
+
+        <form id="assistant-form">
+            {% if edit_agent %}
+            <input type="hidden" id="agent-id" value="{{ edit_agent.id }}">
+            {% endif %}
+
+            <div class="form-group">
+                <label for="name">Nome do Assistente</label>
+                <input type="text" id="name" name="name" placeholder="Ex: Carlos DevOps" required value="{{ edit_agent.name if edit_agent else '' }}">
+            </div>
+
+            <div class="form-group">
+                <label for="specialty">Especialidade / Função</label>
+                <input type="text" id="specialty" name="specialty" placeholder="Ex: Suporte Técnico, Python, Gestão..." required value="{{ edit_agent.specialty if edit_agent else '' }}">
+            </div>
+
+            <div class="form-group">
+                <label for="prompt">Personalidade / Prompt do Sistema</label>
+                <textarea id="prompt" name="prompt" placeholder="Ex: Você é um especialista em Linux..." required>{% if edit_agent %}{{ edit_agent.prompt }}{% endif %}</textarea>
+            </div>
+
+            <div class="form-group">
+                <label>Cor do Tema</label>
+                <div class="color-picker" id="color-picker">
+                    <div class="color-option" data-color="#0e639c" style="background: #0e639c;"></div>
+                    <div class="color-option" data-color="#2ecc71" style="background: #2ecc71;"></div>
+                    <div class="color-option" data-color="#e74c3c" style="background: #e74c3c;"></div>
+                    <div class="color-option" data-color="#f39c12" style="background: #f39c12;"></div>
+                    <div class="color-option" data-color="#9b59b6" style="background: #9b59b6;"></div>
+                    <div class="color-option" data-color="#1abc9c" style="background: #1abc9c;"></div>
+                </div>
+                <input type="hidden" id="color" name="color" value="{{ edit_agent.color if edit_agent else '#0e639c' }}">
+            </div>
+
+            <div class="form-group">
+                <label>Ícone</label>
+                <div class="icon-picker" id="icon-picker">
+                    <div class="icon-option" data-icon="🤖"></div>
+                    <div class="icon-option" data-icon="💻">💻</div>
+                    <div class="icon-option" data-icon="🐧">🐧</div>
+                    <div class="icon-option" data-icon="️">🛡️</div>
+                    <div class="icon-option" data-icon="">🧠</div>
+                    <div class="icon-option" data-icon="⚡">⚡</div>
+                    <div class="icon-option" data-icon="🔧"></div>
+                    <div class="icon-option" data-icon="📊">📊</div>
+                </div>
+                <input type="hidden" id="icon" name="icon" value="">
+            </div>
+
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" onclick="window.location.href='/desktop'">Cancelar</button>
+                <button type="submit" class="btn btn-primary" id="submit-btn">{% if edit_agent %}💾 Atualizar Assistente{% else %}💾 Salvar Assistente{% endif %}</button>
+            </div>
+        </form>
+
+        <div id="lab-status"></div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Seleção de cor (usando option em vez de this)
+        var savedColor = "{{ edit_agent.color if edit_agent else '#0e639c' }}";
+        var colorInput = document.getElementById('color');
+        var colorOptions = document.querySelectorAll('.color-option');
+        var selectedColor = false;
+
+        colorOptions.forEach(function(option) {
+            option.addEventListener('click', function(event) {
+                var clickedOption = event.currentTarget;
+                colorOptions.forEach(function(o) { o.classList.remove('selected'); });
+                clickedOption.classList.add('selected');
+                colorInput.value = clickedOption.getAttribute('data-color');
+            });
+            if (option.getAttribute('data-color') === savedColor) {
+                option.classList.add('selected');
+                colorInput.value = savedColor;
+                selectedColor = true;
+            }
+        });
+
+        if (!selectedColor && colorOptions.length > 0) {
+            colorOptions[0].classList.add('selected');
+            colorInput.value = colorOptions[0].getAttribute('data-color');
+        }
+
+        // Seleção de ícone
+        var iconInput = document.getElementById('icon');
+        var iconOptions = document.querySelectorAll('.icon-option');
+
+        iconOptions.forEach(function(option) {
+            option.addEventListener('click', function(event) {
+                var clickedOption = event.currentTarget;
+                iconOptions.forEach(function(o) { o.classList.remove('selected'); });
+                clickedOption.classList.add('selected');
+                iconInput.value = clickedOption.getAttribute('data-icon');
+            });
+        });
+
+        // Submit do formulário (POST via fetch)
+        var form = document.getElementById('assistant-form');
+        var statusDiv = document.getElementById('lab-status');
+
+        form.addEventListener('submit', function(event) {
+            event.preventDefault();
+            event.stopPropagation();
+
+            statusDiv.style.display = 'block';
+            statusDiv.className = '';
+            statusDiv.textContent = '⏳ Salvando...';
+
+            var agentIdEl = document.getElementById('agent-id');
+            var formData = {
+                name: document.getElementById('name').value,
+                specialty: document.getElementById('specialty').value,
+                prompt: document.getElementById('prompt').value,
+                color: document.getElementById('color').value,
+                icon: document.getElementById('icon').value
+            };
+
+            if (agentIdEl) {
+                formData.id = agentIdEl.value;
+            }
+
+            console.log('📤 Enviando:', formData);
+
+            fetch('/api/assistants/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(formData)
+            })
+            .then(function(response) { return response.json(); })
+            .then(function(data) {
+                console.log(' Resposta:', data);
+                if (data.status === 'success' || data.success === true) {
+                    statusDiv.className = 'status-success';
+                    statusDiv.textContent = '✅ Assistente "' + formData.name + '" salvo com sucesso! Redirecionando...';
+                    setTimeout(function() {
+                        window.location.href = '/desktop';
+                    }, 1000);
+                } else {
+                    statusDiv.className = 'status-error';
+                    statusDiv.textContent = '❌ Erro: ' + (data.error || 'Falha ao salvar');
+                }
+            })
+            .catch(function(err) {
+                console.error('❌ Erro:', err);
+                statusDiv.className = 'status-error';
+                statusDiv.textContent = '❌ Erro de conexão: ' + err.message;
+            });
+
+            return false;
+        });
+    });
+    </script>
+</body>
+</html>

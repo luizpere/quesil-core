@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Métricas do Sistema - ThinkinOS</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #121216; color: #fff; }
+        .header { background: linear-gradient(135deg, #1e1e24, #25252b); padding: 20px 30px; border-bottom: 2px solid #3498db; display: flex; align-items: center; gap: 15px; }
+        .header h1 { margin: 0; font-size: 24px; font-weight: 600; }
+        .container { padding: 30px; display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 25px; }
+        .card { background: linear-gradient(145deg, #1e1e24, #25252b); border-radius: 16px; padding: 25px; border: 1px solid #333; box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+        .card h2 { margin: 0 0 20px 0; font-size: 18px; color: #3498db; display: flex; align-items: center; gap: 10px; }
+        .metric-value { font-size: 36px; font-weight: 700; margin: 10px 0; }
+        .metric-sub { color: #888; font-size: 14px; }
+        .chart-container { position: relative; height: 200px; margin-top: 20px; }
+        .back-btn { background: #333; color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; text-decoration: none; font-size: 14px; margin-left: auto; transition: background 0.3s; }
+        .back-btn:hover { background: #444; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <span style="font-size: 32px;">📊</span>
+        <h1>Métricas do Sistema</h1>
+        <a href="/desktop" class="back-btn">← Voltar ao Desktop</a>
+    </div>
+    
+    <div class="container">
+        <!-- CPU Card -->
+        <div class="card">
+            <h2>🖥️ Processador (CPU)</h2>
+            <div class="metric-value" id="cpu-value">0%</div>
+            <div class="metric-sub">Uso em tempo real</div>
+            <div class="chart-container">
+                <canvas id="cpuChart"></canvas>
+            </div>
+        </div>
+
+        <!-- RAM Card -->
+        <div class="card">
+            <h2>💾 Memória RAM</h2>
+            <div class="metric-value" id="ram-value">0%</div>
+            <div class="metric-sub" id="ram-sub">0 MB / 0 MB</div>
+            <div class="chart-container">
+                <canvas id="ramChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Disk Card -->
+        <div class="card">
+            <h2>💿 Armazenamento (Disco)</h2>
+            <div class="metric-value" id="disk-value">0%</div>
+            <div class="metric-sub" id="disk-sub">0 GB / 0 GB</div>
+            <div class="chart-container">
+                <canvas id="diskChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuração comum dos gráficos
+        const chartOptions = {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { beginAtZero: true, max: 100, grid: { color: '#333' }, ticks: { color: '#888' } },
+                x: { grid: { display: false }, ticks: { display: false } }
+            }
+        };
+
+        // Inicializar gráficos
+        const cpuCtx = document.getElementById('cpuChart').getContext('2d');
+        const cpuChart = new Chart(cpuCtx, {
+            type: 'line',
+            data: { labels: Array(10).fill(''), datasets: [{ data: Array(10).fill(0), borderColor: '#3498db', backgroundColor: 'rgba(52, 152, 219, 0.2)', fill: true, tension: 0.4 }] },
+            options: chartOptions
+        });
+
+        const ramCtx = document.getElementById('ramChart').getContext('2d');
+        const ramChart = new Chart(ramCtx, {
+            type: 'doughnut',
+            data: { labels: ['Usado', 'Livre'], datasets: [{ data: [0, 100], backgroundColor: ['#e74c3c', '#2ecc71'], borderWidth: 0 }] },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#888' } } } }
+        });
+
+        const diskCtx = document.getElementById('diskChart').getContext('2d');
+        const diskChart = new Chart(diskCtx, {
+            type: 'doughnut',
+            data: { labels: ['Usado', 'Livre'], datasets: [{ data: [0, 100], backgroundColor: ['#f39c12', '#2ecc71'], borderWidth: 0 }] },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#888' } } } }
+        });
+
+        // Função para atualizar métricas
+        async function updateMetrics() {
+            try {
+                const res = await fetch('/api/system/metrics');
+                const data = await res.json();
+                
+                if (data.status === 'success') {
+                    // Atualizar CPU
+                    document.getElementById('cpu-value').textContent = data.cpu + '%';
+                    cpuChart.data.datasets[0].data.shift();
+                    cpuChart.data.datasets[0].data.push(data.cpu);
+                    cpuChart.update('none'); // 'none' para animação suave
+
+                    // Atualizar RAM
+                    document.getElementById('ram-value').textContent = data.ram.percent + '%';
+                    document.getElementById('ram-sub').textContent = `${data.ram.used_mb} MB / ${data.ram.total_mb} MB`;
+                    ramChart.data.datasets[0].data = [data.ram.percent, 100 - data.ram.percent];
+                    ramChart.update();
+
+                    // Atualizar Disco
+                    document.getElementById('disk-value').textContent = data.disk.percent + '%';
+                    document.getElementById('disk-sub').textContent = `${data.disk.used_gb} GB / ${data.disk.total_gb} GB`;
+                    diskChart.data.datasets[0].data = [data.disk.percent, 100 - data.disk.percent];
+                    diskChart.update();
+                }
+            } catch (e) {
+                console.error('Erro ao buscar métricas:', e);
+            }
+        }
+
+        // Atualizar a cada 2 segundos
+        updateMetrics();
+        setInterval(updateMetrics, 2000);
+    </script>
+</body>
+</html>

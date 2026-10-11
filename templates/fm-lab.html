@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title> Lab - Gerenciador de Arquivos v9.0</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #2d2d30;
+            color: #fff;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Container Principal */
+        .fm-container {
+            display: flex;
+            height: 100vh;
+        }
+
+        /* Sidebar */
+        .fm-sidebar {
+            width: 220px;
+            background: #252526;
+            border-right: 1px solid #3e3e42;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+
+        .fm-sidebar-header {
+            padding: 15px;
+            border-bottom: 1px solid #3e3e42;
+            font-weight: 600;
+            font-size: 14px;
+            color: #ccc;
+        }
+
+        .fm-sidebar-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px 0;
+        }
+
+        .fm-sidebar-item {
+            padding: 8px 15px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 13px;
+            transition: background 0.2s;
+        }
+
+        .fm-sidebar-item:hover {
+            background: rgba(255,255,255,0.1);
+        }
+
+        .fm-sidebar-item.active {
+            background: #094771;
+            color: #fff;
+        }
+
+        .fm-sidebar-icon {
+            font-size: 16px;
+        }
+
+        /* Área Principal */
+        .fm-main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Toolbar */
+        .fm-toolbar {
+            background: #2d2d30;
+            border-bottom: 1px solid #3e3e42;
+            padding: 10px 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+
+        .fm-btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .fm-btn-primary {
+            background: #0e639c;
+            color: white;
+        }
+
+        .fm-btn-primary:hover {
+            background: #1177bb;
+        }
+
+        .fm-btn-secondary {
+            background: #3c3c3c;
+            color: #ccc;
+        }
+
+        .fm-btn-secondary:hover {
+            background: #4c4c4c;
+        }
+
+        .fm-btn-icon {
+            background: transparent;
+            color: #ccc;
+            padding: 6px 8px;
+        }
+
+        .fm-btn-icon:hover {
+            background: rgba(255,255,255,0.1);
+        }
+
+        /* Breadcrumbs */
+        .fm-breadcrumbs {
+            background: #252526;
+            padding: 8px 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            border-bottom: 1px solid #3e3e42;
+            flex-shrink: 0;
+        }
+
+        .fm-breadcrumb-item {
+            color: #ccc;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .fm-breadcrumb-item:hover {
+            color: #fff;
+        }
+
+        .fm-breadcrumb-separator {
+            color: #666;
+        }
+
+        /* Área de Conteúdo */
+        .fm-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+        }
+
+        /* Grid View */
+        .fm-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 15px;
+        }
+
+        .fm-file-card {
+            background: #2d2d30;
+            border: 2px solid transparent;
+            border-radius: 6px;
+            padding: 15px 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .fm-file-card:hover {
+            background: #3c3c3c;
+            border-color: #094771;
+        }
+
+        .fm-file-card.selected {
+            background: #094771;
+            border-color: #1177bb;
+        }
+
+        .fm-file-icon {
+            font-size: 48px;
+            margin-bottom: 8px;
+        }
+
+        .fm-file-name {
+            font-size: 12px;
+            word-break: break-word;
+            line-height: 1.3;
+        }
+
+        /* List View */
+        .fm-list {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .fm-list-item {
+            display: flex;
+            align-items: center;
+            padding: 8px 12px;
+            background: #2d2d30;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.2s;
+            gap: 12px;
+        }
+
+        .fm-list-item:hover {
+            background: #3c3c3c;
+        }
+
+        .fm-list-item.selected {
+            background: #094771;
+        }
+
+        .fm-list-icon {
+            font-size: 24px;
+        }
+
+        .fm-list-name {
+            flex: 1;
+            font-size: 13px;
+        }
+
+        .fm-list-size {
+            font-size: 12px;
+            color: #888;
+            min-width: 80px;
+            text-align: right;
+        }
+
+        /* Loading e Empty State */
+        .fm-loading, .fm-empty {
+            text-align: center;
+            padding: 60px 20px;
+            color: #888;
+        }
+
+        .fm-loading {
+            font-size: 16px;
+        }
+
+        .fm-empty {
+            font-size: 14px;
+        }
+
+        /* Scrollbar */
+        .fm-content::-webkit-scrollbar,
+        .fm-sidebar-content::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .fm-content::-webkit-scrollbar-track,
+        .fm-sidebar-content::-webkit-scrollbar-track {
+            background: #1e1e1e;
+        }
+
+        .fm-content::-webkit-scrollbar-thumb,
+        .fm-sidebar-content::-webkit-scrollbar-thumb {
+            background: #424242;
+            border-radius: 4px;
+        }
+
+        .fm-content::-webkit-scrollbar-thumb:hover,
+        .fm-sidebar-content::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
+        /* Status Bar */
+        .fm-statusbar {
+            background: #007acc;
+            color: white;
+            padding: 4px 15px;
+            font-size: 12px;
+            display: flex;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="fm-container">
+        <!-- Sidebar -->
+        <div class="fm-sidebar">
+            <div class="fm-sidebar-header">📁 Locais</div>
+            <div class="fm-sidebar-content">
+                <div class="fm-sidebar-item active" onclick="navigateTo('/')">
+                    <span class="fm-sidebar-icon">🏠</span>
+                    <span>Início</span>
+                </div>
+                <div class="fm-sidebar-item" onclick="navigateTo('/uploads')">
+                    <span class="fm-sidebar-icon">📤</span>
+                    <span>Uploads</span>
+                </div>
+                <div class="fm-sidebar-item" onclick="navigateTo('/workspace')">
+                    <span class="fm-sidebar-icon">💼</span>
+                    <span>Workspace</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Área Principal -->
+        <div class="fm-main">
+            <!-- Toolbar -->
+            <div class="fm-toolbar">
+                <button class="fm-btn fm-btn-primary" onclick="document.getElementById('fm-upload-input').click()">
+                    📤 Upload
+                </button>
+                <button class="fm-btn fm-btn-secondary" onclick="showNewFolderModal()">
+                    📁 Nova Pasta
+                </button>
+                <button class="fm-btn fm-btn-secondary" onclick="showNewFileModal()">
+                    📄 Novo Arquivo
+                </button>
+                <button class="fm-btn fm-btn-secondary" onclick="loadFiles()">
+                    🔄 Atualizar
+                </button>
+                <div style="flex: 1;"></div>
+                <button class="fm-btn fm-btn-icon" onclick="toggleView('grid')" id="btn-grid" title="Visualização em Grade">
+                    ⊞
+                </button>
+                <button class="fm-btn fm-btn-icon" onclick="toggleView('list')" id="btn-list" title="Visualização em Lista">
+                    ☰
+                </button>
+                <input type="file" id="fm-upload-input" multiple style="display: none;" onchange="handleUpload(this.files)">
+            </div>
+
+            <!-- Breadcrumbs -->
+            <div class="fm-breadcrumbs" id="fm-breadcrumbs">
+                <span class="fm-breadcrumb-item" onclick="navigateTo('/')">🏠 Início</span>
+            </div>
+
+            <!-- Conteúdo -->
+            <div class="fm-content" id="fm-content">
+                <div class="fm-loading" id="fm-loading">Carregando arquivos...</div>
+                <div class="fm-empty" id="fm-empty" style="display: none;">
+                    <div style="font-size: 64px; margin-bottom: 20px;">📂</div>
+                    <p>Nenhum arquivo encontrado</p>
+                </div>
+                <div class="fm-grid" id="fm-grid" style="display: none;"></div>
+                <div class="fm-list" id="fm-list" style="display: none;"></div>
+            </div>
+
+            <!-- Status Bar -->
+            <div class="fm-statusbar">
+                <span id="fm-status-count">0 itens</span>
+                <span id="fm-status-view">Grade</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    let currentView = 'grid';
+    let allFiles = [];
+
+    console.log('🚀 FM-LAB v2.0 - Script carregado');
+
+    // Chamar loadFiles após 500ms para garantir que o DOM está pronto
+    setTimeout(() => {
+        console.log('⏰ Timeout disparado, chamando loadFiles...');
+        loadFiles();
+    }, 500);
+
+    async function loadFiles() {
+        console.log('📂 loadFiles() chamado');
+        
+        const loading = document.getElementById('fm-loading');
+        const empty = document.getElementById('fm-empty');
+        const grid = document.getElementById('fm-grid');
+        const list = document.getElementById('fm-list');
+
+        if (!loading) {
+            console.error('❌ Elemento #fm-loading não encontrado!');
+            return;
+        }
+
+        loading.style.display = 'block';
+        if (empty) empty.style.display = 'none';
+        if (grid) grid.style.display = 'none';
+        if (list) list.style.display = 'none';
+
+        try {
+            console.log('📡 Fazendo fetch em /api/files/list...');
+            const res = await fetch('/api/files/list');
+            console.log('📡 Status da resposta:', res.status);
+            
+            const data = await res.json();
+            console.log('📦 Dados brutos recebidos:', data);
+
+            // CORREÇÃO: Aceitar array direto OU objeto com .files
+            let filesArray = [];
+            if (Array.isArray(data)) {
+                filesArray = data;
+                console.log('✅ Formato detectado: Array direto');
+            } else if (data && Array.isArray(data.files)) {
+                filesArray = data.files;
+                console.log('✅ Formato detectado: Objeto com data.files');
+            } else if (data && data.success && Array.isArray(data.files)) {
+                filesArray = data.files;
+                console.log('✅ Formato detectado: Objeto com data.success e data.files');
+            }
+
+            console.log('📊 Total de arquivos processados:', filesArray.length);
+
+            if (filesArray.length > 0) {
+                allFiles = filesArray;
+                renderFiles();
+            } else {
+                console.log('⚠️ Nenhum arquivo encontrado');
+                if (empty) empty.style.display = 'block';
+            }
+        } catch (err) {
+            console.error('❌ Erro ao carregar arquivos:', err);
+            if (empty) empty.style.display = 'block';
+        } finally {
+            if (loading) loading.style.display = 'none';
+        }
+    }
+
+    function renderFiles() {
+        console.log('🎨 renderFiles() chamado, view:', currentView);
+        
+        const grid = document.getElementById('fm-grid');
+        const list = document.getElementById('fm-list');
+        const empty = document.getElementById('fm-empty');
+
+        if (allFiles.length === 0) {
+            if (empty) empty.style.display = 'block';
+            if (grid) grid.style.display = 'none';
+            if (list) list.style.display = 'none';
+            return;
+        }
+
+        if (empty) empty.style.display = 'none';
+
+        if (currentView === 'grid') {
+            if (grid) {
+                grid.style.display = 'grid';
+                grid.innerHTML = allFiles.map(file => `
+                    <div class="fm-file-card" onclick="selectFile(this)">
+                        <div class="fm-file-icon">${getFileIcon(file.name)}</div>
+                        <div class="fm-file-name">${file.name}</div>
+                    </div>
+                `).join('');
+            }
+            if (list) list.style.display = 'none';
+        } else {
+            if (list) {
+                list.style.display = 'flex';
+                list.innerHTML = allFiles.map(file => `
+                    <div class="fm-list-item" onclick="selectFile(this)">
+                        <div class="fm-list-icon">${getFileIcon(file.name)}</div>
+                        <div class="fm-list-name">${file.name}</div>
+                        <div class="fm-list-size">${formatSize(file.size)}</div>
+                    </div>
+                `).join('');
+            }
+            if (grid) grid.style.display = 'none';
+        }
+
+        const statusCount = document.getElementById('fm-status-count');
+        if (statusCount) statusCount.textContent = `${allFiles.length} itens`;
+    }
+
+    function toggleView(view) {
+        currentView = view;
+        const btnGrid = document.getElementById('btn-grid');
+        const btnList = document.getElementById('btn-list');
+        const statusView = document.getElementById('fm-status-view');
+        
+        if (btnGrid) btnGrid.style.background = view === 'grid' ? '#094771' : 'transparent';
+        if (btnList) btnList.style.background = view === 'list' ? '#094771' : 'transparent';
+        if (statusView) statusView.textContent = view === 'grid' ? 'Grade' : 'Lista';
+        
+        renderFiles();
+    }
+
+    function selectFile(element) {
+        document.querySelectorAll('.fm-file-card, .fm-list-item').forEach(el => el.classList.remove('selected'));
+        element.classList.add('selected');
+    }
+
+    function getFileIcon(filename) {
+        const ext = filename.split('.').pop().toLowerCase();
+        if (['jpg', 'jpeg', 'png', 'gif', 'svg'].includes(ext)) return '🖼️';
+        if (ext === 'pdf') return '📕';
+        if (ext === 'doc' || ext === 'docx') return '📘';
+        if (ext === 'py') return '🐍';
+        if (ext === 'js') return '⚡';
+        if (ext === 'html') return '🌐';
+        if (ext === 'css') return '🎨';
+        if (ext === 'json') return '📦';
+        if (ext === 'md') return '📝';
+        return '📄';
+    }
+
+    function formatSize(bytes) {
+        if (!bytes) return '-';
+        const sizes = ['B', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(1024));
+        return (bytes / Math.pow(1024, i)).toFixed(1) + ' ' + sizes[i];
+    }
+
+    // Inicializar visualização
+    toggleView('grid');
+</script>
+</body>
+</html>

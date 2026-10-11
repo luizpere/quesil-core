@@ -405,6 +405,280 @@
         font-size: 13px;
     }
 }
+
+/* ==========================================
+   THINKINOS TOAST NOTIFICATIONS (v2.1)
+   Posição: Inferior Direito (acima da Dock)
+   ========================================== */
+.thinkinos-toast-container {
+    position: fixed;
+    bottom: 110px; /* Acima da Dock (~80px) + margem */
+    right: 20px;
+    z-index: 99999;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    pointer-events: none;
+    max-height: calc(100vh - 200px);
+    overflow-y: auto;
+}
+
+.thinkinos-toast {
+    pointer-events: auto;
+    min-width: 280px;
+    max-width: 380px;
+    background: rgba(30, 30, 36, 0.95);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-left: 4px solid #3498db;
+    border-radius: 10px;
+    padding: 14px 18px;
+    color: #e0e0e0;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    font-size: 14px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transform: translateX(120%);
+    animation: slideInToast 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55) forwards;
+    transition: transform 0.3s ease;
+}
+
+.thinkinos-toast.hiding {
+    animation: slideOutToast 0.3s ease-in forwards;
+}
+
+.thinkinos-toast.success { border-left-color: #2ecc71; }
+.thinkinos-toast.success .toast-icon { color: #2ecc71; }
+
+.thinkinos-toast.error { border-left-color: #e74c3c; }
+.thinkinos-toast.error .toast-icon { color: #e74c3c; }
+
+.thinkinos-toast.warning { border-left-color: #f1c40f; }
+.thinkinos-toast.warning .toast-icon { color: #f1c40f; }
+
+.thinkinos-toast.info { border-left-color: #3498db; }
+.thinkinos-toast.info .toast-icon { color: #3498db; }
+
+.toast-icon { font-size: 20px; flex-shrink: 0; }
+.toast-message { flex-grow: 1; line-height: 1.4; }
+.toast-close { 
+    background: none; border: none; color: #888; 
+    cursor: pointer; font-size: 18px; padding: 0 4px; 
+    transition: color 0.2s;
+    line-height: 1;
+}
+.toast-close:hover { color: #fff; }
+
+@keyframes slideInToast {
+    from { transform: translateX(120%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes slideOutToast {
+    from { transform: translateX(0); opacity: 1; }
+    to { transform: translateX(120%); opacity: 0; }
+}
+
+/* Responsividade: em telas pequenas, vai para o topo */
+@media (max-width: 768px) {
+    .thinkinos-toast-container {
+        bottom: auto;
+        top: 80px;
+        right: 10px;
+        left: 10px;
+    }
+    .thinkinos-toast {
+        min-width: auto;
+        max-width: 100%;
+    }
+}
+
+
+/* ==========================================
+   THINKINOS GLOBAL SEARCH (Ctrl+K) v2.1
+   ========================================== */
+.search-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 100000;
+    display: none;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 15vh;
+    animation: fadeInOverlay 0.2s ease;
+}
+
+.search-overlay.active {
+    display: flex;
+}
+
+@keyframes fadeInOverlay {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.search-modal {
+    width: 90%;
+    max-width: 640px;
+    background: rgba(25, 25, 32, 0.95);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6);
+    overflow: hidden;
+    animation: slideDownModal 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideDownModal {
+    from { transform: translateY(-20px) scale(0.98); opacity: 0; }
+    to { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+.search-input-wrapper {
+    display: flex;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    gap: 12px;
+}
+
+.search-input-icon {
+    font-size: 20px;
+    opacity: 0.6;
+}
+
+.search-input {
+    flex-grow: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: #fff;
+    font-size: 16px;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+}
+
+.search-input::placeholder {
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.search-kbd {
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.6);
+    padding: 3px 8px;
+    border-radius: 5px;
+    font-size: 11px;
+    font-family: monospace;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.search-results {
+    max-height: 400px;
+    overflow-y: auto;
+    padding: 8px;
+}
+
+.search-results::-webkit-scrollbar {
+    width: 6px;
+}
+
+.search-results::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 3px;
+}
+
+.search-category {
+    padding: 8px 12px 4px;
+    font-size: 11px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.4);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.search-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.15s;
+    color: #e0e0e0;
+}
+
+.search-item:hover, .search-item.selected {
+    background: rgba(52, 152, 219, 0.2);
+}
+
+.search-item-icon {
+    font-size: 18px;
+    width: 24px;
+    text-align: center;
+}
+
+.search-item-content {
+    flex-grow: 1;
+    min-width: 0;
+}
+
+.search-item-title {
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.search-item-title mark {
+    background: rgba(241, 196, 15, 0.3);
+    color: #f1c40f;
+    padding: 0 2px;
+    border-radius: 2px;
+}
+
+.search-item-desc {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.5);
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.search-item-action {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.4);
+    font-family: monospace;
+}
+
+.search-empty {
+    padding: 30px 20px;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 14px;
+}
+
+.search-footer {
+    padding: 10px 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    display: flex;
+    gap: 16px;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.search-footer kbd {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: monospace;
+    margin-right: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
 </style>
 
     <!-- xterm.js para Terminal Web -->
@@ -964,6 +1238,366 @@ function refitTerminal() {
         font-size: 13px;
     }
 }
+
+/* ==========================================
+   THINKINOS TOAST NOTIFICATIONS (v2.1)
+   Posição: Inferior Direito (acima da Dock)
+   ========================================== */
+.thinkinos-toast-container {
+    position: fixed;
+    bottom: 110px; /* Acima da Dock (~80px) + margem */
+    right: 20px;
+    z-index: 99999;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    pointer-events: none;
+    max-height: calc(100vh - 200px);
+    overflow-y: auto;
+}
+
+.thinkinos-toast {
+    pointer-events: auto;
+    min-width: 280px;
+    max-width: 380px;
+    background: rgba(30, 30, 36, 0.95);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-left: 4px solid #3498db;
+    border-radius: 10px;
+    padding: 14px 18px;
+    color: #e0e0e0;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    font-size: 14px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transform: translateX(120%);
+    animation: slideInToast 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55) forwards;
+    transition: transform 0.3s ease;
+}
+
+.thinkinos-toast.hiding {
+    animation: slideOutToast 0.3s ease-in forwards;
+}
+
+.thinkinos-toast.success { border-left-color: #2ecc71; }
+.thinkinos-toast.success .toast-icon { color: #2ecc71; }
+
+.thinkinos-toast.error { border-left-color: #e74c3c; }
+.thinkinos-toast.error .toast-icon { color: #e74c3c; }
+
+.thinkinos-toast.warning { border-left-color: #f1c40f; }
+.thinkinos-toast.warning .toast-icon { color: #f1c40f; }
+
+.thinkinos-toast.info { border-left-color: #3498db; }
+.thinkinos-toast.info .toast-icon { color: #3498db; }
+
+.toast-icon { font-size: 20px; flex-shrink: 0; }
+.toast-message { flex-grow: 1; line-height: 1.4; }
+.toast-close { 
+    background: none; border: none; color: #888; 
+    cursor: pointer; font-size: 18px; padding: 0 4px; 
+    transition: color 0.2s;
+    line-height: 1;
+}
+.toast-close:hover { color: #fff; }
+
+@keyframes slideInToast {
+    from { transform: translateX(120%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes slideOutToast {
+    from { transform: translateX(0); opacity: 1; }
+    to { transform: translateX(120%); opacity: 0; }
+}
+
+/* Responsividade: em telas pequenas, vai para o topo */
+@media (max-width: 768px) {
+    .thinkinos-toast-container {
+        bottom: auto;
+        top: 80px;
+        right: 10px;
+        left: 10px;
+    }
+    .thinkinos-toast {
+        min-width: auto;
+        max-width: 100%;
+    }
+}
+
+
+/* ==========================================
+   THINKINOS GLOBAL SEARCH (Ctrl+K) v2.1
+   ========================================== */
+.search-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 100000;
+    display: none;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 15vh;
+    animation: fadeInOverlay 0.2s ease;
+}
+
+.search-overlay.active {
+    display: flex;
+}
+
+@keyframes fadeInOverlay {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.search-modal {
+    width: 90%;
+    max-width: 640px;
+    background: rgba(25, 25, 32, 0.95);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6);
+    overflow: hidden;
+    animation: slideDownModal 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideDownModal {
+    from { transform: translateY(-20px) scale(0.98); opacity: 0; }
+    to { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+.search-input-wrapper {
+    display: flex;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    gap: 12px;
+}
+
+.search-input-icon {
+    font-size: 20px;
+    opacity: 0.6;
+}
+
+.search-input {
+    flex-grow: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: #fff;
+    font-size: 16px;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+}
+
+.search-input::placeholder {
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.search-kbd {
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.6);
+    padding: 3px 8px;
+    border-radius: 5px;
+    font-size: 11px;
+    font-family: monospace;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.search-results {
+    max-height: 400px;
+    overflow-y: auto;
+    padding: 8px;
+}
+
+.search-results::-webkit-scrollbar {
+    width: 6px;
+}
+
+.search-results::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 3px;
+}
+
+.search-category {
+    padding: 8px 12px 4px;
+    font-size: 11px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.4);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.search-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.15s;
+    color: #e0e0e0;
+}
+
+.search-item:hover, .search-item.selected {
+    background: rgba(52, 152, 219, 0.2);
+}
+
+.search-item-icon {
+    font-size: 18px;
+    width: 24px;
+    text-align: center;
+}
+
+.search-item-content {
+    flex-grow: 1;
+    min-width: 0;
+}
+
+.search-item-title {
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.search-item-title mark {
+    background: rgba(241, 196, 15, 0.3);
+    color: #f1c40f;
+    padding: 0 2px;
+    border-radius: 2px;
+}
+
+.search-item-desc {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.5);
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.search-item-action {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.4);
+    font-family: monospace;
+}
+
+.search-empty {
+    padding: 30px 20px;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 14px;
+}
+
+.search-footer {
+    padding: 10px 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    display: flex;
+    gap: 16px;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.search-footer kbd {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: monospace;
+    margin-right: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+</style>
+<style>
+
+/* ==========================================
+   THINKINOS QUICK SETTINGS (Central de Controle)
+   ========================================== */
+.qs-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    z-index: 99998;
+    display: none;
+}
+.qs-overlay.active { display: block; }
+
+.qs-panel {
+    position: fixed;
+    top: 70px; /* Abaixo do header */
+    right: 20px;
+    width: 320px;
+    background: rgba(30, 30, 40, 0.95);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+    z-index: 99999;
+    transform: translateX(120%);
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.qs-panel.active { transform: translateX(0); }
+
+.qs-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.qs-header h3 { margin: 0; font-size: 16px; color: #fff; font-weight: 600; }
+.qs-close {
+    background: none; border: none; color: #888;
+    font-size: 20px; cursor: pointer; transition: color 0.2s;
+}
+.qs-close:hover { color: #fff; }
+
+.qs-section { padding: 16px 20px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
+.qs-section-title {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 1px;
+    color: rgba(255, 255, 255, 0.4); margin-bottom: 12px; font-weight: 600;
+}
+
+.qs-metrics { display: flex; justify-content: space-between; gap: 10px; }
+.qs-metric-card {
+    flex: 1; background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px; padding: 12px 8px; text-align: center;
+}
+.qs-metric-value { font-size: 18px; font-weight: 700; color: #3498db; margin-bottom: 4px; }
+.qs-metric-label { font-size: 11px; color: rgba(255, 255, 255, 0.6); }
+
+.qs-actions { display: flex; flex-direction: column; gap: 8px; }
+.qs-action-btn {
+    display: flex; align-items: center; gap: 12px;
+    background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 10px; padding: 12px 16px; color: #e0e0e0;
+    text-decoration: none; font-size: 14px; cursor: pointer;
+    transition: all 0.2s; width: 100%; text-align: left;
+}
+.qs-action-btn:hover {
+    background: rgba(52, 152, 219, 0.15);
+    border-color: rgba(52, 152, 219, 0.3);
+    color: #fff;
+}
+.qs-action-btn.danger:hover {
+    background: rgba(231, 76, 60, 0.15);
+    border-color: rgba(231, 76, 60, 0.3);
+}
+.qs-action-icon { font-size: 18px; width: 24px; text-align: center; }
+
+.qs-footer {
+    padding: 12px 20px; text-align: center;
+    font-size: 11px; color: rgba(255, 255, 255, 0.3);
+}
+
 </style>
 </head>
 <body>
@@ -972,7 +1606,8 @@ function refitTerminal() {
         <div class="header-right">
             <div class="header-right">
             <div id="clock" class="clock-display">00:00:00</div>
-            <a href="/portal/docs" target="_blank" class="btn-docs">📖 Documentação</a>
+            <button onclick="toggleQuickSettings()" style="background: rgba(52, 152, 219, 0.15); border: 1px solid rgba(52, 152, 219, 0.3); color: #fff; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 500; transition: all 0.2s; margin-right: 8px;" onmouseover="this.style.background='rgba(52, 152, 219, 0.25)'" onmouseout="this.style.background='rgba(52, 152, 219, 0.15)'">Controle</button>
+            <a href="/portal/docs" target="_blank" class="btn-docs">Documentação</a>
             <button class="btn-logout" onclick="location.href='/logout'">Sair</button>
         </div>
     </header>
@@ -984,6 +1619,10 @@ function refitTerminal() {
     <!-- DOCK -->
     <div class="dock">
         <a class="dock-item" href="/desktop"><span class="dock-icon">🏠</span><span class="dock-label">Início</span></a>
+        <a class="dock-item" href="/system" title="Dashboard de Métricas do Sistema">
+            <span class="dock-icon">📊</span>
+            <span class="dock-label">Métricas</span>
+        </a>
         <a class="dock-item" onclick="openFM()"><span class="dock-icon">📁</span><span class="dock-label">Arquivos</span></a>
         <a class="dock-item" onclick="openChat('Ana')"><span class="dock-icon">💬</span><span class="dock-label">Chat</span></a>
         <a class="dock-item" href="/perfil"><span class="dock-icon">👤</span><span class="dock-label">Perfil</span></a>
@@ -1504,31 +2143,7 @@ function refitTerminal() {
 <!-- Iframe para o terminal -->
 <iframe id="terminal-iframe" style="display: none; width: 1200px; height: 700px; border: none; position: fixed; top: 0; left: 0; z-index: 9999;"></iframe>
 
-<script>
-// Injetar Card Dashboard Dinamicamente
-document.addEventListener('DOMContentLoaded', () => {
-    // Procurar a grid de cards principal
-    const grid = document.querySelector('.cards-grid') || document.querySelector('.grid') || document.querySelector('#app-grid');
-    
-    if (grid) {
-        const dashCard = document.createElement('div');
-        dashCard.className = 'card';
-        dashCard.style.cursor = 'pointer';
-        dashCard.style.border = '1px solid #00ff00';
-        dashCard.onclick = () => window.location.href = '/dashboard';
-        
-        dashCard.innerHTML = `
-            <div class="card-icon" style="font-size: 24px; margin-bottom: 10px;"></div>
-            <h3 style="margin: 0 0 5px 0; color: #00ff00;">Métricas</h3>
-        `;
-        
-        grid.appendChild(dashCard);
-        console.log("✅ Card Dashboard injetado via JS");
-    } else {
-        console.warn("⚠️ Grid de cards não encontrada para injetar Dashboard");
-    }
-});
-</script>
+
 
 
 
@@ -2072,6 +2687,280 @@ function showToast(message, type = 'info', duration = 3000) {
         font-size: 13px;
     }
 }
+
+/* ==========================================
+   THINKINOS TOAST NOTIFICATIONS (v2.1)
+   Posição: Inferior Direito (acima da Dock)
+   ========================================== */
+.thinkinos-toast-container {
+    position: fixed;
+    bottom: 110px; /* Acima da Dock (~80px) + margem */
+    right: 20px;
+    z-index: 99999;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    pointer-events: none;
+    max-height: calc(100vh - 200px);
+    overflow-y: auto;
+}
+
+.thinkinos-toast {
+    pointer-events: auto;
+    min-width: 280px;
+    max-width: 380px;
+    background: rgba(30, 30, 36, 0.95);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-left: 4px solid #3498db;
+    border-radius: 10px;
+    padding: 14px 18px;
+    color: #e0e0e0;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    font-size: 14px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transform: translateX(120%);
+    animation: slideInToast 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55) forwards;
+    transition: transform 0.3s ease;
+}
+
+.thinkinos-toast.hiding {
+    animation: slideOutToast 0.3s ease-in forwards;
+}
+
+.thinkinos-toast.success { border-left-color: #2ecc71; }
+.thinkinos-toast.success .toast-icon { color: #2ecc71; }
+
+.thinkinos-toast.error { border-left-color: #e74c3c; }
+.thinkinos-toast.error .toast-icon { color: #e74c3c; }
+
+.thinkinos-toast.warning { border-left-color: #f1c40f; }
+.thinkinos-toast.warning .toast-icon { color: #f1c40f; }
+
+.thinkinos-toast.info { border-left-color: #3498db; }
+.thinkinos-toast.info .toast-icon { color: #3498db; }
+
+.toast-icon { font-size: 20px; flex-shrink: 0; }
+.toast-message { flex-grow: 1; line-height: 1.4; }
+.toast-close { 
+    background: none; border: none; color: #888; 
+    cursor: pointer; font-size: 18px; padding: 0 4px; 
+    transition: color 0.2s;
+    line-height: 1;
+}
+.toast-close:hover { color: #fff; }
+
+@keyframes slideInToast {
+    from { transform: translateX(120%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes slideOutToast {
+    from { transform: translateX(0); opacity: 1; }
+    to { transform: translateX(120%); opacity: 0; }
+}
+
+/* Responsividade: em telas pequenas, vai para o topo */
+@media (max-width: 768px) {
+    .thinkinos-toast-container {
+        bottom: auto;
+        top: 80px;
+        right: 10px;
+        left: 10px;
+    }
+    .thinkinos-toast {
+        min-width: auto;
+        max-width: 100%;
+    }
+}
+
+
+/* ==========================================
+   THINKINOS GLOBAL SEARCH (Ctrl+K) v2.1
+   ========================================== */
+.search-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 100000;
+    display: none;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 15vh;
+    animation: fadeInOverlay 0.2s ease;
+}
+
+.search-overlay.active {
+    display: flex;
+}
+
+@keyframes fadeInOverlay {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.search-modal {
+    width: 90%;
+    max-width: 640px;
+    background: rgba(25, 25, 32, 0.95);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6);
+    overflow: hidden;
+    animation: slideDownModal 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideDownModal {
+    from { transform: translateY(-20px) scale(0.98); opacity: 0; }
+    to { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+.search-input-wrapper {
+    display: flex;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    gap: 12px;
+}
+
+.search-input-icon {
+    font-size: 20px;
+    opacity: 0.6;
+}
+
+.search-input {
+    flex-grow: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: #fff;
+    font-size: 16px;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+}
+
+.search-input::placeholder {
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.search-kbd {
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.6);
+    padding: 3px 8px;
+    border-radius: 5px;
+    font-size: 11px;
+    font-family: monospace;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.search-results {
+    max-height: 400px;
+    overflow-y: auto;
+    padding: 8px;
+}
+
+.search-results::-webkit-scrollbar {
+    width: 6px;
+}
+
+.search-results::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 3px;
+}
+
+.search-category {
+    padding: 8px 12px 4px;
+    font-size: 11px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.4);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.search-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.15s;
+    color: #e0e0e0;
+}
+
+.search-item:hover, .search-item.selected {
+    background: rgba(52, 152, 219, 0.2);
+}
+
+.search-item-icon {
+    font-size: 18px;
+    width: 24px;
+    text-align: center;
+}
+
+.search-item-content {
+    flex-grow: 1;
+    min-width: 0;
+}
+
+.search-item-title {
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.search-item-title mark {
+    background: rgba(241, 196, 15, 0.3);
+    color: #f1c40f;
+    padding: 0 2px;
+    border-radius: 2px;
+}
+
+.search-item-desc {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.5);
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.search-item-action {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.4);
+    font-family: monospace;
+}
+
+.search-empty {
+    padding: 30px 20px;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 14px;
+}
+
+.search-footer {
+    padding: 10px 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    display: flex;
+    gap: 16px;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.search-footer kbd {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: monospace;
+    margin-right: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
 </style>
 <script>
 // === GERENCIADOR DE ARQUIVOS - VERSÃO LIMPA SEM ESCAPES ===
@@ -2332,6 +3221,384 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 <!-- FIM GERENCIADOR DE ARQUIVOS -->
+
+
+<!-- ThinkinOS Toast Notification Container (Inferior Direito) -->
+<div id="toast-container" class="thinkinos-toast-container"></div>
+
+
+<script>
+// ==========================================
+// THINKINOS TOAST NOTIFICATION SYSTEM v2.1
+// ==========================================
+window.showNotification = function(message, type = 'info', duration = 4000) {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+
+    const icons = {
+        success: '✅',
+        error: '❌',
+        warning: '⚠️',
+        info: 'ℹ️'
+    };
+
+    const toast = document.createElement('div');
+    toast.className = `thinkinos-toast ${type}`;
+    toast.innerHTML = `
+        <span class="toast-icon">${icons[type] || icons.info}</span>
+        <span class="toast-message">${message}</span>
+        <button class="toast-close" onclick="this.parentElement.remove()">×</button>
+    `;
+
+    container.appendChild(toast);
+
+    setTimeout(() => {
+        toast.classList.add('hiding');
+        setTimeout(() => {
+            if (toast.parentElement) toast.parentElement.removeChild(toast);
+        }, 300);
+    }, duration);
+};
+
+// Teste inicial
+document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(() => {
+        showNotification('Sistema de Notificações ThinkinOS v2.1 ativado!', 'success');
+    }, 1500);
+});
+</script>
+
+
+<!-- ThinkinOS Global Search Modal (Ctrl+K) -->
+<div id="search-overlay" class="search-overlay">
+    <div class="search-modal">
+        <div class="search-input-wrapper">
+            <span class="search-input-icon">🔍</span>
+            <input type="text" id="search-input" class="search-input" placeholder="Buscar assistentes, ações, páginas..." autocomplete="off">
+            <span class="search-kbd">ESC</span>
+        </div>
+        <div id="search-results" class="search-results"></div>
+        <div class="search-footer">
+            <span><kbd>↑↓</kbd> Navegar</span>
+            <span><kbd>↵</kbd> Abrir</span>
+            <span><kbd>ESC</kbd> Fechar</span>
+        </div>
+    </div>
+</div>
+
+
+<script>
+// ==========================================
+// THINKINOS GLOBAL SEARCH (Ctrl+K) v2.1
+// ==========================================
+(function() {
+    // Base de dados de itens buscáveis
+    const searchItems = [
+        // Assistentes
+        { category: 'Assistentes', icon: '🧠', title: 'Pedro (Lógica)', desc: 'Especialista em análise e lógica', action: () => openChat('Pedro') },
+        { category: 'Assistentes', icon: '', title: 'Ana (Pessoal)', desc: 'Assistente pessoal amigável', action: () => openChat('Ana') },
+        { category: 'Assistentes', icon: '', title: 'Lena (Produtividade)', desc: 'Mentora de produtividade', action: () => openChat('Lena') },
+        { category: 'Assistentes', icon: '🤖', title: 'ThinkinIA (Núcleo)', desc: 'Cérebro central do sistema', action: () => openChat('ThinkinIA') },
+        { category: 'Assistentes', icon: '📊', title: 'Carlos (Analytics)', desc: 'Especialista em analytics', action: () => openChat('Carlos') },
+        { category: 'Assistentes', icon: '🐍', title: 'Mentor Python (Código)', desc: 'Especialista em Python', action: () => openChat('Mentor Python') },
+        { category: 'Assistentes', icon: '🔍', title: 'Sherlock', desc: 'Investigação e análise lógica', action: () => openChat('Sherlock') },
+        { category: 'Assistentes', icon: '💻', title: 'Dev', desc: 'Programação e debug', action: () => openChat('Dev') },
+        { category: 'Assistentes', icon: '✍️', title: 'Redator', desc: 'Comunicação e criação de textos', action: () => openChat('Redator') },
+        { category: 'Assistentes', icon: '', title: 'Tradutor', desc: 'Idiomas e adaptação cultural', action: () => openChat('Tradutor') },
+        { category: 'Assistentes', icon: '⚖️', title: 'Lex (Jurídico)', desc: 'Assistente jurídico', action: () => openChat('Lex') },
+        
+        // Sistema
+        { category: 'Sistema', icon: '🏠', title: 'Início', desc: 'Voltar ao Desktop', action: () => window.location.href = '/desktop' },
+        { category: 'Sistema', icon: '📊', title: 'Métricas do Sistema', desc: 'CPU, RAM e Disco em tempo real', action: () => window.location.href = '/system' },
+        { category: 'Sistema', icon: '📁', title: 'Gerenciador de Arquivos', desc: 'Explorar arquivos e pastas', action: () => { if (typeof openFM === 'function') openFM(); } },
+        { category: 'Sistema', icon: '💬', title: 'Chat', desc: 'Abrir conversa com assistente', action: () => { if (typeof openChat === 'function') openChat('Ana'); } },
+        { category: 'Sistema', icon: '👤', title: 'Perfil', desc: 'Configurações do usuário', action: () => window.location.href = '/perfil' },
+        { category: 'Sistema', icon: '⚙️', title: 'Gestão', desc: 'Painel de gestão', action: () => window.location.href = '/gestao' },
+        { category: 'Sistema', icon: '', title: 'Máquinas Virtuais', desc: 'Gerenciar VMs', action: () => window.location.href = '/vm' },
+        { category: 'Sistema', icon: '️', title: 'Terminal', desc: 'Terminal local', action: () => { if (typeof openTerminal === 'function') openTerminal('local', 'Terminal Local'); } },
+        { category: 'Sistema', icon: '📝', title: 'Editor de Código', desc: 'Editor Monaco', action: () => window.open('/editor', '_blank') },
+        { category: 'Sistema', icon: '🌐', title: 'Browser', desc: 'Navegação protegida', action: () => window.location.href = '/browser' },
+        
+        // Portal
+        { category: 'Portal', icon: '📖', title: 'Documentação', desc: 'Documentação oficial do ThinkinOS', action: () => window.location.href = '/portal/docs' },
+        { category: 'Portal', icon: '📰', title: 'Blog', desc: 'Notícias e artigos sobre IA', action: () => window.location.href = '/portal/blog' },
+        { category: 'Portal', icon: '🎓', title: 'Tutoriais', desc: 'Guias práticos', action: () => window.location.href = '/portal/tutorials' },
+        { category: 'Portal', icon: '🧩', title: 'Marketplace de Plugins', desc: 'Extensões e plugins', action: () => window.location.href = '/portal/plugins' },
+        { category: 'Portal', icon: '🤝', title: 'Comunidade', desc: 'Contribua com o projeto', action: () => window.location.href = '/portal/contribute' },
+    ];
+
+    const overlay = document.getElementById('search-overlay');
+    const input = document.getElementById('search-input');
+    const resultsContainer = document.getElementById('search-results');
+    let selectedIndex = -1;
+    let currentResults = [];
+
+    function openSearch() {
+        overlay.classList.add('active');
+        input.value = '';
+        selectedIndex = -1;
+        renderResults(searchItems);
+        setTimeout(() => input.focus(), 50);
+    }
+
+    function closeSearch() {
+        overlay.classList.remove('active');
+        input.value = '';
+        resultsContainer.innerHTML = '';
+    }
+
+    function highlightText(text, query) {
+        if (!query) return text;
+        const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+        return text.replace(regex, '<mark>$1</mark>');
+    }
+
+    function renderResults(items, query = '') {
+        if (items.length === 0) {
+            resultsContainer.innerHTML = '<div class="search-empty">Nenhum resultado encontrado</div>';
+            currentResults = [];
+            return;
+        }
+
+        let html = '';
+        let currentCategory = '';
+        currentResults = [];
+
+        items.forEach((item, index) => {
+            if (item.category !== currentCategory) {
+                currentCategory = item.category;
+                html += `<div class="search-category">${currentCategory}</div>`;
+            }
+            currentResults.push(item);
+            html += `
+                <div class="search-item ${index === selectedIndex ? 'selected' : ''}" data-index="${index}">
+                    <span class="search-item-icon">${item.icon}</span>
+                    <div class="search-item-content">
+                        <div class="search-item-title">${highlightText(item.title, query)}</div>
+                        <div class="search-item-desc">${highlightText(item.desc, query)}</div>
+                    </div>
+                </div>
+            `;
+        });
+
+        resultsContainer.innerHTML = html;
+
+        // Adicionar listeners de clique
+        resultsContainer.querySelectorAll('.search-item').forEach(el => {
+            el.addEventListener('click', () => {
+                const idx = parseInt(el.dataset.index);
+                if (currentResults[idx] && currentResults[idx].action) {
+                    closeSearch();
+                    currentResults[idx].action();
+                }
+            });
+        });
+    }
+
+    function filterResults(query) {
+        const q = query.toLowerCase().trim();
+        if (!q) {
+            selectedIndex = -1;
+            renderResults(searchItems);
+            return;
+        }
+
+        const filtered = searchItems.filter(item => 
+            item.title.toLowerCase().includes(q) || 
+            item.desc.toLowerCase().includes(q) ||
+            item.category.toLowerCase().includes(q)
+        );
+
+        selectedIndex = filtered.length > 0 ? 0 : -1;
+        renderResults(filtered, q);
+    }
+
+    // Listener de digitação
+    input.addEventListener('input', (e) => filterResults(e.target.value));
+
+    // Navegação por teclado
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            if (selectedIndex < currentResults.length - 1) {
+                selectedIndex++;
+                updateSelection();
+            }
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            if (selectedIndex > 0) {
+                selectedIndex--;
+                updateSelection();
+            }
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            if (selectedIndex >= 0 && currentResults[selectedIndex]) {
+                const item = currentResults[selectedIndex];
+                closeSearch();
+                if (item.action) item.action();
+            }
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            closeSearch();
+        }
+    });
+
+    function updateSelection() {
+        const items = resultsContainer.querySelectorAll('.search-item');
+        items.forEach((el, idx) => {
+            el.classList.toggle('selected', idx === selectedIndex);
+        });
+        // Scroll para o item selecionado
+        if (items[selectedIndex]) {
+            items[selectedIndex].scrollIntoView({ block: 'nearest' });
+        }
+    }
+
+    // Fechar ao clicar fora
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) closeSearch();
+    });
+
+    // Atalho Ctrl+K / Cmd+K
+    document.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+            e.preventDefault();
+            if (overlay.classList.contains('active')) {
+                closeSearch();
+            } else {
+                openSearch();
+            }
+        }
+    });
+
+    console.log('✅ Busca Global Ctrl+K inicializada com ' + searchItems.length + ' itens');
+})();
+</script>
+
+
+<!-- ThinkinOS Quick Settings Panel -->
+<div id="qs-overlay" class="qs-overlay"></div>
+<div id="qs-panel" class="qs-panel">
+    <div class="qs-header">
+        <h3>⚡ Central de Controle</h3>
+        <button class="qs-close" onclick="toggleQuickSettings()">×</button>
+    </div>
+    
+    <div class="qs-section">
+        <div class="qs-section-title">Métricas Rápidas</div>
+        <div class="qs-metrics">
+            <div class="qs-metric-card">
+                <div class="qs-metric-value" id="qs-cpu">--%</div>
+                <div class="qs-metric-label">CPU</div>
+            </div>
+            <div class="qs-metric-card">
+                <div class="qs-metric-value" id="qs-ram">--%</div>
+                <div class="qs-metric-label">RAM</div>
+            </div>
+            <div class="qs-metric-card">
+                <div class="qs-metric-value" id="qs-disk">--%</div>
+                <div class="qs-metric-label">Disco</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="qs-section">
+        <div class="qs-section-title">Ações Rápidas</div>
+        <div class="qs-actions">
+            <a href="/system" class="qs-action-btn">
+                <span class="qs-action-icon">📊</span>
+                <span>Dashboard Completo</span>
+            </a>
+            <a href="/perfil" class="qs-action-btn">
+                <span class="qs-action-icon">👤</span>
+                <span>Meu Perfil</span>
+            </a>
+            <a href="/gestao" class="qs-action-btn">
+                <span class="qs-action-icon">⚙️</span>
+                <span>Gestão do Sistema</span>
+            </a>
+            <button class="qs-action-btn danger" onclick="window.location.href='/logout'">
+                <span class="qs-action-icon">🚪</span>
+                <span>Sair do ThinkinOS</span>
+            </button>
+        </div>
+    </div>
+
+    <div class="qs-footer">
+        ThinkinOS v2.1 • Build Estável
+    </div>
+</div>
+
+
+<script>
+// ==========================================
+// THINKINOS QUICK SETTINGS LOGIC
+// ==========================================
+(function() {
+    const panel = document.getElementById('qs-panel');
+    const overlay = document.getElementById('qs-overlay');
+    let isOpen = false;
+
+    window.toggleQuickSettings = function() {
+        isOpen = !isOpen;
+        if (isOpen) {
+            panel.classList.add('active');
+            overlay.classList.add('active');
+            fetchQuickMetrics(); // Atualiza métricas ao abrir
+        } else {
+            panel.classList.remove('active');
+            overlay.classList.remove('active');
+        }
+    };
+
+    // Fechar ao clicar no overlay
+    overlay.addEventListener('click', function() {
+        if (isOpen) toggleQuickSettings();
+    });
+
+    // Fechar com ESC
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && isOpen) {
+            toggleQuickSettings();
+        }
+        // Atalho Ctrl + , (vírgula)
+        if ((e.ctrlKey || e.metaKey) && e.key === ',') {
+            e.preventDefault();
+            toggleQuickSettings();
+        }
+    });
+
+    // Buscar métricas rápidas
+    async function fetchQuickMetrics() {
+    try {
+        const response = await fetch('/api/system/metrics');
+        const data = await response.json();
+        console.log("📊 Dados brutos recebidos da API:", data);
+        
+        // Função inteligente para extrair porcentagem de qualquer formato
+        const getPct = (val) => {
+            if (typeof val === 'number') return val.toFixed(1);
+            if (typeof val === 'object' && val !== null) {
+                return (val.percent || val.usage || val.value || 0).toFixed(1);
+            }
+            return '--';
+        };
+
+        document.getElementById('qs-cpu').textContent = getPct(data.cpu) + '%';
+        document.getElementById('qs-ram').textContent = getPct(data.ram) + '%';
+        document.getElementById('qs-disk').textContent = getPct(data.disk) + '%';
+    } catch (err) {
+        console.error('❌ Erro ao buscar métricas:', err);
+        document.getElementById('qs-cpu').textContent = 'N/A';
+        document.getElementById('qs-ram').textContent = 'N/A';
+        document.getElementById('qs-disk').textContent = 'N/A';
+    }
+}
+
+    console.log('✅ Central de Controle (Quick Settings) inicializada');
+})();
+</script>
+
 
 </body>
 </html>

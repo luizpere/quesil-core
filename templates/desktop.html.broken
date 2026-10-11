@@ -1,0 +1,1927 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <meta name="version" content="1789321864">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ThinkinOS v2.0</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            background: #0a0a0a; 
+            color: #fff; 
+            font-family: 'Segoe UI', sans-serif; 
+            min-height: 100vh;
+            padding-bottom: 100px;
+        }
+        .header { 
+            padding: 20px; 
+            border-bottom: 1px solid #333;
+            position: relative;
+        }
+        .logout-btn { 
+            position: absolute; 
+            top: 20px; 
+            right: 20px; 
+            background: #f44336; 
+            color: white; 
+            padding: 10px 20px; 
+            border: none; 
+            border-radius: 4px; 
+            cursor: pointer; 
+        }
+        .grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); 
+            gap: 12px; 
+            padding: 20px; 
+        }
+        .card { 
+            background: #1a1a1a; 
+            border-radius: 8px; 
+            padding: 20px; 
+            border-left: 4px solid #4caf50; 
+            cursor: pointer; 
+            transition: transform 0.2s; 
+        }
+        .card:hover { transform: translateY(-5px); }
+        .card-header { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            margin-bottom: 10px; 
+        }
+        .card-title { font-size: 1.5em; font-weight: bold; }
+        .card-category { color: #4caf50; font-size: 0.9em; margin-bottom: 10px; }
+        .card-desc { color: #888; font-size: 0.95em; line-height: 1.5; }
+        
+        /* DOCK HORIZONTAL */
+        .dock {
+            position: fixed !important;
+            bottom: 20px !important;
+            left: 50% !important;
+            transform: translateX(-50%) !important;
+            background: rgba(30, 30, 30, 0.95) !important;
+            border-radius: 16px !important;
+            padding: 10px 20px !important;
+            display: flex !important;
+            flex-direction: row !important;
+            gap: 10px !important;
+            z-index: 100 !important;
+            border: 1px solid #444 !important;
+        }
+        .dock-item {
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            cursor: pointer !important;
+            padding: 8px 12px !important;
+            border-radius: 8px !important;
+            color: #fff !important;
+            text-decoration: none !important;
+        }
+        .dock-item:hover { background: rgba(255,255,255,0.15) !important; }
+        .dock-icon { font-size: 1.8em !important; }
+        .dock-label { font-size: 0.75em !important; margin-top: 4px !important; }
+        
+        /* MODAL VM */
+        .vm-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7);
+            z-index: 1000;
+        }
+        .vm-overlay.active { display: block; }
+        .vm-modal {
+            display: none;
+            position: fixed;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            background: #1a1a1a;
+            border-radius: 12px;
+            padding: 20px;
+            max-width: 900px; max-height: 80vh; overflow-y: auto;
+            width: 90%;
+            z-index: 1001;
+            border: 1px solid #444;
+        }
+        .vm-modal.active { display: block; }
+        .vm-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #333;
+        }
+        .close-btn { background: none; border: none; color: #fff; font-size: 2em; cursor: pointer; }
+        .vm-actions { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+        .vm-list { background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; min-height: 100px; }
+        .vm-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #333;
+        }
+        .status-running { color: #4caf50; }
+        .status-exited { color: #f44336; }
+        .btn { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; margin: 5px; }
+        .btn-primary { background: #2196F3; color: white; }
+        .btn-danger { background: #f44336; color: white; }
+    
+/* Glassmorphism Effects */
+.vm-modal {
+    background: rgba(30, 30, 40, 0.95) !important;
+    /* backdrop-filter: blur */(20px) !important;
+    -webkit-/* backdrop-filter: blur */(20px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 
+                inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+}
+
+#chat-modal {
+    background: #14141e !important;
+    /* backdrop-filter: blur */(20px) !important;
+    -webkit-/* backdrop-filter: blur */(20px) !important;
+    border: 1px solid rgba(100, 150, 255, 0.2) !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6),
+                0 0 60px rgba(100, 150, 255, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+}
+
+.vm-overlay {
+    background: rgba(0, 0, 0, 0.65) !important;
+    /* backdrop-filter: blur */(4px) !important;
+    -webkit-/* backdrop-filter: blur */(4px) !important;
+}
+
+/* Chat Messages com Glassmorphism */
+#chat-messages {
+    background: rgba(10, 10, 20, 0.6) !important;
+    /* backdrop-filter: blur */(10px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.05) !important;
+    box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Input do Chat */
+#chat-input {
+    background: rgba(30, 30, 40, 0.8) !important;
+    /* backdrop-filter: blur */(10px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Botões com Glassmorphism */
+.btn-primary {
+    background: linear-gradient(135deg, rgba(33, 150, 243, 0.8), rgba(33, 150, 243, 0.6)) !important;
+    /* backdrop-filter: blur */(10px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    box-shadow: 0 4px 15px rgba(33, 150, 243, 0.3) !important;
+    /* transition removida */ !important;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, rgba(33, 150, 243, 0.9), rgba(33, 150, 243, 0.7)) !important;
+    box-shadow: 0 6px 20px rgba(33, 150, 243, 0.4) !important;
+    /* transform removida */ !important;
+}
+
+/* VM List com Glassmorphism */
+.vm-list {
+    background: rgba(0, 0, 0, 0.65) !important;
+    /* backdrop-filter: blur */(10px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.05) !important;
+}
+
+.vm-row {
+    background: rgba(255, 255, 255, 0.02) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+    transition: background 0.2s ease !important;
+}
+
+.vm-row:hover {
+    background: rgba(255, 255, 255, 0.05) !important;
+}
+
+/* Terminal Container */
+#terminal-container {
+    background: rgba(0, 0, 0, 0.75) !important;
+    backdrop-filter: blur(10px) !important;
+    -webkit-backdrop-filter: blur(10px) !important;
+    box-shadow: inset 0 2px 20px rgba(0, 0, 0, 0.5) !important;
+    min-height: 500px !important;
+    width: 100% !important;
+    padding: 10px !important;
+    border-radius: 4px !important;
+    box-sizing: border-box !important;
+}
+
+.xterm {
+    padding: 10px !important;
+    height: 100% !important;
+}
+
+.xterm-viewport {
+    overflow-y: auto !important;
+}
+
+/* Modal Header */
+.vm-header {
+    background: rgba(255, 255, 255, 0.03) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+
+
+        /* Forçar grid correto para todos os cards, sobrescrevendo inline styles se necessário */
+        .grid .card, .cards-grid .card, #app-grid .card, .card {
+            border-left: 4px solid var(--primary-color, #4caf50) !important;
+            border-top: none !important;
+            border-right: none !important;
+            border-bottom: none !important;
+            box-sizing: border-box !important;
+        }
+
+
+    
+
+.fm-modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 90vw;
+    max-width: 1400px;
+    height: 85vh;
+    max-height: 900px;
+    background: #1a1a2e;
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.fm-modal.active { display: flex; }
+
+/* Header compacto */
+.fm-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 12px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.fm-header h2 {
+    color: white;
+    font-size: 18px;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.fm-close-btn {
+    background: rgba(255,255,255,0.2);
+    border: none;
+    color: white;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 18px;
+    transition: all 0.2s;
+}
+
+.fm-close-btn:hover {
+    background: rgba(255,255,255,0.3);
+    transform: scale(1.1);
+}
+
+/* Toolbar compacta */
+.fm-toolbar {
+    padding: 10px 20px;
+    background: rgba(255,255,255,0.05);
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    flex-shrink: 0;
+}
+
+.fm-btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 13px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.fm-btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.fm-btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.fm-btn-secondary {
+    background: rgba(255,255,255,0.1);
+    color: white;
+}
+
+.fm-btn-secondary:hover {
+    background: rgba(255,255,255,0.2);
+}
+
+/* Barra de busca e filtros compacta */
+.fm-filters {
+    padding: 8px 20px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    background: rgba(0,0,0,0.2);
+    flex-shrink: 0;
+}
+
+.fm-search {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 6px;
+    background: rgba(255,255,255,0.05);
+    color: white;
+    font-size: 13px;
+}
+
+.fm-search:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+.fm-sort {
+    padding: 8px 12px;
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 6px;
+    background: rgba(255,255,255,0.05);
+    color: white;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+/* Área de conteúdo - MAXIMIZADA */
+.fm-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 15px 20px;
+    min-height: 0;
+}
+
+/* Grid de arquivos - Mais compacto e eficiente */
+.fm-files-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 12px;
+}
+
+/* Cards de arquivos - Mais informativos */
+.fm-file-card {
+    background: rgba(255,255,255,0.05);
+    border-radius: 8px;
+    padding: 12px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 2px solid transparent;
+    position: relative;
+}
+
+.fm-file-card:hover {
+    background: rgba(255,255,255,0.1);
+    transform: translateY(-3px);
+    border-color: #667eea;
+}
+
+.fm-file-icon {
+    font-size: 40px;
+    margin-bottom: 8px;
+}
+
+.fm-file-name {
+    color: white;
+    font-size: 12px;
+    word-break: break-word;
+    line-height: 1.3;
+    margin-bottom: 4px;
+}
+
+.fm-file-size {
+    color: rgba(255,255,255,0.6);
+    font-size: 11px;
+}
+
+/* Loading e Empty State */
+.fm-loading, .fm-empty {
+    text-align: center;
+    padding: 60px 20px;
+    color: rgba(255,255,255,0.6);
+}
+
+.fm-loading { font-size: 16px; }
+.fm-empty { font-size: 14px; }
+
+/* Overlay */
+.fm-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.7);
+    z-index: 9999;
+}
+
+.fm-overlay.active { display: block; }
+
+/* Scrollbar personalizada */
+.fm-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.fm-content::-webkit-scrollbar-track {
+    background: rgba(0,0,0,0.2);
+}
+
+.fm-content::-webkit-scrollbar-thumb {
+    background: #667eea;
+    border-radius: 4px;
+}
+
+.fm-content::-webkit-scrollbar-thumb:hover {
+    background: #764ba2;
+}
+
+/* === FILE MANAGER v9.0 === */
+.fm-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.7);
+    z-index: 9999;
+}
+.fm-overlay.active { display: block !important; }
+
+.fm-modal {
+    display: none;
+    position: fixed;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 90vw; max-width: 1200px;
+    height: 80vh; max-height: 800px;
+    background: #2d2d30;
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+    z-index: 10000;
+    overflow: hidden;
+    color: #fff;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+.fm-modal.active { display: flex !important; }
+
+.fm-container {
+    display: flex;
+    height: 100%;
+    width: 100%;
+}
+
+.fm-sidebar {
+    width: 200px;
+    background: #252526;
+    border-right: 1px solid #3e3e42;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+}
+.fm-sidebar-header {
+    padding: 15px;
+    border-bottom: 1px solid #3e3e42;
+    font-weight: 600;
+    font-size: 14px;
+    color: #ccc;
+}
+.fm-sidebar-content { flex: 1; overflow-y: auto; padding: 10px 0; }
+.fm-sidebar-item {
+    padding: 10px 15px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    color: #ccc;
+    transition: background 0.2s;
+}
+.fm-sidebar-item:hover { background: rgba(255,255,255,0.1); color: #fff; }
+.fm-sidebar-item.active { background: #094771; color: #fff; }
+
+.fm-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-width: 0;
+}
+
+.fm-toolbar {
+    background: #2d2d30;
+    border-bottom: 1px solid #3e3e42;
+    padding: 10px 15px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+}
+.fm-toolbar-left, .fm-toolbar-right {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.fm-search-box {
+    display: flex;
+    align-items: center;
+    background: rgba(255,255,255,0.1);
+    border-radius: 6px;
+    padding: 6px 12px;
+    gap: 8px;
+    flex: 1;
+    min-width: 200px;
+    max-width: 300px;
+}
+.fm-search-box input {
+    background: transparent;
+    border: none;
+    color: #fff;
+    font-size: 13px;
+    outline: none;
+    width: 100%;
+}
+.fm-search-box input::placeholder { color: rgba(255,255,255,0.5); }
+.fm-search-icon { color: rgba(255,255,255,0.6); font-size: 14px; }
+
+.fm-btn {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    color: #ccc;
+    background: #3c3c3c;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+.fm-btn:hover { background: #4c4c4c; color: #fff; }
+.fm-btn-primary { background: #0e639c; color: white; }
+.fm-btn-primary:hover { background: #1177bb; }
+
+.fm-breadcrumbs {
+    background: #252526;
+    padding: 8px 15px;
+    font-size: 13px;
+    border-bottom: 1px solid #3e3e42;
+    flex-shrink: 0;
+}
+.fm-breadcrumb-item { color: #ccc; }
+
+.fm-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 15px;
+    min-height: 0;
+}
+
+.fm-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 15px;
+}
+.fm-file-card {
+    background: #2d2d30;
+    border: 2px solid transparent;
+    border-radius: 6px;
+    padding: 15px 10px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.fm-file-card:hover { background: #3c3c3c; border-color: #094771; }
+.fm-file-card.selected { background: #094771; border-color: #1177bb; }
+.fm-file-icon { font-size: 40px; margin-bottom: 8px; }
+.fm-file-name { font-size: 12px; word-break: break-word; line-height: 1.3; }
+
+.fm-list { display: flex; flex-direction: column; gap: 2px; }
+.fm-list-item {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    background: #2d2d30;
+    border-radius: 4px;
+    cursor: pointer;
+    gap: 12px;
+    transition: background 0.2s;
+}
+.fm-list-item:hover { background: #3c3c3c; }
+.fm-list-item.selected { background: #094771; }
+.fm-list-icon { font-size: 24px; }
+.fm-list-name { flex: 1; font-size: 13px; }
+.fm-list-size { font-size: 12px; color: #888; min-width: 80px; text-align: right; }
+
+.fm-loading, .fm-empty { text-align: center; padding: 60px 20px; color: #888; }
+
+.fm-statusbar {
+    background: #007acc;
+    color: white;
+    padding: 6px 15px;
+    font-size: 12px;
+    display: flex;
+    justify-content: space-between;
+    flex-shrink: 0;
+}
+
+.fm-content::-webkit-scrollbar { width: 8px; }
+.fm-content::-webkit-scrollbar-track { background: #1e1e1e; }
+.fm-content::-webkit-scrollbar-thumb { background: #424242; border-radius: 4px; }
+
+.fm-drop-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(102, 126, 234, 0.95);
+    z-index: 10001;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    pointer-events: none;
+}
+.fm-drop-overlay.active { display: flex !important; }
+.fm-drop-overlay-content { text-align: center; color: white; }
+.fm-drop-overlay-icon { font-size: 100px; margin-bottom: 20px; animation: fm-bounce 1s infinite; }
+.fm-drop-overlay-title { font-size: 32px; font-weight: 600; margin-bottom: 10px; }
+.fm-drop-overlay-subtitle { font-size: 18px; opacity: 0.9; }
+@keyframes fm-bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-20px); }
+}
+
+</style>
+<style>
+/* Animações suaves */
+@keyframes fadeIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+}
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+
+.fm-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.8);
+    z-index: 9999;
+    animation: fadeIn 0.3s ease;
+}
+.fm-overlay.active { display: block; }
+
+.fm-modal {
+    display: none;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: #1a1a1a;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 1000px;
+    height: 80vh;
+    z-index: 10000;
+    flex-direction: column;
+    animation: fadeIn 0.3s ease;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+}
+.fm-modal.active { display: flex; }
+
+.fm-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    background: #2d2d2d;
+    border-radius: 12px 12px 0 0;
+}
+.fm-header h2 { margin: 0; color: #e0e0e0; }
+.fm-header button {
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 28px;
+    cursor: pointer;
+}
+
+.fm-toolbar {
+    display: flex;
+    gap: 10px;
+    padding: 15px 20px;
+    background: #252525;
+}
+.fm-toolbar button {
+    background: #4dabf7;
+    color: #fff;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.2s ease;
+}
+.fm-toolbar button:hover {
+    background: #339af0;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(77,171,247,0.4);
+}
+.fm-toolbar button.secondary:hover {
+    background: #ced4da;
+}
+.fm-toolbar button::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #333;
+    color: #fff;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+    margin-bottom: 5px;
+}
+.fm-toolbar button:hover::after {
+    opacity: 1;
+}
+.fm-toolbar button.secondary {
+    background: #e0e0e0;
+    color: #333;
+}
+
+.fm-upload-area {
+    border: 2px dashed #4dabf7;
+    border-radius: 8px;
+    padding: 40px;
+    text-align: center;
+    margin: 20px;
+    cursor: pointer;
+}
+
+.fm-file-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 15px;
+    padding: 20px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.fm-file-item {
+    background: #2a2a2a;
+    border: 2px solid #4dabf7;
+    border-radius: 8px;
+    padding: 15px;
+    text-align: center;
+    cursor: pointer;
+    height: 200px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+}
+.fm-file-item:hover {
+    background: #3a3a3a;
+    transform: translateY(-3px);
+    box-shadow: 0 8px 16px rgba(77,171,247,0.3);
+}
+
+.fm-viewer {
+    display: none;
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: #1a1a1a;
+    z-index: 1000;
+    flex-direction: column;
+}
+.fm-viewer.active { display: flex; }
+.fm-viewer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    background: #2d2d2d;
+}
+.fm-viewer-header button {
+    background: #4dabf7;
+    color: #fff;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    margin-left: 10px;
+}
+.fm-viewer-header .fm-btn-close { background: #cc3333; }
+.fm-viewer-content {
+    flex: 1;
+    overflow: auto;
+    background: #0d0d0d;
+}
+.fm-viewer-content iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+}
+
+
+        /* Forçar grid correto para todos os cards, sobrescrevendo inline styles se necessário */
+        .grid .card, .cards-grid .card, #app-grid .card, .card {
+            border-left: 4px solid var(--primary-color, #4caf50) !important;
+            border-top: none !important;
+            border-right: none !important;
+            border-bottom: none !important;
+            box-sizing: border-box !important;
+        }
+
+
+    </style>
+
+
+
+    <div class="fm-file-list" id="fm-file-list"></div>
+    <div class="fm-viewer" id="fm-viewer">
+        <div class="fm-viewer-header">
+            <h3 id="fm-viewer-title">Visualizando</h3>
+            <button id="fm-viewer-dl">⬇️ Download</button>
+            <button class="fm-btn-close" id="fm-viewer-close">✕ Fechar</button>
+        </div>
+        <div class="fm-viewer-content" id="fm-viewer-content"></div>
+    
+<a class="dock-item" onclick="window.open('/browser', '_blank')" title="Browser Integrado" style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);">
+    <span class="dock-icon">🌐</span>
+    <span class="dock-label">Web</span>
+</a>
+
+</div>
+</div>
+
+<script>
+// === FILE MANAGER v7.0 - MINIMALISTA ===
+console.log("📦 [FM v7.0] Iniciando...");
+
+// Funções globais explícitas
+window.openFM = function() {
+    console.log(" [FM] Abrindo...");
+    var modal = document.getElementById('fm-modal');
+    var overlay = document.getElementById('fm-overlay');
+    if (modal) {
+        modal.style.display = 'flex';
+        modal.classList.add('active');
+    }
+    if (overlay) {
+        overlay.style.display = 'block';
+        overlay.classList.add('active');
+    }
+    window.loadFM();
+};
+
+window.closeFM = function() {
+    console.log("🔒 [FM] Fechando...");
+    var modal = document.getElementById('fm-modal');
+    var overlay = document.getElementById('fm-overlay');
+    if (modal) {
+        modal.style.display = 'none';
+        modal.classList.remove('active');
+    }
+    if (overlay) {
+        overlay.style.display = 'none';
+        overlay.classList.remove('active');
+    }
+    window.closeViewerFM();
+};
+
+window.loadFM = function() {
+    console.log("📁 [FM] Carregando arquivos...");
+    var list = document.getElementById('fm-file-list');
+    if (!list) return;
+    
+    fetch('/api/files/list')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        list.innerHTML = '';
+        var files = data.files || data || [];
+        console.log("📄 [FM] Total:", files.length);
+        
+        if (files.length === 0) {
+            list.innerHTML = '<div style="color:#888;text-align:center;padding:40px;grid-column:1/-1;">Nenhum arquivo</div>';
+            return;
+        }
+        
+        files.forEach(function(file) {
+            var filename = typeof file === 'string' ? file : (file.name || file.filename);
+            var isDir = file.is_dir || false;
+            var ext = (filename.split('.').pop() || '').toLowerCase();
+            var icons = {'pdf':'📕','jpg':'🖼️','png':'🖼️','txt':'📄','folder':'📁'};
+            var icon = isDir ? '' : (icons[ext] || '');
+            
+            var card = document.createElement('div');
+            card.className = 'fm-file-item';
+            card.innerHTML = '<div style="font-size:48px;color:#4dabf7;">' + icon + '</div>' +
+                           '<div style="color:#fff;font-size:12px;">' + filename + '</div>' +
+                           '<div><button style="background:#51cf66;color:#fff;border:none;padding:8px;border-radius:4px;cursor:pointer;">⬇️</button> ' +
+                           '<button style="background:#ff6b6b;color:#fff;border:none;padding:8px;border-radius:4px;cursor:pointer;">️</button></div>';
+            
+            card.onclick = function(e) {
+                if (e.target.tagName !== 'BUTTON') {
+                    window.openViewerFM(filename, isDir);
+                }
+            };
+            
+            var btns = card.querySelectorAll('button');
+            btns[0].onclick = function(e) {
+                e.stopPropagation();
+                window.open('/api/files/download/' + encodeURIComponent(filename), '_blank');
+            };
+            btns[1].onclick = function(e) {
+                e.stopPropagation();
+                if (confirm('Deletar?')) {
+                    fetch('/api/files/delete/' + encodeURIComponent(filename), {method:'DELETE'})
+                    .then(function() { window.loadFM(); });
+                }
+            };
+            
+            list.appendChild(card);
+        });
+        console.log("✅ [FM] Renderizado");
+        
+        // Salvar arquivos globais para busca/ordenação
+        window._fm_all_files = files;
+        window._fm_current_files = files;
+        
+        // Aplicar filtros/ordenação atuais
+        window.filterFM();
+    });
+};
+
+// Busca
+window.filterFM = function() {
+    var search = document.getElementById('fm-search');
+    if (!search) return;
+    
+    var query = search.value.toLowerCase();
+    var list = document.getElementById('fm-file-list');
+    if (!list || !window._fm_all_files) return;
+    
+    var filtered = window._fm_all_files.filter(function(file) {
+        var filename = typeof file === 'string' ? file : (file.name || file.filename);
+        return filename.toLowerCase().includes(query);
+    });
+    
+    window._fm_current_files = filtered;
+    window.renderFMFiles(filtered);
+    console.log(" [FM] Busca:", query, "->", filtered.length, "resultados");
+};
+
+// Ordenação
+window.sortFM = function() {
+    var sort = document.getElementById('fm-sort');
+    if (!sort || !window._fm_current_files) return;
+    
+    var criteria = sort.value;
+    var sorted = window._fm_current_files.slice();
+    
+    sorted.sort(function(a, b) {
+        var nameA = (typeof a === 'string' ? a : (a.name || a.filename)).toLowerCase();
+        var nameB = (typeof b === 'string' ? b : (b.name || b.filename)).toLowerCase();
+        var extA = nameA.split('.').pop().toLowerCase();
+        var extB = nameB.split('.').pop().toLowerCase();
+        
+        if (criteria === 'name') return nameA.localeCompare(nameB);
+        if (criteria === 'name-desc') return nameB.localeCompare(nameA);
+        if (criteria === 'type') {
+            var isDirA = a.is_dir || false;
+            var isDirB = b.is_dir || false;
+            if (isDirA !== isDirB) return isDirA ? -1 : 1;
+            return nameA.localeCompare(nameB);
+        }
+        if (criteria === 'ext') return extA.localeCompare(extB);
+        return 0;
+    });
+    
+    window.renderFMFiles(sorted);
+    console.log("📊 [FM] Ordenado por:", criteria);
+};
+
+// Renderizar arquivos (função auxiliar)
+window.renderFMFiles = function(files) {
+    var list = document.getElementById('fm-file-list');
+    if (!list) return;
+    
+    list.innerHTML = '';
+    
+    if (files.length === 0) {
+        list.innerHTML = '<div style="color:#888;text-align:center;padding:40px;grid-column:1/-1;">Nenhum arquivo encontrado</div>';
+        return;
+    }
+    
+    files.forEach(function(file) {
+        var filename = typeof file === 'string' ? file : (file.name || file.filename);
+        var isDir = file.is_dir || false;
+        var ext = (filename.split('.').pop() || '').toLowerCase();
+        var icons = {'pdf':'📕','jpg':'🖼️','jpeg':'️','png':'🖼️','gif':'🖼️','svg':'🖼️','txt':'📄','md':'','py':'🐍','js':'📜','json':'📋','folder':'📁','odt':'','doc':'📄','docx':'','xls':'📊','xlsx':'','csv':'📊'};
+        var icon = isDir ? '📁' : (icons[ext] || '📄');
+        
+        var card = document.createElement('div');
+        card.className = 'fm-file-item';
+        card.setAttribute('data-tooltip', filename);
+        card.innerHTML = '<div style="font-size:48px;color:#4dabf7;animation:pulse 2s infinite;">' + icon + '</div>' +
+                       '<div style="color:#fff;font-size:12px;word-break:break-word;max-height:40px;overflow:hidden;">' + filename + '</div>' +
+                       '<div><button style="background:#51cf66;color:#fff;border:none;padding:8px;border-radius:4px;cursor:pointer;" data-tooltip="Download">⬇️</button> ' +
+                       '<button style="background:#ff6b6b;color:#fff;border:none;padding:8px;border-radius:4px;cursor:pointer;" data-tooltip="Deletar">🗑️</button></div>';
+        
+        card.onclick = function(e) {
+            if (e.target.tagName !== 'BUTTON') {
+                window.openViewerFM(filename, isDir);
+            }
+        };
+        
+        var btns = card.querySelectorAll('button');
+        btns[0].onclick = function(e) {
+            e.stopPropagation();
+            window.open('/api/files/download/' + encodeURIComponent(filename), '_blank');
+        };
+        btns[1].onclick = function(e) {
+            e.stopPropagation();
+            if (confirm('Deletar "' + filename + '"?')) {
+                fetch('/api/files/delete/' + encodeURIComponent(filename), {method:'DELETE'})
+                .then(function() { window.loadFM(); });
+            }
+        };
+        
+        list.appendChild(card);
+    });
+};
+
+window.openViewerFM = function(filename, isDir) {
+    console.log("👁️ [FM] Abrindo viewer:", filename);
+    if (isDir) { alert('Pastas não podem ser visualizadas'); return; }
+    
+    document.querySelector('.fm-toolbar').style.display = 'none';
+    document.getElementById('fm-upload-area').style.display = 'none';
+    document.getElementById('fm-file-list').style.display = 'none';
+    
+    var viewer = document.getElementById('fm-viewer');
+    var content = document.getElementById('fm-viewer-content');
+    
+    if (viewer && content) {
+        viewer.style.display = 'flex';
+        viewer.classList.add('active');
+        document.getElementById('fm-viewer-title').textContent = filename;
+        
+        var ext = filename.split('.').pop().toLowerCase();
+        var url = '/api/files/view/' + encodeURIComponent(filename);
+        
+        if (ext === 'pdf') {
+            content.innerHTML = '<iframe src="' + url + '" type="application/pdf" style="width:100%;height:100%;border:none;"></iframe>';
+        } else if (['jpg','jpeg','png','gif','svg','webp','bmp'].includes(ext)) {
+            content.innerHTML = '<img src="' + url + '" style="max-width:100%;max-height:100%;display:block;margin:auto;">';
+        } else if (['txt','md','py','js','json','html','css','xml','csv','log','sh','bat'].includes(ext)) {
+            fetch(url).then(function(r) { return r.text(); })
+            .then(function(text) {
+                content.innerHTML = '<pre style="color:#e0e0e0;padding:20px;overflow:auto;white-space:pre-wrap;font-family:monospace;font-size:13px;">' + text.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</pre>';
+            });
+        } else if (['mp4','webm','ogg'].includes(ext)) {
+            content.innerHTML = '<video src="' + url + '" controls style="max-width:100%;max-height:100%;display:block;margin:auto;"></video>';
+        } else if (['mp3','wav','ogg'].includes(ext)) {
+            content.innerHTML = '<audio src="' + url + '" controls style="width:100%;margin-top:50px;"></audio><div style="color:#888;text-align:center;margin-top:20px;">🎵 ' + filename + '</div>';
+        } else if (['odt','doc','docx'].includes(ext)) {
+            content.innerHTML = '<div style="color:#888;text-align:center;padding:40px;">📄 Documento Office<br><br>Use o botão Download para abrir no seu editor preferido</div>';
+        } else if (['xls','xlsx','csv'].includes(ext)) {
+            content.innerHTML = '<div style="color:#888;text-align:center;padding:40px;"> Planilha<br><br>Use o botão Download para abrir no seu editor preferido</div>';
+        } else {
+            content.innerHTML = '<div style="color:#888;text-align:center;padding:40px;">📄 Formato não suportado para visualização<br><br>Use o botão Download</div>';
+        }
+        
+        document.getElementById('fm-viewer-close').onclick = window.closeViewerFM;
+        document.getElementById('fm-viewer-dl').onclick = function() {
+            window.open('/api/files/download/' + encodeURIComponent(filename), '_blank');
+        };
+    }
+};
+
+window.closeViewerFM = function() {
+    console.log("🔒 [FM] Fechando viewer...");
+    var viewer = document.getElementById('fm-viewer');
+    var content = document.getElementById('fm-viewer-content');
+    
+    if (viewer) {
+        viewer.style.display = 'none';
+        viewer.classList.remove('active');
+    }
+    if (content) content.innerHTML = '';
+    
+    document.querySelector('.fm-toolbar').style.display = 'flex';
+    document.getElementById('fm-upload-area').style.display = 'flex';
+    document.getElementById('fm-file-list').style.display = 'grid';
+};
+
+window.uploadFM = function(files) {
+    if (!files || !files.length) return;
+    var uploaded = 0;
+    
+    function uploadNext(i) {
+        if (i >= files.length) {
+            alert(uploaded + ' arquivo(s) enviado(s)');
+            window.loadFM();
+            return;
+        }
+        var fd = new FormData();
+        fd.append('file', files[i]);
+        fetch('/api/files/upload', {method:'POST', body:fd})
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.success || data.status === 'success') uploaded++;
+            uploadNext(i+1);
+        });
+    }
+    uploadNext(0);
+};
+
+window.newFolder = function() {
+    var name = prompt('Nome da pasta:');
+    if (name) {
+        fetch('/api/files/create', {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({filename:name+'/.folder',content:'folder'})
+        }).then(function() { window.loadFM(); });
+    }
+};
+
+window.newFile = function() {
+    var name = prompt('Nome do arquivo:');
+    if (name) {
+        fetch('/api/files/create', {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({filename:name,content:''})
+        }).then(function() { window.loadFM(); });
+    }
+};
+
+// Drag and drop
+document.addEventListener('DOMContentLoaded', function() {
+    var area = document.getElementById('fm-upload-area');
+    if (area) {
+        area.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            area.style.background = 'rgba(77,171,247,0.2)';
+        });
+        area.addEventListener('dragleave', function() {
+            area.style.background = '';
+        });
+        area.addEventListener('drop', function(e) {
+            e.preventDefault();
+            area.style.background = '';
+            var files = e.dataTransfer.files;
+            if (files.length) window.uploadFM(files);
+        });
+    }
+    
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') window.closeFM();
+    });
+    
+    console.log("✅ [FM v7.0] Pronto!");
+});
+</script>
+
+
+<!-- === ESCONDER PAINEL ANTIGO DE MÉTRICAS === -->
+<style>
+/* Esconder painéis de métricas soltos no desktop */
+#metrics-panel,
+.metrics-container,
+.metric-card:not(.metrics-modal .metric-card) {
+    display: none !important;
+}
+
+/* Garantir que o modal funcione */
+.metrics-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.8);
+    z-index: 9999;
+}
+.metrics-overlay.active { display: block; }
+
+.metrics-modal {
+    display: none;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: #1a1a1a;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 800px;
+    z-index: 10000;
+    flex-direction: column;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    animation: fadeIn 0.3s ease;
+}
+.metrics-modal.active { display: flex !important; }
+
+.metrics-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    background: #2d2d2d;
+    border-radius: 12px 12px 0 0;
+}
+.metrics-header h2 {
+    margin: 0;
+    color: #e0e0e0;
+    font-size: 20px;
+}
+.metrics-header button {
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 28px;
+    cursor: pointer;
+    padding: 0;
+    width: 36px;
+    height: 36px;
+}
+
+.metrics-content {
+    padding: 20px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+}
+
+.metric-card-modal {
+    background: #2a2a2a;
+    border-radius: 8px;
+    padding: 20px;
+    border: 1px solid #444;
+}
+
+.metric-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.metric-title {
+    color: #e0e0e0;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.metric-value {
+    color: #4dabf7;
+    font-size: 20px;
+    font-weight: bold;
+}
+
+.metric-bar {
+    height: 10px;
+    background: #1a1a1a;
+    border-radius: 5px;
+    overflow: hidden;
+    margin-top: 10px;
+}
+
+.metric-bar-fill {
+    height: 100%;
+    border-radius: 5px;
+    transition: width 0.5s ease, background 0.5s ease;
+}
+
+.metric-bar-fill.low { background: linear-gradient(90deg, #51cf66, #40c057); }
+.metric-bar-fill.medium { background: linear-gradient(90deg, #ffd43b, #fab005); }
+.metric-bar-fill.high { background: linear-gradient(90deg, #ff6b6b, #fa5252); }
+
+.metric-details {
+    color: #888;
+    font-size: 12px;
+    margin-top: 8px;
+}
+
+.cpu-chart {
+    width: 100%;
+    height: 60px;
+    margin-top: 12px;
+}
+
+.cpu-chart svg {
+    width: 100%;
+    height: 100%;
+}
+
+.cpu-chart path {
+    fill: none;
+    stroke: #4dabf7;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.metrics-footer {
+    padding: 15px 20px;
+    background: #252525;
+    border-top: 1px solid #333;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-radius: 0 0 12px 12px;
+}
+
+.metrics-status {
+    color: #888;
+    font-size: 12px;
+}
+
+.metrics-status .dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #51cf66;
+    margin-right: 6px;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+@keyframes fadeIn {
+    from { opacity: 0; transform: translate(-50%, -60%); }
+    to { opacity: 1; transform: translate(-50%, -50%); }
+}
+
+
+        /* Forçar grid correto para todos os cards, sobrescrevendo inline styles se necessário */
+        .grid .card, .cards-grid .card, #app-grid .card, .card {
+            border-left: 4px solid var(--primary-color, #4caf50) !important;
+            border-top: none !important;
+            border-right: none !important;
+            border-bottom: none !important;
+            box-sizing: border-box !important;
+        }
+
+
+    </style>
+
+
+<!-- === MODAL DE MÉTRICAS === -->
+<div class="metrics-overlay" id="metrics-overlay" onclick="closeMetrics()"></div>
+<div class="metrics-modal" id="metrics-modal">
+    <div class="metrics-header">
+        <h2>📊 Métricas do Sistema</h2>
+        <button onclick="closeMetrics()">&times;</button>
+    </div>
+    <div class="metrics-content">
+        <div class="metric-card-modal">
+            <div class="metric-header-row">
+                <span class="metric-title">🖥️ CPU</span>
+                <span class="metric-value" id="cpu-value">0%</span>
+            </div>
+            <div class="metric-bar">
+                <div class="metric-bar-fill low" id="cpu-bar" style="width: 0%"></div>
+            </div>
+            <div class="cpu-chart">
+                <svg id="cpu-chart-svg" viewBox="0 0 100 60" preserveAspectRatio="none">
+                    <path id="cpu-chart-path" d="M0,60"></path>
+                </svg>
+            </div>
+        </div>
+        
+        <div class="metric-card-modal">
+            <div class="metric-header-row">
+                <span class="metric-title">💾 RAM</span>
+                <span class="metric-value" id="ram-value">0%</span>
+            </div>
+            <div class="metric-bar">
+                <div class="metric-bar-fill low" id="ram-bar" style="width: 0%"></div>
+            </div>
+            <div class="metric-details" id="ram-details">0 GB / 0 GB</div>
+        </div>
+        
+        <div class="metric-card-modal">
+            <div class="metric-header-row">
+                <span class="metric-title">💽 Disco</span>
+                <span class="metric-value" id="disk-value">0%</span>
+            </div>
+            <div class="metric-bar">
+                <div class="metric-bar-fill low" id="disk-bar" style="width: 0%"></div>
+            </div>
+            <div class="metric-details" id="disk-details">0 GB / 0 GB</div>
+        </div>
+    </div>
+    <div class="metrics-footer">
+        <div class="metrics-status">
+            <span class="dot"></span>
+            <span><span style="font-size: 11px; color: #666;">Atualizando a cada 2s</span></span>
+        </div>
+        <button onclick="updateMetrics()" style="background:#4dabf7;color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;">🔄 
+<!-- GRÁFICOS DETALHADOS (TEMA ESCURO) -->
+
+        
+        <!-- Uso de VMs e Containers -->
+        <div style="background: rgba(255,255,255,0.03); padding: 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
+            <h3 style="margin: 0 0 10px 0; color: #0af; font-size: 13px; font-weight: 600;">🖥️ VMs & Containers</h3>
+            <div style="display: flex; justify-content: space-around; align-items: center; height: 150px;">
+                <div style="text-align: center;">
+                    <div style="font-size: 36px; color: #0f0; font-weight: bold;" id="vm-active">3</div>
+                    <div style="font-size: 11px; color: #888; margin-top: 5px;">VMs Ativas</div>
+                </div>
+                <div style="text-align: center;">
+                    <div style="font-size: 36px; color: #0af; font-weight: bold;" id="container-active">8</div>
+                    <div style="font-size: 11px; color: #888; margin-top: 5px;">Containers</div>
+                </div>
+                <div style="text-align: center;">
+                    <div style="font-size: 36px; color: #fa0; font-weight: bold;" id="process-active">142</div>
+                    <div style="font-size: 11px; color: #888; margin-top: 5px;">Processos</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Estatísticas Rápidas -->
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+        <div style="background: rgba(0,255,0,0.08); padding: 12px; border-radius: 8px; text-align: center; border: 1px solid rgba(0,255,0,0.2);">
+            <div style="font-size: 20px; color: #0f0; font-weight: bold;" id="uptime-display">15d 7h</div>
+            <div style="font-size: 10px; color: #888; margin-top: 3px;">UPTIME</div>
+        </div>
+        <div style="background: rgba(0,170,255,0.08); padding: 12px; border-radius: 8px; text-align: center; border: 1px solid rgba(0,170,255,0.2);">
+            <div style="font-size: 20px; color: #0af; font-weight: bold;" id="users-display">1</div>
+            <div style="font-size: 10px; color: #888; margin-top: 3px;">USUÁRIOS</div>
+        </div>
+        <div style="background: rgba(255,170,0,0.08); padding: 12px; border-radius: 8px; text-align: center; border: 1px solid rgba(255,170,0,0.2);">
+            <div style="font-size: 20px; color: #fa0; font-weight: bold;" id="requests-display">247</div>
+            <div style="font-size: 10px; color: #888; margin-top: 3px;">REQ/MIN</div>
+        </div>
+    </div>
+</div>
+
+            
+
+        
+        <!-- 
+<!-- === FUNÇÕES DOCK GARANTIDAS === -->
+<script>
+window.openEditor = function() {
+    console.log('📝 [EDITOR] Abrindo...');
+    window.location.href = '/editor';
+};
+
+window.openTerminalWeb = function() {
+    console.log('⌨️ [TERMINAL] Abrindo...');
+    if (typeof window.openSafeTerminal === 'function') {
+        window.openSafeTerminal();
+    } else {
+        alert('Terminal Web está carregando. Aguarde alguns segundos e tente novamente.');
+    }
+};
+console.log('✅ [DOCK] Funções globais carregadas');
+</script>
+
+<!-- === CORREÇÕES DOCK E BUSCA === -->
+<script>
+// 1. Funções do Dock
+window.openSettings = window.openSettings || function() { 
+    console.log('️ Abrindo Configurações...');
+    window.location.href = '/configuracoes'; 
+};
+
+window.openThinkinBrowser = window.openThinkinBrowser || function() { 
+    console.log('🌐 Abrindo Navegador...');
+    var cards = document.querySelectorAll('.card');
+    for(var i=0; i<cards.length; i++) {
+        if(cards[i].innerText.includes('Browser')) {
+            cards[i].click();
+            return;
+        }
+    }
+    window.location.href = '/browser';
+};
+
+console.log('✅ Funções Dock definidas');
+
+// 2. Barra de Busca
+(function() {
+    function initSearch() {
+        var container = document.getElementById('assistants-container');
+        if (!container || document.getElementById('search-input-final')) return;
+        
+        var input = document.createElement('input');
+        input.type = 'text';
+        input.id = 'search-input-final';
+        input.placeholder = '🔍 Buscar assistentes... (Ctrl+K)';
+        input.autocomplete = 'off';
+        input.style.cssText = 'grid-column: 1 / -1; width: 100%; max-width: 100%; padding: 14px 24px; margin-bottom: 20px; border-radius: 30px; border: 2px solid #444; background: #1a1a1a; color: #fff; font-size: 1.05em; outline: none; box-sizing: border-box; display: block;';
+        
+        if (container.firstChild) {
+            container.insertBefore(input, container.firstChild);
+        } else {
+            container.appendChild(input);
+        }
+        
+        input.addEventListener('input', function() {
+            var q = this.value.toLowerCase().trim();
+            container.querySelectorAll('.card').forEach(function(card) {
+                if (card.id === 'system-metrics-card') return;
+                card.style.display = (q === '' || card.innerText.toLowerCase().includes(q)) ? '' : 'none';
+            });
+        });
+        
+        document.addEventListener('keydown', function(e) {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                e.preventDefault();
+                input.focus();
+                input.select();
+            }
+        });
+        
+        console.log('✅ Busca injetada no topo do grid');
+    }
+    
+    setTimeout(initSearch, 500);
+})();
+</script>
+<!-- === FIM CORREÇÕES === -->
+<script>
+(function() {
+    console.log(' Sistema de Tema Desktop carregado');
+    
+    function applyTheme(color) {
+        console.log('🎨 Aplicando tema:', color);
+        
+        var h1s = document.querySelectorAll('h1');
+        h1s.forEach(function(h1) {
+            if (h1.innerText.includes('ThinkinOS')) {
+                h1.style.color = color;
+                h1.style.textShadow = '0 0 20px ' + color + '40';
+            }
+        });
+        
+        var cards = document.querySelectorAll('.card');
+        cards.forEach(function(card) {
+            card.style.borderLeft = '4px solid ' + color;
+card.style.borderTop = 'none';
+card.style.borderRight = 'none';
+card.style.borderBottom = 'none';
+
+            card.style.boxShadow = '0 4px 15px ' + color + '20';
+        });
+        
+        console.log('✅ ' + cards.length + ' cards atualizados');
+        
+        var style = document.getElementById('theme-style');
+        if (!style) {
+            style = document.createElement('style');
+            style.id = 'theme-style';
+            document.head.appendChild(style);
+        }
+        
+        style.textContent = 'h1 { color: ' + color + ' !important; } .card { border: 2px solid ' + color + '40 !important; } :root { --primary-color: ' + color + ' !important; }';
+    }
+    
+    var savedColor = localStorage.getItem('theme-color');
+    if (savedColor) {
+        console.log('🎨 Tema salvo:', savedColor);
+        setTimeout(function() { applyTheme(savedColor); }, 500);
+    }
+    
+    console.log('✅ Sistema de Tema Desktop inicializado');
+})();
+
+// Alias para compatibilidade
+window.openFM = openFileManager;
+</script>
+
+<!-- === FILE MANAGER v9.0 === -->
+<script>
+// Variáveis globais do FM
+var fmCurrentView = 'grid';
+var fmAllFiles = [];
+var fmSelectedFile = null;
+
+// Função principal para abrir o modal
+function openFileManager() {
+    console.log('🚀 openFileManager() v9.0 chamado');
+    var overlay = document.getElementById('fm-overlay');
+    var modal = document.getElementById('fm-modal');
+    
+    if (overlay) overlay.classList.add('active');
+    if (modal) modal.classList.add('active');
+    
+    loadFMFiles();
+}
+
+// Fechar o modal
+function closeFileManager() {
+    var overlay = document.getElementById('fm-overlay');
+    var modal = document.getElementById('fm-modal');
+    
+    if (overlay) overlay.classList.remove('active');
+    if (modal) modal.classList.remove('active');
+    fmSelectedFile = null;
+}
+
+// Carregar arquivos da API
+function loadFMFiles() {
+    console.log('📡 loadFMFiles() chamado');
+    
+    var loading = document.getElementById('fm-loading');
+    var empty = document.getElementById('fm-empty');
+    var grid = document.getElementById('fm-grid');
+    var list = document.getElementById('fm-list');
+
+    if (loading) loading.style.display = 'block';
+    if (empty) empty.style.display = 'none';
+    if (grid) grid.style.display = 'none';
+    if (list) list.style.display = 'none';
+
+    fetch('/api/files/list')
+        .then(function(res) {
+            console.log('📡 Status:', res.status);
+            return res.json();
+        })
+        .then(function(data) {
+            console.log('📦 Dados recebidos:', data);
+            
+            var filesArray = [];
+            if (Array.isArray(data)) {
+                filesArray = data;
+            } else if (data && Array.isArray(data.files)) {
+                filesArray = data.files;
+            }
+
+            console.log('📊 Total de arquivos:', filesArray.length);
+
+            if (filesArray.length > 0) {
+                fmAllFiles = filesArray;
+                renderFMFiles();
+            } else {
+                if (empty) empty.style.display = 'block';
+            }
+        })
+        .catch(function(err) {
+            console.error(' Erro ao carregar arquivos:', err);
+            if (empty) empty.style.display = 'block';
+        })
+        .finally(function() {
+            if (loading) loading.style.display = 'none';
+        });
+}
+
+// Renderizar arquivos na tela
+function renderFMFiles() {
+    console.log(' renderFMFiles() chamado, view:', fmCurrentView);
+    
+    var grid = document.getElementById('fm-grid');
+    var list = document.getElementById('fm-list');
+    var empty = document.getElementById('fm-empty');
+
+    if (fmAllFiles.length === 0) {
+        if (empty) empty.style.display = 'block';
+        return;
+    }
+    if (empty) empty.style.display = 'none';
+
+    if (fmCurrentView === 'grid') {
+        if (grid) {
+            grid.style.display = 'grid';
+            var html = '';
+            fmAllFiles.forEach(function(file) {
+                html += '<div class="fm-file-card" onclick="selectFMFile(this, '' + file.name.replace(/'/g, "\'") + '')">';
+                html += '<div class="fm-file-icon">' + getFMFileIcon(file.name) + '</div>';
+                html += '<div class="fm-file-name">' + file.name + '</div>';
+                html += '</div>';
+            });
+            grid.innerHTML = html;
+        }
+        if (list) list.style.display = 'none';
+    } else {
+        if (list) {
+            list.style.display = 'flex';
+            var html = '';
+            fmAllFiles.forEach(function(file) {
+                html += '<div class="fm-list-item" onclick="selectFMFile(this, '' + file.name.replace(/'/g, "\'") + '')">';
+                html += '<div class="fm-list-icon">' + getFMFileIcon(file.name) + '</div>';
+                html += '<div class="fm-list-name">' + file.name + '</div>';
+                html += '<div class="fm-list-size">' + formatFMSize(file.size) + '</div>';
+                html += '</div>';
+            });
+            list.innerHTML = html;
+        }
+        if (grid) grid.style.display = 'none';
+    }
+
+    var statusCount = document.getElementById('fm-status-count');
+    if (statusCount) statusCount.textContent = fmAllFiles.length + ' itens';
+}
+
+// Alternar entre Grade e Lista
+function toggleFMView(view) {
+    fmCurrentView = view;
+    var statusView = document.getElementById('fm-status-view');
+    if (statusView) statusView.textContent = view === 'grid' ? 'Grade' : 'Lista';
+    renderFMFiles();
+}
+
+// Selecionar arquivo
+function selectFMFile(element, filename) {
+    var cards = document.querySelectorAll('.fm-file-card, .fm-list-item');
+    for (var i = 0; i < cards.length; i++) {
+        cards[i].classList.remove('selected');
+    }
+    element.classList.add('selected');
+    fmSelectedFile = filename;
+}
+
+// Obter ícone do arquivo
+function getFMFileIcon(filename) {
+    var ext = filename.split('.').pop().toLowerCase();
+    if (['jpg', 'jpeg', 'png', 'gif', 'svg'].indexOf(ext) !== -1) return '🖼️';
+    if (ext === 'pdf') return '📕';
+    if (ext === 'doc' || ext === 'docx') return '📘';
+    if (ext === 'odt') return '📗';
+    if (ext === 'py') return '';
+    if (ext === 'js') return '⚡';
+    if (ext === 'html') return '🌐';
+    if (ext === 'css') return '🎨';
+    if (ext === 'json') return '';
+    if (ext === 'md') return '📝';
+    return '';
+}
+
+// Formatar tamanho
+function formatFMSize(bytes) {
+    if (!bytes) return '-';
+    var sizes = ['B', 'KB', 'MB', 'GB'];
+    var i = Math.floor(Math.log(bytes) / Math.log(1024));
+    return (bytes / Math.pow(1024, i)).toFixed(1) + ' ' + sizes[i];
+}
+
+// Upload de arquivos
+function handleFMUpload(files) {
+    if (!files || files.length === 0) return;
+    var formData = new FormData();
+    for (var i = 0; i < files.length; i++) {
+        formData.append('files', files[i]);
+    }
+    
+    var loading = document.getElementById('fm-loading');
+    if (loading) {
+        loading.style.display = 'block';
+        loading.textContent = 'Enviando ' + files.length + ' arquivo(s)...';
+    }
+
+    fetch('/api/files/upload', { method: 'POST', body: formData })
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+            if (data.success) {
+                alert(files.length + ' arquivo(s) enviado(s) com sucesso!');
+                loadFMFiles();
+            } else {
+                alert('Erro: ' + (data.error || 'Falha no upload'));
+            }
+        })
+        .catch(function(err) {
+            alert('Erro de conexão: ' + err.message);
+        })
+        .finally(function() {
+            if (loading) {
+                loading.style.display = 'none';
+                loading.textContent = 'Carregando arquivos...';
+            }
+        });
+}
+
+// Criar nova pasta
+function showNewFMFolderModal() {
+    var name = prompt('Nome da nova pasta:');
+    if (name) {
+        fetch('/api/files/create', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ name: name, type: 'folder' })
+        })
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+            if (data.success) {
+                alert('Pasta criada com sucesso!');
+                loadFMFiles();
+            } else {
+                alert('Erro: ' + (data.error || 'Falha ao criar pasta'));
+            }
+        });
+    }
+}
+
+// Criar novo arquivo
+function showNewFMFileModal() {
+    var name = prompt('Nome do novo arquivo:');
+    if (name) {
+        fetch('/api/files/create', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ name: name, type: 'file', content: '' })
+        })
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+            if (data.success) {
+                alert('Arquivo criado com sucesso!');
+                loadFMFiles();
+            } else {
+                alert('Erro: ' + (data.error || 'Falha ao criar arquivo'));
+            }
+        });
+    }
+}
+
+// Excluir arquivo
+function deleteFMFile() {
+    if (!fmSelectedFile) {
+        alert('Selecione um arquivo para excluir.');
+        return;
+    }
+    if (confirm('Tem certeza que deseja excluir "' + fmSelectedFile + '"?')) {
+        fetch('/api/files/delete/' + encodeURIComponent(fmSelectedFile), { method: 'DELETE' })
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+            if (data.success) {
+                alert('Arquivo excluído com sucesso!');
+                fmSelectedFile = null;
+                loadFMFiles();
+            } else {
+                alert('Erro: ' + (data.error || 'Falha ao excluir'));
+            }
+        });
+    }
+}
+
+// Alias para compatibilidade com código antigo
+window.openFM = openFileManager;
+
+console.log('✅ File Manager v9.0 carregado com sucesso!');
+</script>
+
+<script src="/static/fm-v9.js"></script>
+<!-- === FILE MANAGER v9.0 MODAL === -->
+<div class="fm-overlay" id="fm-overlay" onclick="closeFileManager()"></div>
