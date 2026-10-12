@@ -687,7 +687,7 @@
 // === TERMINAL WEB ===
 let terminal = null;
 let socket = null;
-let currentContainerId = null;
+let currentContainerId = 'thinkinos_webtop_test';
 
 function openTerminal(containerId, containerName) {
     console.log("Abrindo terminal para:", containerId, containerName);
@@ -1630,7 +1630,7 @@ function refitTerminal() {
         <a class="dock-item" onclick="window.location.href='/vm'" title="Máquinas Virtuais">
             <span class="dock-icon">🐧</span>
             <span class="dock-label">VMs</span>
-        </a>        <a class="dock-item" onclick="openTerminal('local', 'Terminal Local')" title="Terminal">
+        </a>        <a class="dock-item" onclick="openTerminal('thinkinos_webtop_test', 'Terminal Webtop')" title="Terminal">
             <span class="dock-icon">🖥️</span>
             <span class="dock-label">Terminal</span>
         </a>
