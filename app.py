@@ -4479,6 +4479,171 @@ def analyst_code_review():
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
+
+# ==========================================
+# KANBAN - GERENCIADOR DE TAREFAS
+# ==========================================
+def init_kanban_db():
+    """Cria a tabela de tarefas se não existir."""
+    conn = get_db()
+    try:
+        conn.execute('''
+            CREATE TABLE IF NOT EXISTS tarefas (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                titulo TEXT NOT NULL,
+                descricao TEXT DEFAULT '',
+                coluna TEXT NOT NULL DEFAULT 'todo',
+                prioridade TEXT DEFAULT 'media',
+                ordem INTEGER DEFAULT 0,
+                data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        conn.commit()
+        print("✅ Tabela 'tarefas' pronta.")
+    except Exception as e:
+        print(f"️ Erro ao init kanban: {e}")
+    finally:
+        conn.close()
+
+# Inicializar tabela na carga do app
+try:
+    init_kanban_db()
+except:
+    pass
+
+@app.route('/api/kanban', methods=['GET'])
+def api_kanban_list():
+    """Lista todas as tarefas agrupadas por coluna."""
+    conn = get_db()
+    try:
+        tarefas = conn.execute(
+            'SELECT * FROM tarefas ORDER BY coluna, ordem ASC'
+        ).fetchall()
+        return jsonify({
+            'status': 'success',
+            'tarefas': [dict(t) for t in tarefas]
+        })
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+    finally:
+        conn.close()
+
+@app.route('/api/kanban', methods=['POST'])
+def api_kanban_create():
+    """Cria uma nova tarefa."""
+    data = request.get_json()
+    titulo = data.get('titulo', '').strip()
+    descricao = data.get('descricao', '')
+    coluna = data.get('coluna', 'todo')
+    prioridade = data.get('prioridade', 'media')
+    
+    if not titulo:
+        return jsonify({'status': 'error', 'message': 'Título obrigatório'}), 400
+    
+    conn = get_db()
+    try:
+        # Pega a maior ordem da coluna para colocar no final
+        max_ordem = conn.execute(
+            'SELECT MAX(ordem) FROM tarefas WHERE coluna = ?', (coluna,)
+        ).fetchone()[0] or 0
+        
+        cursor = conn.execute(
+            '''INSERT INTO tarefas (titulo, descricao, coluna, prioridade, ordem)
+               VALUES (?, ?, ?, ?, ?)''',
+            (titulo, descricao, coluna, prioridade, max_ordem + 1)
+        )
+        conn.commit()
+        return jsonify({
+            'status': 'success',
+            'id': cursor.lastrowid
+        })
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+    finally:
+        conn.close()
+
+@app.route('/api/kanban/<int:tarefa_id>', methods=['PUT'])
+def api_kanban_update(tarefa_id):
+    """Atualiza tarefa (título, descrição, coluna, prioridade, ordem)."""
+    data = request.get_json()
+    conn = get_db()
+    try:
+        fields = []
+        values = []
+        
+        if 'titulo' in data:
+            fields.append('titulo = ?')
+            values.append(data['titulo'])
+        if 'descricao' in data:
+            fields.append('descricao = ?')
+            values.append(data['descricao'])
+        if 'coluna' in data:
+            fields.append('coluna = ?')
+            values.append(data['coluna'])
+        if 'prioridade' in data:
+            fields.append('prioridade = ?')
+            values.append(data['prioridade'])
+        if 'ordem' in data:
+            fields.append('ordem = ?')
+            values.append(data['ordem'])
+        
+        if not fields:
+            return jsonify({'status': 'error', 'message': 'Nenhum campo para atualizar'}), 400
+        
+        values.append(tarefa_id)
+        conn.execute(
+            f'UPDATE tarefas SET {", ".join(fields)} WHERE id = ?',
+            values
+        )
+        conn.commit()
+        return jsonify({'status': 'success'})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+    finally:
+        conn.close()
+
+@app.route('/api/kanban/<int:tarefa_id>', methods=['DELETE'])
+def api_kanban_delete(tarefa_id):
+    """Deleta uma tarefa."""
+    conn = get_db()
+    try:
+        conn.execute('DELETE FROM tarefas WHERE id = ?', (tarefa_id,))
+        conn.commit()
+        return jsonify({'status': 'success'})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+    finally:
+        conn.close()
+
+@app.route('/api/kanban/move', methods=['POST'])
+def api_kanban_move():
+    """Move uma tarefa entre colunas (drag & drop)."""
+    data = request.get_json()
+    tarefa_id = data.get('id')
+    nova_coluna = data.get('coluna')
+    nova_ordem = data.get('ordem')
+    
+    if not tarefa_id or not nova_coluna:
+        return jsonify({'status': 'error', 'message': 'Dados inválidos'}), 400
+    
+    conn = get_db()
+    try:
+        conn.execute(
+            'UPDATE tarefas SET coluna = ?, ordem = ? WHERE id = ?',
+            (nova_coluna, nova_ordem, tarefa_id)
+        )
+        conn.commit()
+        return jsonify({'status': 'success'})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+    finally:
+        conn.close()
+
+
+@app.route('/kanban')
+def page_kanban():
+    return render_template('kanban.html')
+
 if __name__ == '__main__':
     socketio.run(app, host='0.0.0.0', port=5000, debug=True, allow_unsafe_werkzeug=True)
 
