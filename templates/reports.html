@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ghorak - Relatórios Periódicos</title>
+    <style>
+        body { background: #12121a; color: #ecf0f1; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 1px solid #333; padding-bottom: 15px; }
+        .header h1 { color: #9b59b6; margin: 0; }
+        .btn-back { background: #34495e; color: white; text-decoration: none; padding: 8px 16px; border-radius: 4px; }
+        .btn-back:hover { background: #2c3e50; }
+        
+        .summary-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 30px; }
+        .card { background: #1e1e24; padding: 20px; border-radius: 8px; text-align: center; border: 1px solid #333; }
+        .card.critical { border-color: #e74c3c; }
+        .card.high { border-color: #e67e22; }
+        .card.medium { border-color: #f1c40f; }
+        .card.low { border-color: #3498db; }
+        .card h3 { margin: 0 0 10px 0; font-size: 14px; color: #95a5a6; }
+        .card .value { font-size: 32px; font-weight: bold; }
+        
+        table { width: 100%; border-collapse: collapse; background: #1e1e24; border-radius: 8px; overflow: hidden; }
+        th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #333; }
+        th { background: #2c2c35; color: #9b59b6; font-weight: 600; }
+        tr:hover { background: #252530; }
+        .badge { padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; }
+        .badge.critical { background: rgba(231, 76, 60, 0.2); color: #e74c3c; }
+        .badge.high { background: rgba(230, 126, 34, 0.2); color: #e67e22; }
+        .badge.medium { background: rgba(241, 196, 15, 0.2); color: #f1c40f; }
+        .badge.low { background: rgba(52, 152, 219, 0.2); color: #3498db; }
+        .no-report { color: #7f8c8d; font-style: italic; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📊 Ghorak - Relatórios de Código</h1>
+        <a href="/code-review" class="btn-back">← Voltar ao Code Review</a>
+    </div>
+
+    {% if latest %}
+    <div class="summary-cards">
+        <div class="card critical">
+            <h3>🔴 Críticas</h3>
+            <div class="value" style="color: #e74c3c;">{{ latest.summary.critical }}</div>
+        </div>
+        <div class="card high">
+            <h3>🟠 Altas</h3>
+            <div class="value" style="color: #e67e22;">{{ latest.summary.high }}</div>
+        </div>
+        <div class="card medium">
+            <h3>🟡 Médias</h3>
+            <div class="value" style="color: #f1c40f;">{{ latest.summary.medium }}</div>
+        </div>
+        <div class="card low">
+            <h3> Baixas</h3>
+            <div class="value" style="color: #3498db;">{{ latest.summary.low }}</div>
+        </div>
+    </div>
+    {% endif %}
+
+    <h2 style="color: #ecf0f1; margin-bottom: 15px;">📅 Histórico dos Últimos 30 Dias</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Data</th>
+                <th>Arquivos Analisados</th>
+                <th>Total de Issues</th>
+                <th>Severidade</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for day in history %}
+            <tr>
+                <td>{{ day.date }}</td>
+                <td>{{ day.files_analyzed }}</td>
+                <td>{{ day.total_issues }}</td>
+                <td>
+                    {% if day.critical > 0 %}<span class="badge critical">{{ day.critical }} Críticas</span>{% endif %}
+                    {% if day.high > 0 %}<span class="badge high">{{ day.high }} Altas</span>{% endif %}
+                </td>
+                <td>
+                    {% if day.no_report %}
+                        <span class="no-report">Sem análise</span>
+                    {% else %}
+                        <span style="color: #2ecc71;">✅ Concluído</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>

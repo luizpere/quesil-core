@@ -1,0 +1,437 @@
+{
+  "timestamp": "2026-10-18T01:25:17.885174",
+  "date": "2026-10-18",
+  "hours_analyzed": 24,
+  "total_files": 9,
+  "files": [
+    {
+      "path": "code_review_security.py",
+      "name": "code_review_security.py",
+      "modified": "17/10/2026 07:39",
+      "icon": "🐍",
+      "issues": [
+        {
+          "severity": "critical",
+          "title": "Possível SQL Injection",
+          "description": "Linha 32 usa concatenação em query SQL.",
+          "suggestion": "Use parâmetros (? ou :name) em vez de concatenação."
+        },
+        {
+          "severity": "high",
+          "title": "Possível Path Traversal",
+          "description": "Linha 43 abre arquivo com path do usuário sem validação.",
+          "suggestion": "Use os.path.realpath() e valide se está dentro do diretório permitido."
+        },
+        {
+          "severity": "high",
+          "title": "Query dentro de loop",
+          "description": "Linha 32 executa query dentro de loop.",
+          "suggestion": "Use bulk operations ou JOINs para reduzir queries."
+        },
+        {
+          "severity": "high",
+          "title": "Query dentro de loop",
+          "description": "Linha 65 executa query dentro de loop.",
+          "suggestion": "Use bulk operations ou JOINs para reduzir queries."
+        },
+        {
+          "severity": "low",
+          "title": "List comprehension possível",
+          "description": "Linha 78 usa append em loop.",
+          "suggestion": "Considere usar list comprehension para melhor performance."
+        },
+        {
+          "severity": "low",
+          "title": "List comprehension possível",
+          "description": "Linha 79 usa append em loop.",
+          "suggestion": "Considere usar list comprehension para melhor performance."
+        },
+        {
+          "severity": "critical",
+          "title": "Possível SQL Injection",
+          "description": "Linha 32 usa concatenação em query SQL.",
+          "suggestion": "Use parâmetros (? ou :name) em vez de concatenação."
+        },
+        {
+          "severity": "high",
+          "title": "Possível Path Traversal",
+          "description": "Linha 43 abre arquivo com path do usuário sem validação.",
+          "suggestion": "Use os.path.realpath() e valide se está dentro do diretório permitido."
+        },
+        {
+          "severity": "high",
+          "title": "Query dentro de loop",
+          "description": "Linha 32 executa query dentro de loop.",
+          "suggestion": "Use bulk operations ou JOINs para reduzir queries."
+        },
+        {
+          "severity": "high",
+          "title": "Query dentro de loop",
+          "description": "Linha 65 executa query dentro de loop.",
+          "suggestion": "Use bulk operations ou JOINs para reduzir queries."
+        },
+        {
+          "severity": "low",
+          "title": "List comprehension possível",
+          "description": "Linha 78 usa append em loop.",
+          "suggestion": "Considere usar list comprehension para melhor performance."
+        },
+        {
+          "severity": "low",
+          "title": "List comprehension possível",
+          "description": "Linha 79 usa append em loop.",
+          "suggestion": "Considere usar list comprehension para melhor performance."
+        }
+      ],
+      "total_issues": 12
+    },
+    {
+      "path": "code_review_ai.py",
+      "name": "code_review_ai.py",
+      "modified": "17/10/2026 08:17",
+      "icon": "🐍",
+      "issues": [],
+      "total_issues": 0
+    },
+    {
+      "path": "app.py",
+      "name": "app.py",
+      "modified": "18/10/2026 01:20",
+      "icon": "🐍",
+      "issues": [
+        {
+          "severity": "medium",
+          "title": "Função muito longa: api_update_assistant",
+          "description": "A função api_update_assistant tem 52 linhas.",
+          "suggestion": "Divida em funções menores com responsabilidades únicas (SRP)."
+        },
+        {
+          "severity": "medium",
+          "title": "Função muito longa: start_container",
+          "description": "A função start_container tem 57 linhas.",
+          "suggestion": "Divida em funções menores com responsabilidades únicas (SRP)."
+        },
+        {
+          "severity": "medium",
+          "title": "Função muito longa: lab_gestao",
+          "description": "A função lab_gestao tem 60 linhas.",
+          "suggestion": "Divida em funções menores com responsabilidades únicas (SRP)."
+        },
+        {
+          "severity": "medium",
+          "title": "Função muito longa: lab_gestao",
+          "description": "A função lab_gestao tem 55 linhas.",
+          "suggestion": "Divida em funções menores com responsabilidades únicas (SRP)."
+        },
+        {
+          "severity": "medium",
+          "title": "Função muito longa: analyze_file",
+          "description": "A função analyze_file tem 83 linhas.",
+          "suggestion": "Divida em funções menores com responsabilidades únicas (SRP)."
+        },
+        {
+          "severity": "high",
+          "title": "Alta complexidade condicional",
+          "description": "Linha 2085 tem múltiplas condições aninhadas.",
+          "suggestion": "Use early returns ou extraia condições para variáveis booleanas."
+        },
+        {
+          "severity": "medium",
+          "title": "URL hardcoded",
+          "description": "Linha 4263 contém URL hardcoded.",
+          "suggestion": "Use variáveis de ambiente ou arquivo .env."
+        },
+        {
+          "severity": "medium",
+          "title": "URL hardcoded",
+          "description": "Linha 4267 contém URL hardcoded.",
+          "suggestion": "Use variáveis de ambiente ou arquivo .env."
+        },
+        {
+          "severity": "critical",
+          "title": "Except vazio ou genérico",
+          "description": "Linha 472 captura exceções sem tratamento.",
+          "suggestion": "Especifique o tipo de exceção e adicione logging."
+        },
+        {
+          "severity": "critical",
+          "title": "Except vazio ou genérico",
+          "description": "Linha 494 captura exceções sem tratamento.",
+          "suggestion": "Especifique o tipo de exceção e adicione logging."
+        },
+        {
+          "severity": "critical",
+          "title": "Except vazio ou genérico",
+          "description": "Linha 992 captura exceções sem tratamento.",
+          "suggestion": "Especifique o tipo de exceção e adicione logging."
+        },
+        {
+          "severity": "critical",
+          "title": "Except vazio ou genérico",
+          "description": "Linha 1046 captura exceções sem tratamento.",
+          "suggestion": "Especifique o tipo de exceção e adicione logging."
+        },
+        {
+          "severity": "critical",
+          "title": "Except vazio ou genérico",
+          "description": "Linha 1282 captura exceções sem tratamento.",
+          "suggestion": "Especifique o tipo de exceção e adicione logging."
+        },
+        {
+          "severity": "critical",
+          "title": "Except vazio ou genérico",
+          "description": "Linha 1291 captura exceções sem tratamento.",
+          "suggestion": "Especifique o tipo de exceção e adicione logging."
+        },
+        {
+          "severity": "critical",
+          "title": "Except vazio ou genérico",
+          "description": "Linha 1314 captura exceções sem tratamento.",
+          "suggestion": "Especifique o tipo de exceção e adicione logging."
+        },
+        {
+          "severity": "critical",
+          "title": "Except vazio ou genérico",
+          "description": "Linha 1319 captura exceções sem tratamento.",
+          "suggestion": "Especifique o tipo de exceção e adicione logging."
+        },
+        {
+          "severity": "critical",
+          "title": "Except vazio ou genérico",
+          "description": "Linha 1804 captura exceções sem tratamento.",
+          "suggestion": "Especifique o tipo de exceção e adicione logging."
+        },
+        {
+          "severity": "critical",
+          "title": "Except vazio ou genérico",
+          "description": "Linha 4513 captura exceções sem tratamento.",
+          "suggestion": "Especifique o tipo de exceção e adicione logging."
+        },
+        {
+          "severity": "high",
+          "title": "Query dentro de loop",
+          "description": "Linha 379 executa query dentro de loop.",
+          "suggestion": "Use bulk operations ou JOINs para reduzir queries."
+        },
+        {
+          "severity": "high",
+          "title": "Query dentro de loop",
+          "description": "Linha 445 executa query dentro de loop.",
+          "suggestion": "Use bulk operations ou JOINs para reduzir queries."
+        },
+        {
+          "severity": "high",
+          "title": "Query dentro de loop",
+          "description": "Linha 4156 executa query dentro de loop.",
+          "suggestion": "Use bulk operations ou JOINs para reduzir queries."
+        },
+        {
+          "severity": "low",
+          "title": "List comprehension possível",
+          "description": "Linha 632 usa append em loop.",
+          "suggestion": "Considere usar list comprehension para melhor performance."
+        },
+        {
+          "severity": "low",
+          "title": "List comprehension possível",
+          "description": "Linha 1742 usa append em loop.",
+          "suggestion": "Considere usar list comprehension para melhor performance."
+        },
+        {
+          "severity": "low",
+          "title": "List comprehension possível",
+          "description": "Linha 1775 usa append em loop.",
+          "suggestion": "Considere usar list comprehension para melhor performance."
+        },
+        {
+          "severity": "high",
+          "title": "Query dentro de loop",
+          "description": "Linha 379 executa query dentro de loop.",
+          "suggestion": "Use bulk operations ou JOINs para reduzir queries."
+        },
+        {
+          "severity": "high",
+          "title": "Query dentro de loop",
+          "description": "Linha 445 executa query dentro de loop.",
+          "suggestion": "Use bulk operations ou JOINs para reduzir queries."
+        },
+        {
+          "severity": "high",
+          "title": "Query dentro de loop",
+          "description": "Linha 4156 executa query dentro de loop.",
+          "suggestion": "Use bulk operations ou JOINs para reduzir queries."
+        },
+        {
+          "severity": "low",
+          "title": "List comprehension possível",
+          "description": "Linha 632 usa append em loop.",
+          "suggestion": "Considere usar list comprehension para melhor performance."
+        },
+        {
+          "severity": "low",
+          "title": "List comprehension possível",
+          "description": "Linha 1742 usa append em loop.",
+          "suggestion": "Considere usar list comprehension para melhor performance."
+        },
+        {
+          "severity": "low",
+          "title": "List comprehension possível",
+          "description": "Linha 1775 usa append em loop.",
+          "suggestion": "Considere usar list comprehension para melhor performance."
+        }
+      ],
+      "total_issues": 30
+    },
+    {
+      "path": "code_review_report.py",
+      "name": "code_review_report.py",
+      "modified": "18/10/2026 01:17",
+      "icon": "🐍",
+      "issues": [
+        {
+          "severity": "high",
+          "title": "Alta complexidade condicional",
+          "description": "Linha 45 tem múltiplas condições aninhadas.",
+          "suggestion": "Use early returns ou extraia condições para variáveis booleanas."
+        },
+        {
+          "severity": "low",
+          "title": "List comprehension possível",
+          "description": "Linha 109 usa append em loop.",
+          "suggestion": "Considere usar list comprehension para melhor performance."
+        },
+        {
+          "severity": "low",
+          "title": "List comprehension possível",
+          "description": "Linha 109 usa append em loop.",
+          "suggestion": "Considere usar list comprehension para melhor performance."
+        }
+      ],
+      "total_issues": 3
+    },
+    {
+      "path": "code_review_fix.py",
+      "name": "code_review_fix.py",
+      "modified": "18/10/2026 00:56",
+      "icon": "🐍",
+      "issues": [],
+      "total_issues": 0
+    },
+    {
+      "path": "workspaces/default/workspace/Teste.py",
+      "name": "Teste.py",
+      "modified": "17/10/2026 07:49",
+      "icon": "🐍",
+      "issues": [],
+      "total_issues": 0
+    },
+    {
+      "path": "templates/reports.html",
+      "name": "reports.html",
+      "modified": "18/10/2026 01:21",
+      "icon": "🌐",
+      "issues": [],
+      "total_issues": 0
+    },
+    {
+      "path": "templates/filemanager.html",
+      "name": "filemanager.html",
+      "modified": "17/10/2026 07:38",
+      "icon": "🌐",
+      "issues": [],
+      "total_issues": 0
+    },
+    {
+      "path": "templates/code_review.html",
+      "name": "code_review.html",
+      "modified": "18/10/2026 00:07",
+      "icon": "🌐",
+      "issues": [],
+      "total_issues": 0
+    }
+  ],
+  "summary": {
+    "critical": 12,
+    "high": 14,
+    "medium": 7,
+    "low": 12,
+    "total_issues": 45
+  },
+  "top_issues": [
+    {
+      "file": "code_review_security.py",
+      "severity": "critical",
+      "title": "Possível SQL Injection",
+      "description": "Linha 32 usa concatenação em query SQL.",
+      "suggestion": "Use parâmetros (? ou :name) em vez de concatenação."
+    },
+    {
+      "file": "code_review_security.py",
+      "severity": "critical",
+      "title": "Possível SQL Injection",
+      "description": "Linha 32 usa concatenação em query SQL.",
+      "suggestion": "Use parâmetros (? ou :name) em vez de concatenação."
+    },
+    {
+      "file": "app.py",
+      "severity": "critical",
+      "title": "Except vazio ou genérico",
+      "description": "Linha 472 captura exceções sem tratamento.",
+      "suggestion": "Especifique o tipo de exceção e adicione logging."
+    },
+    {
+      "file": "app.py",
+      "severity": "critical",
+      "title": "Except vazio ou genérico",
+      "description": "Linha 494 captura exceções sem tratamento.",
+      "suggestion": "Especifique o tipo de exceção e adicione logging."
+    },
+    {
+      "file": "app.py",
+      "severity": "critical",
+      "title": "Except vazio ou genérico",
+      "description": "Linha 992 captura exceções sem tratamento.",
+      "suggestion": "Especifique o tipo de exceção e adicione logging."
+    },
+    {
+      "file": "app.py",
+      "severity": "critical",
+      "title": "Except vazio ou genérico",
+      "description": "Linha 1046 captura exceções sem tratamento.",
+      "suggestion": "Especifique o tipo de exceção e adicione logging."
+    },
+    {
+      "file": "app.py",
+      "severity": "critical",
+      "title": "Except vazio ou genérico",
+      "description": "Linha 1282 captura exceções sem tratamento.",
+      "suggestion": "Especifique o tipo de exceção e adicione logging."
+    },
+    {
+      "file": "app.py",
+      "severity": "critical",
+      "title": "Except vazio ou genérico",
+      "description": "Linha 1291 captura exceções sem tratamento.",
+      "suggestion": "Especifique o tipo de exceção e adicione logging."
+    },
+    {
+      "file": "app.py",
+      "severity": "critical",
+      "title": "Except vazio ou genérico",
+      "description": "Linha 1314 captura exceções sem tratamento.",
+      "suggestion": "Especifique o tipo de exceção e adicione logging."
+    },
+    {
+      "file": "app.py",
+      "severity": "critical",
+      "title": "Except vazio ou genérico",
+      "description": "Linha 1319 captura exceções sem tratamento.",
+      "suggestion": "Especifique o tipo de exceção e adicione logging."
+    }
+  ],
+  "files_with_issues": [
+    "code_review_security.py",
+    "app.py",
+    "code_review_report.py"
+  ]
+}

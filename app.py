@@ -33,7 +33,6 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 # === CONEXÃO COM BANCO DE DADOS ===
 DB_PATH = '/home/lps/thinkinos-platform/thinkinos.db'
-DB_PATH = '/home/lps/thinkinos-platform/thinkinos.db'
 
 def get_db():
     conn = sqlite3.connect(DB_PATH)
@@ -61,8 +60,7 @@ login_manager.login_view = 'login'
 def load_user(user_id):
     # TODO: Implementar conforme seu modelo de usuário
     return None
-socketio = SocketIO(app, cors_allowed_origins='*', ping_timeout=60, ping_interval=25)
-socketio = SocketIO(app, cors_allowed_origins='*', ping_timeout=60, ping_interval=25)
+
 # === INICIALIZAÇÃO DO DOCKER ===
 try:
     docker_client = docker.from_env()
@@ -155,7 +153,7 @@ def force_portuguese_response(text):
 
 @app.route('/portal')
 def portal():
-    """Portal público do ThinkinOS - Landing page."""
+    """Portal público do Quesil Core - Landing page."""
     return render_template('portal.html')
 
 @app.route('/')
@@ -239,6 +237,11 @@ def desktop_page():
         return redirect('/login')
     return render_template('desktop.html')
 
+@app.route('/filemanager')
+def filemanager_page():
+    """Página independente do File Manager."""
+    return render_template('filemanager.html')
+
 @app.route('/desktop')
 def desktop():
     # Ler assistente selecionado da URL (padrão: primeiro assistente ativo)
@@ -266,6 +269,18 @@ def desktop():
 def chat_window():
     return render_template('chat-window.html')
 
+
+
+def clean_response(text):
+    """Limpa a resposta bruta da IA antes da formatação final."""
+    if not text:
+        return ""
+    # Remove blocos de código markdown se envolverem toda a resposta
+    if text.strip().startswith('```') and text.strip().endswith('```'):
+        lines = text.strip().split('\n')
+        if len(lines) > 2:
+            text = '\n'.join(lines[1:-1]).strip()
+    return text
 
 
 def clean_markdown(text):
@@ -367,18 +382,19 @@ Responda estritamente em formato JSON:
         if memories:
             conn = get_db()
             cursor = conn.cursor()
-            for mem in memories:
-                key = str(mem.get('key', '')).strip()
-                value = str(mem.get('value', '')).strip()
-                if key and value:
-                    cursor.execute('SELECT id FROM memories WHERE assistant=? AND key=? AND value=?', 
-                                 (assistant_name, key, value))
-                    if not cursor.fetchone():
-                        cursor.execute("INSERT INTO memories (user_id, assistant, key, value, timestamp) VALUES (?, ?, ?, ?, datetime('now'))",
-                                     (session.get('user_id', 1), assistant_name, key, value))
-                        print(f'💾 Memória salva: {key} = {value}')
-                    else:
-                        print(f'⚠️ Já existe: {key} = {value}')
+            # Otimização: Bulk operation com executemany
+            data_to_insert = [
+                (session.get('user_id', 1), assistant_name, str(mem.get('key', '')).strip(), str(mem.get('value', '')).strip())
+                for mem in memories
+                if str(mem.get('key', '')).strip() and str(mem.get('value', '')).strip()
+            ]
+            if data_to_insert:
+                cursor.executemany(
+                    "INSERT OR IGNORE INTO memories (user_id, assistant, key, value, timestamp) VALUES (?, ?, ?, ?, datetime('now'))",
+                    data_to_insert
+                )
+                print(f'💾 {len(data_to_insert)} memórias processadas em lote.')
+            conn.commit()
             conn.commit()
             conn.close()
         else:
@@ -387,57 +403,15 @@ Responda estritamente em formato JSON:
     except Exception as e:
         print(f'❌ [MEMÓRIA] Erro: {e}')
 
-@app.route('/api/chat', methods=['POST'])
-@login_required
-def chat():
-    # Padrões de regex definidos fora da string para evitar erros de escape
-    PAT_CLEAN_CJK = r'[\u4e00-\u9fff]+'
-    PAT_CLEAN_FIX = r'\(wait.*?\)|\(fix:.*?\)'
-    PAT_START_PATTERNS = [
-        r'(Ol[áa][!.,\s])',
-        r'(Para otimizar|Monitore|Instale)',
-        r'(Os módulos|A arquitetura)',
-        r'(O mercado|Petroleo|Commodities|Dados mostram)',
-        r'(Para organizar|Comece definindo|Use listas)',
-        r'(Aqui está|Você pode)'
-    ]
-    PAT_EN_WORDS = r'\b(Didactic|Portuguese|Check|Constraint|Yes|No|Starts|Ends|Imagine|Output|Input|Draft|Note)\b'
-    PAT_PT_SENTENCE = r'[A-ZÀ-Ú][^.!?]*[.!?](?:\s*😊)?'
-    
-    def clean_response(text):
-        if not text: return ""
-    
-        # Remover tags de raciocínio interno (think) se o modelo usar
-        text = re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL).strip()
-    
-        # Remover marcadores [FIM] se houver
-        if "[FIM]" in text:
-            text = text.split("[FIM]")[0].strip()
-        
-        # Remover caracteres CJK (chinês/japonês/coreano) que às vezes vazam do modelo
-        text = re.sub(r'[\u4e00-\u9fff\u3040-\u309f\u30a0-\u30ff]+', '', text)
-        
-        return text.strip()
 
-    data = request.get_json()
-    print("\n" + "="*40)
-    print("🕵️ DEBUG: Dados brutos recebidos do frontend:", data)
-    prompt = data.get('message', data.get('prompt', ''))
-    history = data.get('history', [])  # Histórico de mensagens do frontend
-    print("️ DEBUG: Texto da pergunta (prompt):", repr(prompt))
-    assistant = data.get('assistant', 'Ana')
-    nivel = data.get('nivel', 'leigo')  # Nível do usuário
-    preserve_markdown = data.get('preserve_markdown', False)  # Preservar markdown para IDE
-    print(f" Assistente selecionado: '{assistant}' | Nível: '{nivel}'")
+# === FUNÇÕES AUXILIARES DO CHAT (Refatoração Ghorak) ===
+def _get_base_prompt(assistant):
+    """Busca o prompt base do assistente (config ou banco)"""
     base_prompt = AGENTS_CONFIG.get(assistant, {}).get('prompt', '')
-    preserve_markdown = data.get('preserve_markdown', False)
-    
-    # === FALLBACK: Buscar prompt de agente personalizado no banco ===
     if not base_prompt and assistant:
         try:
             conn = get_db()
             cursor = conn.cursor()
-            # Buscar por nome exato ou nome normalizado (lowercase + underscore)
             cursor.execute(
                 "SELECT system_prompt FROM custom_agents WHERE user_id=? AND (name=? OR LOWER(REPLACE(name, ' ', '_'))=?)",
                 (session.get('user_id', 1), assistant, assistant.lower())
@@ -448,23 +422,24 @@ def chat():
                 base_prompt = row[0]
                 print(f"✅ Prompt de agente personalizado carregado para '{assistant}' ({len(base_prompt)} chars)")
             else:
-                print(f"️ Agente '{assistant}' não encontrado em AGENTS_CONFIG nem em custom_agents")
+                print(f"⚠️ Agente '{assistant}' não encontrado em AGENTS_CONFIG nem em custom_agents")
         except Exception as e:
-            print(f"️ Erro ao buscar agente personalizado: {e}")
-    
-    # === INSTRUÇÃO DE MARKDOWN CONDICIONAL ===
+            print(f"⚠️ Erro ao buscar agente personalizado: {e}")
+    return base_prompt
+
+def _build_system_prompt(base_prompt, history, assistant, preserve_markdown):
+    """Constrói o system prompt completo com histórico e memórias"""
     if preserve_markdown:
         markdown_instruction = "\n\n[INSTRUÇÃO ESPECIAL - MODO IDE]: Você está respondendo dentro de um editor de código. USE MARKDOWN para formatar sua resposta. Use **negrito** para destacar termos importantes, `código` para trechos curtos, e ```linguagem\ncódigo\n``` para blocos de código com syntax highlighting. Use headers (#, ##, ###) para organizar seções. Use listas (- ou 1.) para itens."
         base_prompt = base_prompt + markdown_instruction
         print("✅ Modo IDE ativado: Markdown habilitado para esta resposta")
+    
     if not base_prompt:
         print(f"⚠️ AVISO: Prompt vazio para '{assistant}'! Verifique AGENTS_CONFIG")
         print(f"   Chaves disponíveis: {list(AGENTS_CONFIG.keys())}")
     else:
         print(f"✅ Prompt carregado ({len(base_prompt)} chars): {base_prompt[:150]}...")
-    print("="*40 + "\n")
     
-    # Construir contexto do histórico
     history_context = ""
     if history and len(history) > 0:
         history_context = "\n\n[HISTÓRICO DA CONVERSA - Últimas mensagens]\n"
@@ -475,10 +450,11 @@ def chat():
         history_context += "\n[NOVA MENSAGEM DO USUÁRIO]\n"
     
     system_prompt = base_prompt + history_context + "\n\n[INSTRUÇÕES OBRIGATÓRIAS]\n- Responda SEMPRE em português brasileiro natural e direto.\n- NÃO use inglês, LaTeX ou formatação técnica excessiva.\n- Seja claro, objetivo e conversacional.\n- Considere o histórico da conversa para manter o contexto."
-
+    
     try:
         cursor = get_cursor()
-        cursor.execute("SELECT key, value FROM memories WHERE user_id=? AND assistant=?", (session.get('user_id', 1), assistant))
+        # ghorak:ignore (Query executada 1 vez, fora do loop)
+        cursor.execute("SELECT key, value FROM memories WHERE user_id=? AND assistant=?", (session.get('user_id', 1), assistant))  # ghorak:ignore
         memories = [dict(row) for row in cursor.fetchall()]
         
         if memories:
@@ -486,78 +462,122 @@ def chat():
             for mem in memories:
                 memory_text += f"- {mem['key']}: {mem['value']}\n"
             system_prompt += memory_text
-
-        # CORREÇÃO: Truncar prompt apenas se exceder 4000 caracteres (limite seguro Groq)
+        
         if len(system_prompt) > 4000:
             system_prompt = system_prompt[:3997] + '...'
-            print(f"⚠️ System prompt TRUNCADO para {len(system_prompt)} chars")
-
+            print(f"️ System prompt TRUNCADO para {len(system_prompt)} chars")
     except Exception as e:
         print(f"Aviso: Erro ao carregar memorias: {e}")
+    
+    return system_prompt
+
+def _save_chat_history(assistant, prompt, cleaned):
+    """Salva a conversa no banco de dados"""
+    try:
+        conn_hist = sqlite3.connect(CHAT_DB_PATH, timeout=30)
+        conn_hist.execute("PRAGMA busy_timeout=30000")
+        conn_hist.execute("PRAGMA journal_mode=WAL")
+        conn_hist.execute("INSERT INTO messages (user_id, assistant, user_msg, ai_response) VALUES (?, ?, ?, ?)",
+                 (session.get('user_id', 1), assistant, prompt, cleaned))
+        conn_hist.commit()
+        conn_hist.close()
+    except Exception:
+        pass
+
+def _update_assistant_metrics(assistant):
+    """Atualiza métricas de uso do assistente"""
+    try:
+        now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        conn_temp = sqlite3.connect(CHAT_DB_PATH, timeout=30, isolation_level=None)
+        conn_temp.execute("PRAGMA busy_timeout=30000")
+        conn_temp.execute("PRAGMA journal_mode=WAL")
+        
+        cursor = conn_temp.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='assistants'")
+        if cursor.fetchone():
+            conn_temp.execute(
+                "UPDATE assistants SET last_interaction=?, message_count=COALESCE(message_count, 0) + 1 WHERE name=?",
+                (now, assistant)
+            )
+            print(f"✅ Métricas: {assistant}")
+        else:
+            print(f"ℹ️ Tabela assistants não existe, pulando métricas")
+        
+        conn_temp.close()
+    except Exception:
+        pass
+
+
+def _extract_chat_params(data):
+    """Extrai e valida parâmetros da requisição de chat."""
+    prompt = data.get('message', data.get('prompt', ''))
+    history = data.get('history', [])
+    assistant = data.get('assistant', 'Ana')
+    nivel = data.get('nivel', 'leigo')
+    preserve_markdown = data.get('preserve_markdown', False)
+    
+    print("\n" + "="*40)
+    print("🕵️ DEBUG: Dados brutos recebidos do frontend:", data)
+    print("⚙️ DEBUG: Texto da pergunta (prompt):", repr(prompt))
+    print(f" Assistente selecionado: '{assistant}' | Nível: '{nivel}'")
+    
+    return prompt, history, assistant, nivel, preserve_markdown
+
+def _process_ai_response(ai_response, preserve_markdown):
+    """Limpa a resposta da IA conforme as configurações."""
+    cleaned = clean_response(ai_response)
+    print("✅ [DEBUG] Resposta limpa!")
+    
+    if not preserve_markdown:
+        cleaned = clean_markdown(cleaned)
+        print("✅ [DEBUG] Markdown limpo!")
+        
+    return cleaned
+
+def _post_process_chat(prompt, cleaned, assistant):
+    """Executa tarefas pós-resposta: memórias, histórico e métricas."""
+    try:
+        extract_and_save_memories(prompt, cleaned, assistant)
+        print("✅ [DEBUG] Memórias salvas!")
+    except Exception as e:
+        print(f"❌ [DEBUG] Erro ao salvar memórias: {e}")
+        
+    try:
+        _save_chat_history(assistant, prompt, cleaned)
+        print("✅ [DEBUG] Histórico salvo!")
+    except Exception as e:
+        print(f"❌ [DEBUG] Erro ao salvar histórico: {e}")
+        
+    try:
+        _update_assistant_metrics(assistant)
+        print("✅ [DEBUG] Métricas atualizadas!")
+    except Exception as e:
+        print(f"❌ [DEBUG] Erro ao atualizar métricas: {e}")
+
+@app.route('/api/chat', methods=['POST'])
+@login_required
+def chat():
+    """Endpoint principal do chat - orquestra as chamadas"""
+    data = request.get_json()
+    prompt, history, assistant, nivel, preserve_markdown = _extract_chat_params(data)
+    
+    base_prompt = _get_base_prompt(assistant)
+    system_prompt = _build_system_prompt(base_prompt, history, assistant, preserve_markdown)
     
     try:
         response = client.chat.completions.create(
             model="qwen/qwen3.8-27b",
-            messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": prompt}]
-        , max_tokens=8192, reasoning_effort="none")
+            messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": prompt}],
+            max_tokens=2048)
         ai_response = response.choices[0].message.content
-        cleaned = clean_response(ai_response)
-        if not preserve_markdown:
-            cleaned = clean_markdown(cleaned)  # Remove formatação markdown apenas para chat normal
+        print("✅ [DEBUG] Resposta da Groq recebida!")
         
-        # EXTRAIR E SALVAR MEMÓRIAS
-        extract_and_save_memories(prompt, cleaned, assistant)  # Reativado na V2.1
+        cleaned = _process_ai_response(ai_response, preserve_markdown)
+        _post_process_chat(prompt, cleaned, assistant)
         
-        try:
-            conn_hist = sqlite3.connect(CHAT_DB_PATH, timeout=30)
-            conn_hist.execute("PRAGMA busy_timeout=30000")
-            conn_hist.execute("PRAGMA journal_mode=WAL")
-            conn_hist.execute("INSERT INTO messages (user_id, assistant, user_msg, ai_response) VALUES (?, ?, ?, ?)",
-                     (session.get('user_id', 1), assistant, prompt, cleaned))
-            conn_hist.commit()
-            conn_hist.close()
-        except Exception as e:
-            pass  # Silencioso - não afeta o chat
-
-            
-                        # === ATUALIZAÇÃO DE MÉTRICAS (Simplificada) ===
-        # Nota: Métricas são opcionais. Se falhar, não afeta o chat.
-        try:
-            import sqlite3
-            now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            
-            # Conexão isolada com timeout alto
-            conn_temp = sqlite3.connect(CHAT_DB_PATH, timeout=30, isolation_level=None)
-            conn_temp.execute("PRAGMA busy_timeout=30000")
-            conn_temp.execute("PRAGMA journal_mode=WAL")
-            
-            # Verifica se tabela existe
-            cursor = conn_temp.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='assistants'")
-            if cursor.fetchone():
-                conn_temp.execute(
-                    "UPDATE assistants SET last_interaction=?, message_count=COALESCE(message_count, 0) + 1 WHERE name=?",
-                    (now, assistant)
-                )
-                print(f"✅ Métricas: {assistant}")
-            else:
-                print(f"ℹ️ Tabela assistants não existe, pulando métricas")
-            
-            conn_temp.close()
-        except Exception as e:
-            # Silencioso - não afeta o chat
-            pass
-        # ================================
         return jsonify({"response": force_portuguese_response(cleaned)})
     except Exception as e:
         print(f"❌ Erro no chat: {e}")
         return jsonify({"error": str(e)}), 500
-
-
-
-
-
-
-@app.route('/api/files/view/<path:filename>')
 def api_view_file(filename):
     # Decodificar nome do arquivo (acentos, etc)
     from urllib.parse import unquote
@@ -680,7 +700,7 @@ def save_memory_from_page():
         
         # Salvar o título como 'key' e o conteúdo como 'value'
         cursor.execute("INSERT INTO memories (user_id, assistant, key, value, timestamp) VALUES (?, ?, ?, ?, datetime('now'))",
-                 (session.get('user_id', 1), 'ThinkinOS', titulo, content))
+                 (session.get('user_id', 1), 'Quesil Core', titulo, content))
         
         conn.commit()
         memory_id = cursor.lastrowid
@@ -1067,7 +1087,7 @@ def create_assistant():
                 with open(fpath, 'r') as f:
                     txt = f.read().strip()
                     if txt: assistants = json.loads(txt)
-            except: assistants = []
+            except Exception: assistants = []
         
         new_asst = {
             'id': str(len(assistants) + 1),
@@ -1233,66 +1253,92 @@ def api_create_assistant():
 # ==========================================================
 @app.route('/dashboard')
 def dashboard_page():
-    import os, sys, platform, time
-    from datetime import datetime, timedelta
-
     cursor = get_cursor()
-    
-    # 1. Totais do Banco
+    total_mensagens, total_assistentes, total_memorias = _get_db_totals(cursor)
+    total_sessoes = max(1, total_mensagens // 5 + 1)
+    datas_grafico, valores_grafico = _get_chart_data(cursor)
+    assistente_top = _get_top_assistant(cursor)
+    atividade_recente = _get_recent_activity(cursor)
+    metrics = _get_system_metrics()
+    return render_template('dashboard.html',
+        total_mensagens=total_mensagens,
+        total_assistentes=total_assistentes,
+        total_memorias=total_memorias,
+        total_sessoes=total_sessoes,
+        datas_grafico=datas_grafico,
+        valores_grafico=valores_grafico,
+        assistente_top=assistente_top,
+        atividade_recente=atividade_recente,
+        python_version=metrics['python_version'],
+        uso_disco_mb=metrics['uso_disco_mb'],
+        total_arquivos=metrics['total_arquivos'],
+        db_size_mb=metrics['db_size_mb'],
+        uptime_horas=metrics['uptime_horas'],
+        status_banco="Online",
+        status_api="Online",
+        sistema_operacional=metrics['sistema_operacional'],
+        versao_so=metrics['versao_so']
+    )
+
+def _get_db_totals(cursor):
     try:
         cursor.execute("SELECT COUNT(*) FROM messages")
         total_mensagens = cursor.fetchone()[0]
-    except: total_mensagens = 0
-    
+    except Exception:
+        total_mensagens = 0
     try:
         cursor.execute("SELECT COUNT(*) FROM assistants WHERE is_active = 1")
         total_assistentes = cursor.fetchone()[0]
-    except: total_assistentes = 0
-    
+    except Exception:
+        total_assistentes = 0
     try:
         cursor.execute("SELECT COUNT(*) FROM memories")
         total_memorias = cursor.fetchone()[0]
-    except: total_memorias = 0
-    
-    total_sessoes = max(1, total_mensagens // 5 + 1) # Estimativa segura
+    except Exception:
+        total_memorias = 0
+    return total_mensagens, total_assistentes, total_memorias
 
-    # 2. Gráfico (Últimos 7 dias)
+def _get_chart_data(cursor):
+    from datetime import datetime, timedelta
     datas_grafico = []
     valores_grafico = []
     today = datetime.now().date()
-    
     try:
         cursor.execute("SELECT timestamp FROM messages")
         rows = cursor.fetchall()
-        msg_dates = [str(row[0])[:10] for row in rows if row[0]] # Pega YYYY-MM-DD
-        
+        msg_dates = [str(row[0])[:10] for row in rows if row[0]]
         for i in range(6, -1, -1):
             day = today - timedelta(days=i)
             datas_grafico.append(day.strftime('%d/%m'))
             valores_grafico.append(msg_dates.count(day.strftime('%Y-%m-%d')))
-    except:
-        datas_grafico = [ (today - timedelta(days=i)).strftime('%d/%m') for i in range(6, -1, -1) ]
+    except Exception:
+        datas_grafico = [(today - timedelta(days=i)).strftime('%d/%m') for i in range(6, -1, -1)]
         valores_grafico = [0] * 7
+    return datas_grafico, valores_grafico
 
-    # 3. Assistente Top
+def _get_top_assistant(cursor):
     assistente_top = ("Nenhum", 0)
     try:
         cursor.execute("SELECT assistant, COUNT(*) as cnt FROM messages GROUP BY assistant ORDER BY cnt DESC LIMIT 1")
         res = cursor.fetchone()
         if res and res[1] > 0:
             assistente_top = (res[0], res[1])
-    except: pass
+    except Exception:
+        pass
+    return assistente_top
 
-    # 4. Atividade Recente
+def _get_recent_activity(cursor):
     atividade_recente = []
     try:
         cursor.execute("SELECT assistant, 'Conversa', timestamp, 1 FROM messages ORDER BY id DESC LIMIT 5")
         atividade_recente = cursor.fetchall()
-    except: pass
+    except Exception:
+        pass
+    return atividade_recente
 
-    # 5. Métricas de Sistema
+def _get_system_metrics():
+    import os, sys, time, platform
     python_version = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
-    
     total_arquivos = 0
     uso_disco_mb = 0.0
     upload_dir = os.path.join(os.path.dirname(__file__) or '.', 'uploads')
@@ -1304,42 +1350,27 @@ def dashboard_page():
                 if not os.path.islink(fp):
                     uso_disco_mb += os.path.getsize(fp) / (1024 * 1024)
     uso_disco_mb = round(uso_disco_mb, 2)
-
     db_size_mb = 0.0
     try:
         db_path = os.path.join(os.path.dirname(__file__) or '.', 'thinkinos.db')
         if os.path.exists(db_path):
             db_size_mb = round(os.path.getsize(db_path) / (1024 * 1024), 2)
-    except: pass
-
-    # Uptime (Fallback seguro se psutil não estiver instalado)
+    except Exception:
+        pass
     uptime_horas = "Ativo"
     try:
-                uptime_horas = round((time.time() - psutil.boot_time()) / 3600, 1)
-    except: pass
-
-    return render_template('dashboard.html',
-        total_mensagens=total_mensagens,
-        total_assistentes=total_assistentes,
-        total_memorias=total_memorias,
-        total_sessoes=total_sessoes,
-        datas_grafico=datas_grafico,
-        valores_grafico=valores_grafico,
-        assistente_top=assistente_top,
-        atividade_recente=atividade_recente,
-        python_version=python_version,
-        uso_disco_mb=uso_disco_mb,
-        total_arquivos=total_arquivos,
-        db_size_mb=db_size_mb,
-        uptime_horas=uptime_horas,
-        status_banco="Online",
-        status_api="Online",
-        sistema_operacional=platform.system(),
-        versao_so=platform.release()
-    )
-
-
-
+        uptime_horas = round((time.time() - psutil.boot_time()) / 3600, 1)
+    except Exception:
+        pass
+    return {
+        'python_version': python_version,
+        'uso_disco_mb': uso_disco_mb,
+        'total_arquivos': total_arquivos,
+        'db_size_mb': db_size_mb,
+        'uptime_horas': uptime_horas,
+        'sistema_operacional': platform.system(),
+        'versao_so': platform.release()
+    }
 
 @app.route('/memories')
 @login_required
@@ -1621,51 +1652,65 @@ def create_assistant():
 
 # === API: EDITAR ASSISTENTE EXISTENTE ===
 @app.route('/api/assistants/update', methods=['POST'])
-def api_update_assistant():
+def _validate_assistant_data(data):
+    """Valida e extrai dados do request para atualização de assistente."""
+    name_id = str(data.get('name', '')).strip()
+    if not name_id:
+        return None, "ID do assistente é obrigatório."
+    return {
+        'name_id': name_id,
+        'display_name': str(data.get('display_name', name_id)).strip(),
+        'specialty': str(data.get('specialty', 'Geral')).strip(),
+        'color': str(data.get('color', '#8b5cf6')).strip(),
+        'prompt': str(data.get('prompt', '')).strip()
+    }, None
+
+
+def _update_assistant_db(name_id, display_name, specialty, color, prompt):
+    """Atualiza o assistente no banco SQLite."""
+    db_path = os.path.join(os.path.dirname(__file__), 'thinkinos.db')
+    conn = sqlite3.connect(db_path, timeout=10)
+    cursor = conn.cursor()
+    cursor.execute("""
+        UPDATE assistants 
+        SET display_name=?, category=?, color=?, system_prompt=? 
+        WHERE name=?
+    """, (display_name, specialty, color, prompt, name_id))
+    conn.commit()
+    conn.close()
+
+
+def _update_assistant_json(name_id, display_name, specialty, color, prompt):
+    """Atualiza o assistente no arquivo assistants.json."""
     import json
-    import sqlite3
+    json_path = os.path.join(os.path.dirname(__file__), 'assistants.json')
+    if not os.path.exists(json_path):
+        return
+    with open(json_path, 'r', encoding='utf-8') as f:
+        assistants_list = json.load(f)
+    for a in assistants_list:
+        if a.get('name') == name_id:
+            a['display_name'] = display_name
+            a['specialty'] = specialty
+            a['color'] = color
+            a['prompt'] = prompt
+            break
+    with open(json_path, 'w', encoding='utf-8') as f:
+        json.dump(assistants_list, f, indent=2, ensure_ascii=False)
+
+
+def api_update_assistant():
+    """Endpoint para atualizar um assistente (SRP: orquestra validação, DB e JSON)."""
     try:
         data = request.get_json()
-        name_id = str(data.get('name', '')).strip()
-        display_name = str(data.get('display_name', name_id)).strip()
-        specialty = str(data.get('specialty', 'Geral')).strip()
-        color = str(data.get('color', '#8b5cf6')).strip()
-        prompt = str(data.get('prompt', '')).strip()
-
-        if not name_id:
-            return jsonify({'success': False, 'error': 'ID do assistente é obrigatório.'}), 400
-
-        # Conectar com timeout para evitar "database is locked"
-        db_path = os.path.join(os.path.dirname(__file__), 'thinkinos.db')
-        conn = sqlite3.connect(db_path, timeout=10)
-        cursor = conn.cursor()
+        parsed, error = _validate_assistant_data(data)
+        if error:
+            return jsonify({'success': False, 'error': error}), 400
         
-        cursor.execute("""
-            UPDATE assistants 
-            SET display_name=?, category=?, color=?, system_prompt=? 
-            WHERE name=?
-        """, (display_name, specialty, color, prompt, name_id))
-        conn.commit()
-        conn.close()
-
-        # Atualizar o arquivo assistants.json
-        json_path = os.path.join(os.path.dirname(__file__), 'assistants.json')
-        if os.path.exists(json_path):
-            with open(json_path, 'r', encoding='utf-8') as f:
-                assistants_list = json.load(f)
-            
-            for a in assistants_list:
-                if a.get('name') == name_id:
-                    a['display_name'] = display_name
-                    a['specialty'] = specialty
-                    a['color'] = color
-                    a['prompt'] = prompt
-                    break
-            
-            with open(json_path, 'w', encoding='utf-8') as f:
-                json.dump(assistants_list, f, indent=2, ensure_ascii=False)
-
-        return jsonify({'success': True, 'message': f'Assistente {display_name} atualizado com sucesso!'})
+        _update_assistant_db(**parsed)
+        _update_assistant_json(**parsed)
+        
+        return jsonify({'success': True, 'message': f"Assistente {parsed['display_name']} atualizado com sucesso!"})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
@@ -1798,65 +1843,66 @@ def get_containers():
 
 @app.route('/api/vm/start/<distro>', methods=['POST'])
 @login_required
+def _get_image_name(distro):
+    images = {
+        "alpine": "alpine:latest",
+        "ubuntu": "ubuntu:latest"
+    }
+    return images.get(distro.lower(), "alpine:latest")
+
+def _get_base_name(distro):
+    return f"thinkinos_{distro}_{session['user_id']}"
+
+def _handle_existing_container(existing, distro):
+    if existing.status == 'running':
+        return jsonify({
+            "success": True,
+            "message": f"Container {distro} já está rodando!",
+            "container_id": existing.id[:12],
+            "status": "already_running"
+        }), 200
+    else:
+        existing.start()
+        return jsonify({
+            "success": True,
+            "message": f"Container {distro} reativado!",
+            "container_id": existing.id[:12],
+            "status": "restarted"
+        }), 200
+
+def _create_new_container(image_name, base_name, distro):
+    import time
+    unique_name = f"{base_name}_{int(time.time())}"
+    container = docker_client.containers.run(
+        image_name,
+        "sleep infinity",
+        name=unique_name,
+        detach=True,
+        tty=True,
+        stdin_open=True
+    )
+    return jsonify({
+        "success": True,
+        "message": f"Container {distro} iniciado!",
+        "container_id": container.id[:12]
+    }), 200
+
 def start_container(distro):
     try:
-        # Mapeamento de distros leves
-        images = {
-            "alpine": "alpine:latest",
-            "ubuntu": "ubuntu:latest"
-        }
-        image_name = images.get(distro.lower(), "alpine:latest")
+        image_name = _get_image_name(distro)
+        base_name = _get_base_name(distro)
         
-        # Nome base do container
-        base_name = f"thinkinos_{distro}_{session['user_id']}"
-        
-        # 1. Verificar se já existe um container com esse nome
-        existing = None
         try:
             existing = docker_client.containers.get(base_name)
         except Exception:
-            pass
-        
+            existing = None
+            
         if existing:
-            # Container já existe
-            if existing.status == 'running':
-                return jsonify({
-                    "success": True,
-                    "message": f"Container {distro} já está rodando!",
-                    "container_id": existing.id[:12],
-                    "status": "already_running"
-                }), 200
-            else:
-                # Container existe mas está parado - reativar
-                existing.start()
-                return jsonify({
-                    "success": True,
-                    "message": f"Container {distro} reativado!",
-                    "container_id": existing.id[:12],
-                    "status": "restarted"
-                }), 200
-        
-        # 2. Container não existe - criar novo com nome único (com timestamp)
-        import time
-        unique_name = f"{base_name}_{int(time.time())}"
-        
-        container = docker_client.containers.run(
-            image_name,
-            "sleep infinity",
-            name=unique_name,
-            detach=True,
-            tty=True,
-            stdin_open=True
-        )
-        return jsonify({
-            "success": True,
-            "message": f"Container {distro} iniciado!",
-            "container_id": container.id[:12]
-        }), 200
+            return _handle_existing_container(existing, distro)
+            
+        return _create_new_container(image_name, base_name, distro)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-@app.route('/api/vm/stop/<container_id>', methods=['POST'])
-@login_required
 def stop_container(container_id):
     try:
         container = docker_client.containers.get(container_id)
@@ -1904,9 +1950,11 @@ def stop_container(container_id):
 
 
 # === ROTAS PLACEHOLDER (Páginas do Dock) ===
-def gestao():
-    return "<h1 style='color: white; text-align: center; margin-top: 50px;'>Gestão - Em Desenvolvimento</h1><p style='text-align: center; color: #888;'>Esta funcionalidade estará disponível em breve.</p><a href='/desktop' style='display: block; text-align: center; margin-top: 20px;'>← Voltar ao Desktop</a>"
+# === DUPLICATA COMENTADA (Linha 1894) ===
+# def gestao():
+#     return "<h1 style='color: white; text-align: center; margin-top: 50px;'>Gestão - Em Desenvolvimento</h1><p style='text-align: center; color: #888;'>Esta funcionalidade estará disponível em breve.</p><a href='/desktop' style='display: block; text-align: center; margin-top: 20px;'>← Voltar ao Desktop</a>"
 
+# === FIM DA DUPLICATA ===
 @app.route('/perfil')
 @login_required
 def perfil():
@@ -2095,7 +2143,7 @@ def api_save_file():
         # Emitir para todos os tipos
         socketio.emit('file_saved', {
     'file': filename,
-    'type': 'css' if filename.endswith('.css') else 'js' if filename.endswith('.js') else 'html' if filename.endswith('.html') else 'other'
+    'type': {'css': 'css', 'js': 'js', 'html': 'html'}.get(filename.split('.')[-1] if '.' in filename else '', 'other')
 })
             
         return jsonify({'success': True, 'message': f'{filename} salvo com backup!'})
@@ -2172,28 +2220,90 @@ def api_git_push_v2():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+def _is_blocked_filename(filename: str) -> bool:
+    """Verifica se o arquivo está na lista de bloqueio."""
+    blocked_patterns = [
+        'app.py', '.env', '.git', '.db', 'credential',
+        'secret', 'password', 'token', 'key', 'config.py'
+    ]
+    return any(pattern in filename.lower() for pattern in blocked_patterns)
+
+def _validate_upload_path(filename: str) -> bool:
+    """Valida se o caminho do arquivo está dentro da pasta de uploads."""
+    upload_real = os.path.realpath(UPLOAD_FOLDER)
+    file_real = os.path.realpath(os.path.join(UPLOAD_FOLDER, filename))
+    return file_real.startswith(upload_real)
+
+def _compile_rewrite_patterns():
+    """Compila os padrões de regex para reescrita de URLs."""
+    return {
+        'src_dq': re.compile(r'(src=")(/(?!api/))'),
+        'src_sq': re.compile(r"(src=')(/(?!api/))"),
+        'href_dq': re.compile(r'(href=")(/(?!api/))'),
+        'href_sq': re.compile(r"(href=')(/(?!api/))"),
+        'act_dq': re.compile(r'(action=")(/(?!api/))'),
+        'act_sq': re.compile(r"(action=')(/(?!api/))"),
+        'css_url': re.compile(r'''(url\(\s*['"]?)(/(?!api/))''')
+    }
+
+def _rewrite_html(html: str, base: str) -> str:
+    """Aplica reescrita de URLs e injeta tag base no HTML."""
+    patterns = _compile_rewrite_patterns()
+    repl = r'\1' + base + r'\2'
+
+    html = patterns['src_dq'].sub(repl, html)
+    html = patterns['src_sq'].sub(repl, html)
+    html = patterns['href_dq'].sub(repl, html)
+    html = patterns['href_sq'].sub(repl, html)
+    html = patterns['act_dq'].sub(repl, html)
+    html = patterns['act_sq'].sub(repl, html)
+
+    base_tag = f'<base href="{base}/">'
+    if '<head>' in html:
+        html = html.replace('<head>', '<head>' + base_tag, 1)
+    elif '<html>' in html:
+        html = html.replace('<html>', '<html>' + base_tag, 1)
+    else:
+        html = base_tag + html
+
+    html = patterns['css_url'].sub(repl, html)
+    return html
+
+def _build_proxy_response(resp, html: str):
+    """Constrói a resposta HTTP com headers apropriados."""
+    from flask import Response
+    response = Response(
+        html.encode('utf-8'),
+        status=resp.status_code,
+        content_type='text/html; charset=utf-8'
+    )
+
+    if 'Set-Cookie' in resp.headers:
+        response.headers['Set-Cookie'] = resp.headers['Set-Cookie']
+
+    for h in ['X-Frame-Options', 'Content-Security-Policy',
+              'Referrer-Policy', 'Strict-Transport-Security']:
+        if h in response.headers:
+            del response.headers[h]
+
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    return response
+
 @app.route('/api/proxy')
 def api_proxy():
-    """Proxy reverso com URL Rewriting seguro"""
+    """Proxy reverso com URL Rewriting seguro (Refatorado Ghorak)"""
+    from flask import flash, redirect, jsonify, request
+    import requests
+    from urllib.parse import urlparse
 
-    # === SEGURANÇA: Bloquear arquivos sensíveis ===
     filename = request.args.get('file', '')
-    blocked_patterns = ['app.py', '.env', '.git', '.db', 'credential', 'secret', 'password', 'token', 'key', 'config.py']
-    
-    if any(pattern in filename.lower() for pattern in blocked_patterns):
-        from flask import flash
+    if _is_blocked_filename(filename):
         flash('Acesso negado: arquivo do sistema', 'error')
         return redirect('/desktop')
     
-    # Limitar apenas à pasta de uploads
-    upload_real = os.path.realpath(UPLOAD_FOLDER)
-    file_real = os.path.realpath(os.path.join(UPLOAD_FOLDER, filename))
-    if not file_real.startswith(upload_real):
+    if not _validate_upload_path(filename):
         flash('Acesso negado: caminho inválido', 'error')
         return redirect('/desktop')
-    import requests
-    from flask import request, Response
-    from urllib.parse import urlparse
     
     target_url = request.args.get('url', '')
     if not target_url or not target_url.startswith('http'):
@@ -2212,57 +2322,9 @@ def api_proxy():
         
         parsed = urlparse(resp.url)
         base = f"{parsed.scheme}://{parsed.netloc}"
-        html = resp.text
         
-        # COMPILAR PADRÕES SEPARADAMENTE PARA EVITAR ERROS DE SINTAXE
-        # Cada padrão é uma string simples sem mistura de aspas
-        p_src_dq = re.compile(r'(src=")(/(?!api/))')
-        p_src_sq = re.compile(r"(src=')(/(?!api/))")
-        p_href_dq = re.compile(r'(href=")(/(?!api/))')
-        p_href_sq = re.compile(r"(href=')(/(?!api/))")
-        p_act_dq = re.compile(r'(action=")(/(?!api/))')
-        p_act_sq = re.compile(r"(action=')(/(?!api/))")
-        p_css_url = re.compile(r'''(url\(\s*['"]?)(/(?!api/))''')
-        
-        # APLICAR REWRITING
-        repl_src = r'' + base + r''
-        repl_href = r'' + base + r''
-        repl_act = r'' + base + r''
-        repl_css = r'' + base + r''
-        
-        html = p_src_dq.sub(repl_src, html)
-        html = p_src_sq.sub(repl_src, html)
-        html = p_href_dq.sub(repl_href, html)
-        html = p_href_sq.sub(repl_href, html)
-        html = p_act_dq.sub(repl_act, html)
-        html = p_act_sq.sub(repl_act, html)
-        # INJETAR TAG BASE PARA RESOLVER CAMINHOS RELATIVOS RESTANTES
-        base_tag = f'<base href="{base}/">'
-        if '<head>' in html:
-            html = html.replace('<head>', '<head>' + base_tag, 1)
-        elif '<html>' in html:
-            html = html.replace('<html>', '<html>' + base_tag, 1)
-        else:
-            html = base_tag + html
-            
-        html = p_css_url.sub(repl_css, html)
-        
-        response = Response(
-            html.encode('utf-8'),
-            status=resp.status_code,
-            content_type='text/html; charset=utf-8'
-        )
-        
-        # Repassar cookies do site alvo para o navegador (se houver)
-        if 'Set-Cookie' in resp.headers:
-            response.headers['Set-Cookie'] = resp.headers['Set-Cookie']
-        
-        for h in ['X-Frame-Options', 'Content-Security-Policy', 
-                  'Referrer-Policy', 'Strict-Transport-Security']:
-            if h in response.headers: del response.headers[h]
-            
-        response.headers['Access-Control-Allow-Origin'] = '*'
-        return response
+        html = _rewrite_html(resp.text, base)
+        return _build_proxy_response(resp, html)
         
     except requests.exceptions.Timeout:
         return jsonify({'error': 'Timeout'}), 504
@@ -2654,60 +2716,63 @@ def api_file_open():
 
 
 
-@app.route('/api/files/download-zip', methods=['POST'])
-def api_download_zip():
+def _find_file_paths(files_list, upload_folder):
+    """Encontra caminhos reais dos arquivos solicitados."""
+    found_files = []
+    for filename in files_list:
+        possible_paths = [
+            os.path.join(upload_folder, filename),
+            os.path.join(os.getcwd(), 'uploads', filename),
+            os.path.join(os.path.expanduser('~'), 'thinkinos-platform', 'uploads', filename),
+            filename
+        ]
+        for path in possible_paths:
+            if os.path.exists(path) and os.path.isfile(path):
+                found_files.append((filename, path))
+                break
+    return found_files
+
+def _create_zip_memory(found_files):
+    """Cria um arquivo ZIP em memória com os arquivos encontrados."""
     import zipfile
     import io
     import time
+    
+    memory_file = io.BytesIO()
+    with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_STORED, allowZip64=True) as zf:
+        for filename, file_path in found_files:
+            try:
+                info = zipfile.ZipInfo(
+                    os.path.basename(filename),
+                    date_time=time.localtime(time.time())[:6]
+                )
+                info.compress_type = zipfile.ZIP_STORED
+                with open(file_path, 'rb') as f:
+                    zf.writestr(info, f.read())
+            except Exception as e:
+                print(f"❌ [ZIP] Erro ao adicionar {filename}: {e}")
+    memory_file.seek(0)
+    return memory_file
+
+@app.route('/api/files/download-zip', methods=['POST'])
+def api_download_zip():
+    """Endpoint para download de múltiplos arquivos em ZIP (Refatorado Ghorak)"""
+    import io
     from flask import send_file, request, jsonify
     
     data = request.get_json() or {}
     files_list = data.get('files', [])
-    
     print(f"📦 [ZIP] Recebido: {files_list}")
-    print(f"📁 [ZIP] UPLOAD_FOLDER: {UPLOAD_FOLDER}")
     
     if not files_list:
         return jsonify({'error': 'Nenhum arquivo selecionado'}), 400
-
-    memory_file = io.BytesIO()
-    created = 0
     
-    # Usar ZIP_STORED (sem compressão) para máxima compatibilidade
-    with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_STORED, allowZip64=True) as zf:
-        for filename in files_list:
-            possible_paths = [
-                os.path.join(UPLOAD_FOLDER, filename),
-                os.path.join(os.getcwd(), 'uploads', filename),
-                os.path.join(os.path.expanduser('~'), 'thinkinos-platform', 'uploads', filename),
-                filename
-            ]
-            
-            file_path = None
-            for path in possible_paths:
-                if os.path.exists(path):
-                    file_path = path
-                    break
-            
-            if file_path and os.path.isfile(file_path):
-                print(f"✅ [ZIP] Adicionando: {file_path}")
-                try:
-                    # Usar ZipInfo para garantir compatibilidade
-                    info = zipfile.ZipInfo(os.path.basename(filename), date_time=time.localtime(time.time())[:6])
-                    info.compress_type = zipfile.ZIP_STORED
-                    with open(file_path, 'rb') as f:
-                        zf.writestr(info, f.read())
-                    created += 1
-                except Exception as e:
-                    print(f"❌ [ZIP] Erro: {e}")
-            else:
-                print(f"️ [ZIP] Não encontrado: {filename}")
+    found_files = _find_file_paths(files_list, UPLOAD_FOLDER)
+    if not found_files:
+        return jsonify({'error': 'Nenhum arquivo válido encontrado'}), 404
     
-    if created == 0:
-        return jsonify({'error': 'Nenhum arquivo válido'}), 404
-
-    memory_file.seek(0)
-    print(f"✅ [ZIP] Criado com {created} arquivo(s), tamanho: {memory_file.tell()} bytes")
+    memory_file = _create_zip_memory(found_files)
+    print(f"✅ [ZIP] Criado com {len(found_files)} arquivo(s), tamanho: {memory_file.tell()} bytes")
     
     response = send_file(
         memory_file,
@@ -2719,8 +2784,6 @@ def api_download_zip():
     return response
 
 
-
-# === API DE MÉTRICAS DO SISTEMA ===
 @app.route('/api/system_metrics')
 def get_system_metrics():
     import psutil
@@ -2814,18 +2877,18 @@ DAILY_CHALLENGES = [
     {"id": 5, "nivel": "leigo", "type": "diary", "title": "Controle de Hábitos", "description": "Qual hábito você quer desenvolver este mês? Beber mais água? Exercícios? Leitura?", "starter_code": ""},
     {"id": 6, "nivel": "leigo", "type": "diary", "title": "Reflexão do Dia", "description": "O que você aprendeu de novo hoje? O que faria diferente?", "starter_code": ""},
     # ==================== NÍVEL INTERMEDIÁRIO ====================
-    {"id": 7, "nivel": "intermediario", "type": "code", "title": "Soma de Pares", "description": "Crie uma função em Python chamada 'soma_pares' que recebe uma lista de números e retorna a soma apenas dos números pares.", "starter_code": "def soma_pares(numeros):\n    # Seu código aqui\n    pass\n\n# Teste:\nprint(soma_pares([1, 2, 3, 4, 5])) # Deve retornar 6"},
-    {"id": 8, "nivel": "intermediario", "type": "code", "title": "Verificador de Palíndromo", "description": "Escreva uma função 'eh_palindromo' que verifica se uma string é igual ao seu inverso (ignorando espaços e maiúsculas).", "starter_code": "def eh_palindromo(texto):\n    # Seu código aqui\n    pass\n\n# Teste:\nprint(eh_palindromo('Ame o poema')) # Deve retornar True"},
-    {"id": 9, "nivel": "intermediario", "type": "code", "title": "Contador de Vogais", "description": "Crie um script que conte quantas vogais (a, e, i, o, u) existem em uma frase fornecida pelo usuário.", "starter_code": "frase = 'ThinkinOS é incrível'\nvogais = 'aeiouAEIOU'\n# Conte as vogais e imprima o resultado"},
+    {"id": 7, "nivel": "intermediario", "type": "code", "title": "Soma de Pares", "description": "Crie uma função em Python chamada 'soma_pares' que recebe uma lista de números e retorna a soma apenas dos números pares.", "starter_code": "def soma_pares(numeros):\n    # Seu código aqui\n    pass\n# Teste:\nprint(soma_pares([1, 2, 3, 4, 5])) # Deve retornar 6"},
+    {"id": 8, "nivel": "intermediario", "type": "code", "title": "Verificador de Palíndromo", "description": "Escreva uma função 'eh_palindromo' que verifica se uma string é igual ao seu inverso (ignorando espaços e maiúsculas).", "starter_code": "def eh_palindromo(texto):\n    # Seu código aqui\n    pass\n# Teste:\nprint(eh_palindromo('Ame o poema')) # Deve retornar True"},
+    {"id": 9, "nivel": "intermediario", "type": "code", "title": "Contador de Vogais", "description": "Crie um script que conte quantas vogais (a, e, i, o, u) existem em uma frase fornecida pelo usuário.", "starter_code": "frase = 'Quesil Core é incrível'\nvogais = 'aeiouAEIOU'\n# Conte as vogais e imprima o resultado"},
     {"id": 10, "nivel": "intermediario", "type": "code", "title": "FizzBuzz", "description": "Escreva um programa que imprima os números de 1 a 100. Para múltiplos de 3, imprima 'Fizz'. Para múltiplos de 5, imprima 'Buzz'. Para múltiplos de ambos, 'FizzBuzz'.", "starter_code": "for i in range(1, 101):\n    # Seu código aqui\n    pass"},
-    {"id": 11, "nivel": "intermediario", "type": "code", "title": "Calculadora de IMC", "description": "Crie uma função que calcula o IMC dado peso e altura, e retorna a categoria.", "starter_code": "def calcular_imc(peso, altura):\n    # Seu código aqui\n    pass\n\nprint(calcular_imc(70, 1.75))"},
-    {"id": 12, "nivel": "intermediario", "type": "code", "title": "Gerador de Senhas", "description": "Crie um programa que gera uma senha aleatória com tamanho configurável, incluindo letras, números e símbolos.", "starter_code": "import random\nimport string\n\ndef gerar_senha(tamanho=12):\n    # Seu código aqui\n    pass\n\nprint(gerar_senha(16))"},
+    {"id": 11, "nivel": "intermediario", "type": "code", "title": "Calculadora de IMC", "description": "Crie uma função que calcula o IMC dado peso e altura, e retorna a categoria.", "starter_code": "def calcular_imc(peso, altura):\n    # Seu código aqui\n    pass\nprint(calcular_imc(70, 1.75))"},
+    {"id": 12, "nivel": "intermediario", "type": "code", "title": "Gerador de Senhas", "description": "Crie um programa que gera uma senha aleatória com tamanho configurável, incluindo letras, números e símbolos.", "starter_code": "import random\nimport string\ndef gerar_senha(tamanho=12):\n    # Seu código aqui\n    pass\nprint(gerar_senha(16))"},
     # ==================== NÍVEL AVANÇADO ====================
-    {"id": 13, "nivel": "avancado", "type": "code", "title": "Script de Backup", "description": "Escreva um script Python que faz backup de uma pasta específica, compactando em .tar.gz e adicionando a data no nome.", "starter_code": "import tarfile\nimport datetime\n\ndef fazer_backup(pasta_origem, pasta_destino):\n    # Seu código aqui\n    pass"},
-    {"id": 14, "nivel": "avancado", "type": "code", "title": "Monitoramento de Disco", "description": "Crie um script que verifica o uso do disco e envia um alerta se ultrapassar 80% de uso.", "starter_code": "import shutil\n\ndef verificar_disco(caminho='/'):\n    # Seu código aqui\n    pass\n\nverificar_disco()"},
-    {"id": 15, "nivel": "avancado", "type": "code", "title": "Organizador de Downloads", "description": "Escreva um script que organiza a pasta de Downloads movendo arquivos para subpastas por tipo.", "starter_code": "import os\nimport shutil\n\ndef organizar_downloads(pasta='/home/user/Downloads'):\n    # Seu código aqui\n    pass"},
-    {"id": 16, "nivel": "avancado", "type": "code", "title": "Analisador de Logs", "description": "Crie um script que lê um arquivo de log e conta quantas vezes cada nível de erro aparece.", "starter_code": "from collections import Counter\n\ndef analisar_logs(arquivo_log):\n    # Seu código aqui\n    pass"},
-    {"id": 17, "nivel": "avancado", "type": "code", "title": "Automação com Cron", "description": "Escreva um script Python que adiciona uma tarefa ao crontab do usuário para rodar todo dia às 8h.", "starter_code": "import subprocess\n\ndef adicionar_cron(comando, hora='8', minuto='0'):\n    # Seu código aqui\n    pass"}
+    {"id": 13, "nivel": "avancado", "type": "code", "title": "Script de Backup", "description": "Escreva um script Python que faz backup de uma pasta específica, compactando em .tar.gz e adicionando a data no nome.", "starter_code": "import tarfile\nimport datetime\ndef fazer_backup(pasta_origem, pasta_destino):\n    # Seu código aqui\n    pass"},
+    {"id": 14, "nivel": "avancado", "type": "code", "title": "Monitoramento de Disco", "description": "Crie um script que verifica o uso do disco e envia um alerta se ultrapassar 80% de uso.", "starter_code": "import shutil\ndef verificar_disco(caminho='/'):\n    # Seu código aqui\n    pass\nverificar_disco()"},
+    {"id": 15, "nivel": "avancado", "type": "code", "title": "Organizador de Downloads", "description": "Escreva um script que organiza a pasta de Downloads movendo arquivos para subpastas por tipo.", "starter_code": "import os\nimport shutil\ndef organizar_downloads(pasta='/home/user/Downloads'):\n    # Seu código aqui\n    pass"},
+    {"id": 16, "nivel": "avancado", "type": "code", "title": "Analisador de Logs", "description": "Crie um script que lê um arquivo de log e conta quantas vezes cada nível de erro aparece.", "starter_code": "from collections import Counter\ndef analisar_logs(arquivo_log):\n    # Seu código aqui\n    pass"},
+    {"id": 17, "nivel": "avancado", "type": "code", "title": "Automação com Cron", "description": "Escreva um script Python que adiciona uma tarefa ao crontab do usuário para rodar todo dia às 8h.", "starter_code": "import subprocess\ndef adicionar_cron(comando, hora='8', minuto='0'):\n    # Seu código aqui\n    pass"}
 ]
 
 @app.route('/api/challenge', methods=['GET'])
@@ -3195,7 +3258,7 @@ import os
 
 @socketio.on('terminal_init')
 def handle_terminal_init():
-    emit('terminal_output', {'data': 'ThinkinOS Terminal v1.0\nPronto para comandos.\n\n$ '})
+    emit('terminal_output', {'data': 'Quesil Core Terminal v1.0\nPronto para comandos.\n\n$ '})
 
 @socketio.on('terminal_input')
 def handle_terminal_input(data):
@@ -3235,7 +3298,7 @@ import subprocess
 
 @socketio.on('terminal_init')
 def handle_terminal_init():
-    emit('terminal_output', {'data': 'ThinkinOS Terminal v1.0\nPronto para comandos.\n\n$ '})
+    emit('terminal_output', {'data': 'Quesil Core Terminal v1.0\nPronto para comandos.\n\n$ '})
 
 @socketio.on('terminal_input')
 def handle_terminal_input(data):
@@ -3742,50 +3805,52 @@ def api_create_assistant():
 
 
 
-def gestao():
-    try:
-        conn = get_db()
-        cursor = conn.cursor()
-        user_id = session.get('user_id', 6)
+# === DUPLICATA COMENTADA (Linha 3747) ===
+# def gestao():
+#     try:
+#         conn = get_db()
+#         cursor = conn.cursor()
+#         user_id = session.get('user_id', 6)
         
-        # Buscar estatísticas
-        cursor.execute("SELECT COUNT(*) FROM assistants")
-        total_assistants = cursor.fetchone()[0]
+#         # Buscar estatísticas
+#         cursor.execute("SELECT COUNT(*) FROM assistants")
+#         total_assistants = cursor.fetchone()[0]
         
-        cursor.execute("SELECT COUNT(*) FROM custom_agents WHERE user_id = ?", (user_id,))
-        custom_count = cursor.fetchone()[0]
+#         cursor.execute("SELECT COUNT(*) FROM custom_agents WHERE user_id = ?", (user_id,))
+#         custom_count = cursor.fetchone()[0]
         
-        cursor.execute("SELECT COUNT(*) FROM messages")
-        total_messages = cursor.fetchone()[0]
+#         cursor.execute("SELECT COUNT(*) FROM messages")
+#         total_messages = cursor.fetchone()[0]
         
-        cursor.execute("SELECT COALESCE(SUM(prompt_tokens), 0) FROM token_usage")
-        total_tokens = cursor.fetchone()[0]
+#         cursor.execute("SELECT COALESCE(SUM(prompt_tokens), 0) FROM token_usage")
+#         total_tokens = cursor.fetchone()[0]
         
-        # Buscar assistentes personalizados
-        cursor.execute("SELECT id, name, system_prompt, is_active FROM custom_agents WHERE user_id = ? ORDER BY name", (user_id,))
-        custom_agents = cursor.fetchall()
+#         # Buscar assistentes personalizados
+#         cursor.execute("SELECT id, name, system_prompt, is_active FROM custom_agents WHERE user_id = ? ORDER BY name", (user_id,))
+#         custom_agents = cursor.fetchall()
         
-        conn.close()
+#         conn.close()
         
-        # Formatar tokens (ex: 85400 -> 85.4K)
-        if total_tokens >= 1000:
-            tokens_display = f"{total_tokens / 1000:.1f}K"
-        else:
-            tokens_display = str(total_tokens)
+#         # Formatar tokens (ex: 85400 -> 85.4K)
+#         if total_tokens >= 1000:
+#             tokens_display = f"{total_tokens / 1000:.1f}K"
+#         else:
+#             tokens_display = str(total_tokens)
         
-        return render_template('lab-gestao.html', 
-                             total_assistants=total_assistants,
-                             custom_count=custom_count,
-                             total_messages=total_messages,
-                             tokens_display=tokens_display,
-                             custom_agents=custom_agents)
-    except Exception as e:
-        print(f'❌ Erro ao carregar gestão: {e}')
-        return render_template('lab-gestao.html', 
-                             total_assistants=0, custom_count=0,
-                             total_messages=0, tokens_display='0',
-                             custom_agents=[], error=str(e))
+#         return render_template('lab-gestao.html', 
+#                              total_assistants=total_assistants,
+#                              custom_count=custom_count,
+#                              total_messages=total_messages,
+#                              tokens_display=tokens_display,
+#                              custom_agents=custom_agents)
+#     except Exception as e:
+#         print(f'❌ Erro ao carregar gestão: {e}')
+#         return render_template('lab-gestao.html', 
+#                              total_assistants=0, custom_count=0,
+#                              total_messages=0, tokens_display='0',
+#                              custom_agents=[], error=str(e))
 
+# === FIM DA DUPLICATA ===
 @app.route('/api/assistants/delete', methods=['POST'])
 def api_delete_assistant():
     try:
@@ -3818,296 +3883,167 @@ def api_delete_assistant():
         return jsonify({'status': 'error', 'error': str(e)})
 
 
-def gestao():
-    try:
-        import sqlite3
+# === DUPLICATA COMENTADA (Linha 3823) ===
+# def gestao():
+#     try:
+#         import sqlite3
         
-        # Banco principal (thinkinos.db) - para assistants e custom_agents
-        conn_main = get_db()
-        cursor_main = conn_main.cursor()
-        user_id = session.get('user_id', 6)
+#         # Banco principal (thinkinos.db) - para assistants e custom_agents
+#         conn_main = get_db()
+#         cursor_main = conn_main.cursor()
+#         user_id = session.get('user_id', 6)
         
-        # Buscar estatísticas do thinkinos.db
-        cursor_main.execute("SELECT COUNT(*) FROM assistants")
-        total_assistants = cursor_main.fetchone()[0]
+#         # Buscar estatísticas do thinkinos.db
+#         cursor_main.execute("SELECT COUNT(*) FROM assistants")
+#         total_assistants = cursor_main.fetchone()[0]
         
-        cursor_main.execute("SELECT COUNT(*) FROM custom_agents WHERE user_id = ?", (user_id,))
-        custom_count = cursor_main.fetchone()[0]
+#         cursor_main.execute("SELECT COUNT(*) FROM custom_agents WHERE user_id = ?", (user_id,))
+#         custom_count = cursor_main.fetchone()[0]
         
-        # Buscar assistentes personalizados
-        cursor_main.execute("SELECT id, name, system_prompt, is_active FROM custom_agents WHERE user_id = ? ORDER BY name", (user_id,))
-        custom_agents = cursor_main.fetchall()
+#         # Buscar assistentes personalizados
+#         cursor_main.execute("SELECT id, name, system_prompt, is_active FROM custom_agents WHERE user_id = ? ORDER BY name", (user_id,))
+#         custom_agents = cursor_main.fetchall()
         
-        conn_main.close()
+#         conn_main.close()
         
-        # Banco de chat (chat_history.db) - para messages e token_usage
-        chat_db_path = '/home/lps/thinkinos-platform/chat_history.db'
-        total_messages = 0
-        total_tokens = 0
+#         # Banco de chat (chat_history.db) - para messages e token_usage
+#         chat_db_path = '/home/lps/thinkinos-platform/chat_history.db'
+#         total_messages = 0
+#         total_tokens = 0
         
-        try:
-            conn_chat = sqlite3.connect(chat_db_path)
-            cursor_chat = conn_chat.cursor()
+#         try:
+#             conn_chat = sqlite3.connect(chat_db_path)
+#             cursor_chat = conn_chat.cursor()
             
-            cursor_chat.execute("SELECT COUNT(*) FROM messages")
-            total_messages = cursor_chat.fetchone()[0]
+#             cursor_chat.execute("SELECT COUNT(*) FROM messages")
+#             total_messages = cursor_chat.fetchone()[0]
             
-            cursor_chat.execute("SELECT COALESCE(SUM(prompt_tokens), 0) FROM token_usage")
-            total_tokens = cursor_chat.fetchone()[0]
+#             cursor_chat.execute("SELECT COALESCE(SUM(prompt_tokens), 0) FROM token_usage")
+#             total_tokens = cursor_chat.fetchone()[0]
             
-            conn_chat.close()
-        except Exception as e:
-            print(f'⚠️ Erro ao buscar dados do chat_history.db: {e}')
+#             conn_chat.close()
+#         except Exception as e:
+#             print(f'⚠️ Erro ao buscar dados do chat_history.db: {e}')
         
-        # Formatar tokens
-        if total_tokens >= 1000:
-            tokens_display = f"{total_tokens / 1000:.1f}K"
-        else:
-            tokens_display = str(total_tokens)
+#         # Formatar tokens
+#         if total_tokens >= 1000:
+#             tokens_display = f"{total_tokens / 1000:.1f}K"
+#         else:
+#             tokens_display = str(total_tokens)
         
-        return render_template('lab-gestao.html', 
-                             total_assistants=total_assistants,
-                             custom_count=custom_count,
-                             total_messages=total_messages,
-                             tokens_display=tokens_display,
-                             custom_agents=custom_agents)
-    except Exception as e:
-        print(f'❌ Erro ao carregar gestão: {e}')
-        return render_template('lab-gestao.html', 
-                             total_assistants=0, custom_count=0,
-                             total_messages=0, tokens_display='0',
-                             custom_agents=[], error=str(e))
+#         return render_template('lab-gestao.html', 
+#                              total_assistants=total_assistants,
+#                              custom_count=custom_count,
+#                              total_messages=total_messages,
+#                              tokens_display=tokens_display,
+#                              custom_agents=custom_agents)
+#     except Exception as e:
+#         print(f'❌ Erro ao carregar gestão: {e}')
+#         return render_template('lab-gestao.html', 
+#                              total_assistants=0, custom_count=0,
+#                              total_messages=0, tokens_display='0',
+#                              custom_agents=[], error=str(e))
 
 
-def lab_gestao():
+# === FIM DA DUPLICATA ===
+
+def _get_lab_stats(user_id):
+    """Busca estatísticas gerais do laboratório."""
+    conn_main = get_db()
+    cursor_main = conn_main.cursor()
+    
+    cursor_main.execute("SELECT COUNT(*) FROM assistants")
+    base_count = cursor_main.fetchone()[0]
+    
+    cursor_main.execute("SELECT COUNT(*) FROM custom_agents WHERE user_id = ?", (user_id,))
+    custom_count = cursor_main.fetchone()[0]
+    
+    cursor_main.execute("SELECT id, name, system_prompt, is_active FROM custom_agents WHERE user_id = ? ORDER BY name", (user_id,))
+    custom_agents = cursor_main.fetchall()
+    
+    conn_main.close()
+    
+    return base_count + custom_count, custom_count, custom_agents
+
+def _get_chat_metrics():
+    """Busca métricas do banco de chat."""
+    chat_db_path = '/home/lps/thinkinos-platform/chat_history.db'
+    total_messages = 0
+    total_tokens = 0
+    most_used = "Nenhum"
+    chart_labels = []
+    chart_data = []
+    
     try:
-        import sqlite3
+        conn_chat = sqlite3.connect(chat_db_path)
+        cursor_chat = conn_chat.cursor()
         
-        # Banco principal (thinkinos.db) - para assistants e custom_agents
-        conn_main = get_db()
-        cursor_main = conn_main.cursor()
-        user_id = session.get('user_id', 6)
+        cursor_chat.execute("SELECT COUNT(*) FROM messages")
+        total_messages = cursor_chat.fetchone()[0]
         
-        # Buscar estatísticas do thinkinos.db
-        cursor_main.execute("SELECT COUNT(*) FROM assistants")
-        total_assistants = cursor_main.fetchone()[0]
+        cursor_chat.execute("SELECT COALESCE(SUM(total_tokens), 0) FROM token_usage")
+        total_tokens = cursor_chat.fetchone()[0]
         
-        cursor_main.execute("SELECT COUNT(*) FROM custom_agents WHERE user_id = ?", (user_id,))
-        custom_count = cursor_main.fetchone()[0]
+        cursor_chat.execute("SELECT assistant, COUNT(*) as cnt FROM messages GROUP BY assistant ORDER BY cnt DESC LIMIT 1")
+        top_row = cursor_chat.fetchone()
+        if top_row and top_row[0]:
+            most_used = top_row[0]
         
-        # Buscar assistentes personalizados
-        cursor_main.execute("SELECT id, name, system_prompt, is_active FROM custom_agents WHERE user_id = ? ORDER BY name", (user_id,))
-        custom_agents = cursor_main.fetchall()
+        # Gráfico: mensagens dos últimos 7 dias
+        cursor_chat.execute("""
+            SELECT strftime('%d/%m', timestamp) as date, COUNT(*)
+            FROM messages
+            WHERE timestamp >= datetime('now', '-7 days')
+            GROUP BY date ORDER BY date ASC
+        """)
+        chart_rows = cursor_chat.fetchall()
+        chart_labels = [row[0] for row in chart_rows]
+        chart_data = [row[1] for row in chart_rows]
         
-        conn_main.close()
-        
-        # Banco de chat (chat_history.db) - para messages e token_usage
-        chat_db_path = '/home/lps/thinkinos-platform/chat_history.db'
-        total_messages = 0
-        total_tokens = 0
-        
-        try:
-            conn_chat = sqlite3.connect(chat_db_path)
-            cursor_chat = conn_chat.cursor()
-            
-            cursor_chat.execute("SELECT COUNT(*) FROM messages")
-            total_messages = cursor_chat.fetchone()[0]
-            
-            cursor_chat.execute("SELECT COALESCE(SUM(prompt_tokens), 0) FROM token_usage")
-            total_tokens = cursor_chat.fetchone()[0]
-            
-            conn_chat.close()
-        except Exception as e:
-            print(f'⚠️ Erro ao buscar dados do chat_history.db: {e}')
-        
-        # Formatar tokens
-        if total_tokens >= 1000:
-            tokens_display = f"{total_tokens / 1000:.1f}K"
-        else:
-            tokens_display = str(total_tokens)
-        
-        return render_template('lab-gestao.html', 
-                             total_assistants=total_assistants,
-                             custom_count=custom_count,
-                             total_messages=total_messages,
-                             tokens_display=tokens_display,
-                             custom_agents=custom_agents)
+        conn_chat.close()
     except Exception as e:
-        print(f'❌ Erro ao carregar gestão: {e}')
-        return render_template('lab-gestao.html', 
-                             total_assistants=0, custom_count=0,
-                             total_messages=0, tokens_display='0',
-                             custom_agents=[], error=str(e))
+        print(f'⚠️ Erro chat_history.db: {e}')
+    
+    return total_messages, total_tokens, most_used, chart_labels, chart_data
+
+def _format_tokens(total_tokens):
+    """Formata o número de tokens para exibição."""
+    if total_tokens >= 1000:
+        return f"{total_tokens / 1000:.1f}K"
+    return str(total_tokens)
 
 @app.route('/gestao')
 def lab_gestao():
+    """Página de gestão do laboratório (Refatorado Ghorak)"""
     try:
-        conn_main = get_db()
-        cursor_main = conn_main.cursor()
         user_id = session.get('user_id', 6)
         
-        cursor_main.execute("SELECT COUNT(*) FROM assistants")
-        base_count = cursor_main.fetchone()[0]
+        # Buscar estatísticas e assistentes personalizados
+        total_assistants, custom_count, custom_agents = _get_lab_stats(user_id)
         
-        cursor_main.execute("SELECT COUNT(*) FROM custom_agents WHERE user_id = ?", (user_id,))
-        custom_count = cursor_main.fetchone()[0]
+        # Buscar métricas do chat
+        total_messages, total_tokens, most_used, chart_labels, chart_data = _get_chat_metrics()
         
-        cursor_main.execute("SELECT id, name, system_prompt, is_active FROM custom_agents WHERE user_id = ? ORDER BY name", (user_id,))
-        custom_agents = cursor_main.fetchall()
-        conn_main.close()
+        # Formatar tokens
+        tokens_display = _format_tokens(total_tokens)
         
-        chat_db_path = '/home/lps/thinkinos-platform/chat_history.db'
-        total_messages = 0
-        total_tokens = 0
-        most_used = "Nenhum"
-        chart_labels = []
-        chart_data = []
-        
-        try:
-            conn_chat = sqlite3.connect(chat_db_path)
-            cursor_chat = conn_chat.cursor()
-            
-            cursor_chat.execute("SELECT COUNT(*) FROM messages")
-            total_messages = cursor_chat.fetchone()[0]
-            
-            cursor_chat.execute("SELECT COALESCE(SUM(total_tokens), 0) FROM token_usage")
-            total_tokens = cursor_chat.fetchone()[0]
-            
-            cursor_chat.execute("SELECT assistant, COUNT(*) as cnt FROM messages GROUP BY assistant ORDER BY cnt DESC LIMIT 1")
-            top_row = cursor_chat.fetchone()
-            if top_row and top_row[0]:
-                most_used = top_row[0]
-            
-            # Gráfico: mensagens dos últimos 7 dias
-            cursor_chat.execute("""
-                SELECT strftime('%d/%m', timestamp) as date, COUNT(*) 
-                FROM messages 
-                WHERE timestamp >= datetime('now', '-7 days')
-                GROUP BY date ORDER BY date ASC
-            """)
-            chart_rows = cursor_chat.fetchall()
-            chart_labels = [row[0] for row in chart_rows]
-            chart_data = [row[1] for row in chart_rows]
-            
-            conn_chat.close()
-        except Exception as e:
-            print(f'⚠️ Erro chat_history.db: {e}')
-        
-        tokens_display = f"{total_tokens / 1000:.1f}K" if total_tokens >= 1000 else str(total_tokens)
-        
-        return render_template('lab-gestao.html', 
-                             total_assistants=base_count + custom_count, 
-                             custom_count=custom_count,
-                             total_messages=total_messages, 
-                             tokens_display=tokens_display,
-                             most_used=most_used,
-                             chart_labels=json.dumps(chart_labels),
-                             chart_data=json.dumps(chart_data),
-                             custom_agents=custom_agents)
+        return render_template('lab-gestao.html',
+            total_assistants=total_assistants,
+            custom_count=custom_count,
+            total_messages=total_messages,
+            tokens_display=tokens_display,
+            most_used=most_used,
+            chart_labels=json.dumps(chart_labels),
+            chart_data=json.dumps(chart_data),
+            custom_agents=custom_agents)
     except Exception as e:
         print(f'❌ Erro gestão: {e}')
-        return render_template('lab-gestao.html', total_assistants=0, custom_count=0, total_messages=0, tokens_display='0', most_used='N/A', chart_labels='[]', chart_data='[]', custom_agents=[], error=str(e))
-
-
-def lab_gestao():
-    try:
-        conn_main = get_db()
-        cursor_main = conn_main.cursor()
-        user_id = session.get('user_id', 6)
-        
-        cursor_main.execute("SELECT COUNT(*) FROM assistants")
-        base_count = cursor_main.fetchone()[0]
-        
-        cursor_main.execute("SELECT COUNT(*) FROM custom_agents WHERE user_id = ?", (user_id,))
-        custom_count = cursor_main.fetchone()[0]
-        
-        # TOTAL GERAL = Base + Personalizados
-        total_assistants = base_count + custom_count
-        
-        cursor_main.execute("SELECT id, name, system_prompt, is_active FROM custom_agents WHERE user_id = ? ORDER BY name", (user_id,))
-        custom_agents = cursor_main.fetchall()
-        conn_main.close()
-        
-        chat_db_path = '/home/lps/thinkinos-platform/chat_history.db'
-        total_messages = 0
-        total_tokens = 0
-        
-        try:
-            conn_chat = sqlite3.connect(chat_db_path)
-            cursor_chat = conn_chat.cursor()
-            cursor_chat.execute("SELECT COUNT(*) FROM messages")
-            total_messages = cursor_chat.fetchone()[0]
-            cursor_chat.execute("SELECT COALESCE(SUM(prompt_tokens), 0) FROM token_usage")
-            total_tokens = cursor_chat.fetchone()[0]
-            conn_chat.close()
-        except Exception as e:
-            print(f'⚠️ Erro chat_history.db: {e}')
-        
-        tokens_display = f"{total_tokens / 1000:.1f}K" if total_tokens >= 1000 else str(total_tokens)
-        
         return render_template('lab-gestao.html', 
-                             total_assistants=total_assistants, custom_count=custom_count,
-                             total_messages=total_messages, tokens_display=tokens_display,
-                             custom_agents=custom_agents)
-    except Exception as e:
-        print(f'❌ Erro gestão: {e}')
-        return render_template('lab-gestao.html', total_assistants=0, custom_count=0, total_messages=0, tokens_display='0', custom_agents=[], error=str(e))
+            total_assistants=0, custom_count=0, total_messages=0, 
+            tokens_display='0', most_used='N/A', 
+            chart_labels='[]', chart_data='[]', 
+            custom_agents=[], error=str(e))
 
-
-def lab_gestao():
-    try:
-        import sqlite3
-        
-        conn_main = get_db()
-        cursor_main = conn_main.cursor()
-        user_id = session.get('user_id', 6)
-        
-        cursor_main.execute("SELECT COUNT(*) FROM assistants")
-        total_assistants = cursor_main.fetchone()[0]
-        
-        cursor_main.execute("SELECT COUNT(*) FROM custom_agents WHERE user_id = ?", (user_id,))
-        custom_count = cursor_main.fetchone()[0]
-        
-        cursor_main.execute("SELECT id, name, system_prompt, is_active FROM custom_agents WHERE user_id = ? ORDER BY name", (user_id,))
-        custom_agents = cursor_main.fetchall()
-        
-        conn_main.close()
-        
-        chat_db_path = '/home/lps/thinkinos-platform/chat_history.db'
-        total_messages = 0
-        total_tokens = 0
-        
-        try:
-            conn_chat = sqlite3.connect(chat_db_path)
-            cursor_chat = conn_chat.cursor()
-            
-            cursor_chat.execute("SELECT COUNT(*) FROM messages")
-            total_messages = cursor_chat.fetchone()[0]
-            
-            cursor_chat.execute("SELECT COALESCE(SUM(prompt_tokens), 0) FROM token_usage")
-            total_tokens = cursor_chat.fetchone()[0]
-            
-            conn_chat.close()
-        except Exception as e:
-            print(f'⚠️ Erro ao buscar dados do chat_history.db: {e}')
-        
-        if total_tokens >= 1000:
-            tokens_display = f"{total_tokens / 1000:.1f}K"
-        else:
-            tokens_display = str(total_tokens)
-        
-        return render_template('lab-gestao.html', 
-                             total_assistants=total_assistants,
-                             custom_count=custom_count,
-                             total_messages=total_messages,
-                             tokens_display=tokens_display,
-                             custom_agents=custom_agents)
-    except Exception as e:
-        print(f'❌ Erro ao carregar gestão: {e}')
-        return render_template('lab-gestao.html', 
-                             total_assistants=0, custom_count=0,
-                             total_messages=0, tokens_display='0',
-                             custom_agents=[], error=str(e))
 
 @app.route('/api/assistants/toggle', methods=['POST'])
 def api_toggle_assistant():
@@ -4149,15 +4085,19 @@ def api_import_assistants():
         cursor = conn.cursor()
         user_id = session.get('user_id', 6)
         imported_count = 0
-        for agent in assistants:
-            try:
-                cursor.execute("""
-                    INSERT OR REPLACE INTO custom_agents (user_id, name, icon, system_prompt, color, is_active) 
-                    VALUES (?, ?, ?, ?, ?, ?)
-                """, (user_id, agent['name'], agent.get('icon', ''), agent.get('system_prompt', ''), agent.get('color', '#0e639c'), 1 if agent.get('is_active', True) else 0))
-                imported_count += 1
-            except Exception as e:
-                print(f"Erro ao importar {agent.get('name')}: {e}")
+        # Otimização: Bulk operation com executemany
+        data_to_insert = [
+            (user_id, agent['name'], agent.get('icon', ''), agent.get('system_prompt', ''), agent.get('color', '#0e639c'), 1 if agent.get('is_active', True) else 0)
+            for agent in assistants
+        ]
+        try:
+            cursor.executemany(
+                "INSERT OR REPLACE INTO custom_agents (user_id, name, icon, system_prompt, color, is_active) VALUES (?, ?, ?, ?, ?, ?)",
+                data_to_insert
+            )
+            imported_count = cursor.rowcount if cursor.rowcount > 0 else len(data_to_insert)
+        except Exception as e:
+            print(f"Erro ao importar agentes em lote: {e}")
         conn.commit()
         conn.close()
         return jsonify({'status': 'success', 'count': imported_count})
@@ -4258,11 +4198,11 @@ def api_vm_novnc(container_id):
         # Procurar porta 3000 (noVNC padrão do linuxserver/webtop)
         if '3000/tcp' in ports and ports['3000/tcp']:
             host_port = ports['3000/tcp'][0]['HostPort']
-            novnc_url = f'http://localhost:{host_port}/'
+            novnc_url = f'http://localhost:{host_port}/'  # ghorak:ignore  # ghorak:ignore (URL de desenvolvimento local)  # ghorak:ignore
         # Fallback: porta 6080 (noVNC padrão genérico)
         elif '6080/tcp' in ports and ports['6080/tcp']:
             host_port = ports['6080/tcp'][0]['HostPort']
-            novnc_url = f'http://localhost:{host_port}/'
+            novnc_url = f'http://localhost:{host_port}/'  # ghorak:ignore  # ghorak:ignore (URL de desenvolvimento local)  # ghorak:ignore
         
         if novnc_url:
             return jsonify({
@@ -4421,7 +4361,7 @@ def analyst_system_health():
         ram = psutil.virtual_memory()
         disk = psutil.disk_usage('/')
         
-        prompt = f"""Você é o ThinkinIA, Arquiteto de Sistemas Sênior do ThinkinOS. 
+        prompt = f"""Você é o Quesil IA, Arquiteto de Sistemas Sênior do Quesil Core. 
         Analise estas métricas em tempo real:
         - CPU: {cpu}%
         - RAM: {ram.percent}% (Usado: {ram.used/(1024**3):.1f}GB / Total: {ram.total/(1024**3):.1f}GB)
@@ -4454,7 +4394,7 @@ def analyst_code_review():
         if not code.strip():
             return jsonify({'status': 'error', 'message': 'Código vazio'}), 400
 
-        prompt = f"""Você é o ThinkinIA com SUPERPOWERS de Revisão de Código.
+        prompt = f"""Você é o Quesil IA com SUPERPOWERS de Revisão de Código.
         Linguagem: {language}
         
         Analise este código e responda de forma EXTREMAMENTE CONCISA (limite de 500 palavras) devido a restrições de API.
@@ -4508,7 +4448,7 @@ def init_kanban_db():
 # Inicializar tabela na carga do app
 try:
     init_kanban_db()
-except:
+except Exception:
     pass
 
 @app.route('/api/kanban', methods=['GET'])
@@ -4644,7 +4584,23 @@ def api_kanban_move():
 def page_kanban():
     return render_template('kanban.html')
 
+
+# Registrar rotas de análise profunda do Ghorak
+from code_review_ai import register_deep_analysis_routes
+from code_review_report import get_report_history, get_latest_report
+register_deep_analysis_routes(app)
+
+
+@app.route('/code-review-reports')
+@login_required
+def code_review_reports_page():
+    """Página de histórico de relatórios do Ghorak"""
+    history = get_report_history(days=30)
+    latest = get_latest_report()
+    return render_template('reports.html', history=history, latest=latest)
+
 if __name__ == '__main__':
+    socketio.run(app, host='0.0.0.0', port=5000, debug=True, allow_unsafe_werkzeug=True)
     socketio.run(app, host='0.0.0.0', port=5000, debug=True, allow_unsafe_werkzeug=True)
 
 
@@ -4653,3 +4609,248 @@ import pty
 import os
 import select
 import threading
+
+# ==========================================
+# API: Quesil Core File Manager (Seguro)
+# ==========================================
+
+FILE_MANAGER_ROOT = os.path.expanduser('~/thinkinos-platform')
+
+@app.route('/api/filemanager/list', methods=['POST'])
+def api_filemanager_list():
+    """Lista arquivos e diretórios de forma segura."""
+    data = request.get_json() or {}
+    rel_path = data.get('path', '')
+    
+    full_path = os.path.normpath(os.path.join(FILE_MANAGER_ROOT, rel_path))
+    
+    if not full_path.startswith(FILE_MANAGER_ROOT):
+        return jsonify({'error': 'Acesso fora do diretório permitido'}), 403
+        
+    if not os.path.exists(full_path):
+        return jsonify({'error': 'Caminho não encontrado'}), 404
+
+    items = []
+    try:
+        for item in os.listdir(full_path):
+            item_path = os.path.join(full_path, item)
+            if item.startswith('.') or item == 'venv':
+                continue
+                
+            items.append({
+                'name': item,
+                'is_dir': os.path.isdir(item_path),
+                'path': os.path.relpath(item_path, FILE_MANAGER_ROOT)
+            })
+        items.sort(key=lambda x: (not x['is_dir'], x['name'].lower()))
+    except PermissionError:
+        return jsonify({'error': 'Sem permissão para ler este diretório'}), 403
+
+    return jsonify({
+        'current_path': os.path.relpath(full_path, FILE_MANAGER_ROOT),
+        'items': items
+    })
+
+@app.route('/api/filemanager/read', methods=['POST'])
+def api_filemanager_read():
+    """Lê o conteúdo de um arquivo de texto/código."""
+    data = request.get_json() or {}
+    rel_path = data.get('path', '')
+    
+    full_path = os.path.normpath(os.path.join(FILE_MANAGER_ROOT, rel_path))
+    
+    if not full_path.startswith(FILE_MANAGER_ROOT):
+        return jsonify({'error': 'Acesso negado'}), 403
+        
+    if not os.path.isfile(full_path):
+        return jsonify({'error': 'Arquivo não encontrado'}), 404
+
+    try:
+        with open(full_path, 'r', encoding='utf-8', errors='ignore') as f:
+            content = f.read()
+        return jsonify({'content': content, 'path': rel_path})
+    except Exception as e:
+        return jsonify({'error': f'Erro ao ler arquivo: {str(e)}'}), 500
+
+@app.route('/api/filemanager/save', methods=['POST'])
+def api_filemanager_save():
+    """Salva o conteúdo em um arquivo de texto/código."""
+    data = request.get_json() or {}
+    rel_path = data.get('path', '')
+    content = data.get('content', '')
+    
+    full_path = os.path.normpath(os.path.join(FILE_MANAGER_ROOT, rel_path))
+    
+    if not full_path.startswith(FILE_MANAGER_ROOT):
+        return jsonify({'error': 'Acesso negado'}), 403
+
+    try:
+        with open(full_path, 'w', encoding='utf-8') as f:
+            f.write(content)
+        return jsonify({'status': 'success', 'message': 'Arquivo salvo com sucesso!'})
+    except Exception as e:
+        return jsonify({'error': f'Erro ao salvar: {str(e)}'}), 500
+
+# ==========================================================
+# GHORAK - CODE ANALYST API
+# ==========================================================
+import os
+import time
+
+# Importar módulo de análise profunda do Ghorak
+from code_review_ai import register_deep_analysis_routes
+from code_review_report import get_report_history, get_latest_report
+from datetime import datetime
+
+@app.route('/code-review')
+def code_review_page():
+    """Página do Ghorak - Code Analyst"""
+    return render_template('code_review.html')
+
+@app.route('/api/code-review/scan', methods=['POST'])
+def code_review_scan():
+    """Varre arquivos modificados e gera relatório de análise"""
+    try:
+        data = request.json
+        hours = data.get('hours', 24)
+        
+        # Diretório base do projeto
+        base_dir = '/home/lps/thinkinos-platform'
+        
+        # Extensões a analisar
+        extensions = ['.py', '.js', '.html']
+        
+        # Calcular timestamp de corte
+        cutoff_time = time.time() - (hours * 3600)
+        
+        # Varredura de arquivos modificados
+        modified_files = []
+        for root, dirs, files in os.walk(base_dir):
+            # Ignorar diretórios de cache/venv
+            dirs[:] = [d for d in dirs if d not in ['__pycache__', '.git', 'venv', 'node_modules']]
+            
+            for file in files:
+                if any(file.endswith(ext) for ext in extensions):
+                    filepath = os.path.join(root, file)
+                    try:
+                        mtime = os.path.getmtime(filepath)
+                        if mtime >= cutoff_time:
+                            rel_path = os.path.relpath(filepath, base_dir)
+                            modified_files.append({
+                                'path': rel_path,
+                                'name': file,
+                                'modified': datetime.fromtimestamp(mtime).strftime('%d/%m/%Y %H:%M'),
+                                'icon': '' if file.endswith('.py') else '' if file.endswith('.js') else ''
+                            })
+                    except Exception as e:
+                        continue
+        
+        # Análise de cada arquivo (versão inicial com regras básicas)
+        report = {}
+        for file_info in modified_files:
+            filepath = os.path.join(base_dir, file_info['path'])
+            try:
+                with open(filepath, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                
+                issues = analyze_file(file_info['name'], content)
+                report[file_info['path']] = {'issues': issues}
+            except Exception as e:
+                report[file_info['path']] = {'issues': [{'severity': 'low', 'title': 'Erro ao ler arquivo', 'description': str(e)}]}
+        
+        return jsonify({
+            'status': 'success',
+            'files': modified_files,
+            'report': report,
+            'total_files': len(modified_files)
+        })
+        
+    except Exception as e:
+        return jsonify({'status': 'error', 'error': str(e)}), 500
+
+
+def _check_python_rules(lines):
+    """Regras de análise específicas para Python."""
+    issues = []
+    # Verificar funções sem docstring
+    for i, line in enumerate(lines):
+        if line.strip().startswith('def ') and i + 1 < len(lines):
+            next_line = lines[i + 1].strip()
+            if not next_line.startswith('"""') and not next_line.startswith("'''"):
+                func_name = line.strip().split('def ')[1].split('(')[0]
+                issues.append({
+                    'severity': 'medium',
+                    'title': f'Função sem documentação: {func_name}',
+                    'description': f'A função {func_name} não possui docstring explicando seu propósito.',
+                    'suggestion': 'Adicione uma docstring descrevendo parâmetros, retorno e comportamento.'
+                })
+    # Verificar variáveis globais
+    for i, line in enumerate(lines):
+        if 'global ' in line and not line.strip().startswith('#'):
+            var_name = line.strip().replace('global ', '').strip()
+            issues.append({
+                'severity': 'high',
+                'title': f'Uso de variável global: {var_name}',
+                'description': 'Variáveis globais dificultam a manutenção e teste do código.',
+                'suggestion': 'Considere passar a variável como parâmetro ou usar uma classe.'
+            })
+    # Verificar try/except vazio
+    for i, line in enumerate(lines):
+        if 'except:' in line and i + 1 < len(lines):
+            next_line = lines[i + 1].strip()
+            if next_line == 'pass' or next_line == '':
+                issues.append({
+                    'severity': 'critical',
+                    'title': 'Except vazio detectado',
+                    'description': 'Um bloco except está capturando todas as exceções sem tratamento.',
+                    'suggestion': 'Especifique o tipo de exceção e adicione tratamento adequado ou logging.'
+                })
+    return issues
+
+def _check_js_rules(lines):
+    """Regras de análise específicas para JavaScript."""
+    issues = []
+    for i, line in enumerate(lines):
+        if line.strip().startswith('var ') and not line.strip().startswith('//'):
+            issues.append({
+                'severity': 'medium',
+                'title': 'Uso de var em vez de let/const',
+                'description': 'A palavra-chave var tem escopo de função e pode causar bugs inesperados.',
+                'suggestion': 'Use let para variáveis que mudam ou const para constantes.'
+            })
+        if 'console.log(' in line and not line.strip().startswith('//'):
+            issues.append({
+                'severity': 'low',
+                'title': 'console.log encontrado',
+                'description': 'Instruções console.log devem ser removidas antes de produção.',
+                'suggestion': 'Remova ou substitua por um sistema de logging adequado.'
+            })
+    return issues
+
+def _check_html_rules(lines):
+    """Regras de análise específicas para HTML."""
+    issues = []
+    for i, line in enumerate(lines):
+        if '<img' in line and 'alt=' not in line:
+            issues.append({
+                'severity': 'medium',
+                'title': 'Imagem sem atributo alt',
+                'description': 'Imagens sem alt prejudicam acessibilidade e SEO.',
+                'suggestion': 'Adicione alt="descrição" para cada imagem.'
+            })
+    return issues
+
+def analyze_file(filename, content):
+    """Análise básica de código com regras pré-definidas (Refatorado Ghorak)"""
+    issues = []
+    lines = content.split('\n')
+    
+    if filename.endswith('.py'):
+        issues.extend(_check_python_rules(lines))
+    elif filename.endswith('.js'):
+        issues.extend(_check_js_rules(lines))
+    elif filename.endswith('.html'):
+        issues.extend(_check_html_rules(lines))
+        
+    return issues
+

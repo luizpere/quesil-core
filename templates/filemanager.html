@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ThinkinOS File Manager</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #0f0f1a;
+            color: #ecf0f1;
+            font-family: 'Segoe UI', sans-serif;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .fm-header {
+            background: #1e1e24;
+            padding: 15px 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #3498db;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+        .fm-header h1 {
+            font-size: 18px;
+            color: #3498db;
+        }
+        .fm-header h1 span { color: #ecf0f1; }
+        .fm-breadcrumb {
+            background: #25252b;
+            padding: 8px 25px;
+            font-size: 13px;
+            color: #95a5a6;
+            border-bottom: 1px solid #333;
+        }
+        .fm-breadcrumb a {
+            color: #3498db;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        .fm-breadcrumb a:hover { text-decoration: underline; }
+        .fm-body {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+        .fm-sidebar {
+            width: 35%;
+            background: #1e1e24;
+            overflow-y: auto;
+            border-right: 1px solid #333;
+        }
+        .fm-item {
+            padding: 12px 20px;
+            cursor: pointer;
+            border-bottom: 1px solid #2c2c35;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .fm-item:hover { background: #3498db; color: white; }
+        .fm-item.active { background: #2980b9; color: white; }
+        .fm-editor-area {
+            width: 65%;
+            display: flex;
+            flex-direction: column;
+            background: #12121a;
+        }
+        #fm-editor {
+            flex: 1;
+            background: #12121a;
+            color: #f8f8f2;
+            border: none;
+            padding: 20px;
+            font-family: 'Fira Code', 'Courier New', monospace;
+            font-size: 14px;
+            resize: none;
+            outline: none;
+            line-height: 1.6;
+        }
+        .fm-footer {
+            background: #1e1e24;
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 1px solid #333;
+        }
+        #fm-status { color: #95a5a6; font-size: 12px; }
+        .fm-btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        .fm-btn:hover { background: #2980b9; }
+        .fm-btn.danger { background: #e74c3c; }
+        .fm-btn.danger:hover { background: #c0392b; }
+        .fm-btn.success { background: #27ae60; }
+        .fm-btn.success:hover { background: #229954; }
+        .fm-empty {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #7f8c8d;
+            font-size: 16px;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .fm-empty .icon { font-size: 48px; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #1e1e24; }
+        ::-webkit-scrollbar-thumb { background: #3498db; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <div class="fm-header">
+        <h1>📁 <span>ThinkinOS</span> File Manager</h1>
+        <div>
+            <button class="fm-btn" onclick="voltarDesktop()">🏠 Voltar ao Desktop</button>
+        </div>
+    </div>
+    <div class="fm-breadcrumb" id="fm-breadcrumb">
+        <a href="#" onclick="carregarDiretorio('')">🏠 Raiz</a>
+    </div>
+    <div class="fm-body">
+        <div class="fm-sidebar" id="fm-file-list">
+            <div class="fm-empty">
+                <div class="icon">📂</div>
+                <div>Carregando diretório...</div>
+            </div>
+        </div>
+        <div class="fm-editor-area">
+            <textarea id="fm-editor" placeholder="Selecione um arquivo na lista à esquerda para visualizar ou editar..."></textarea>
+            <div class="fm-footer">
+                <span id="fm-status">Pronto</span>
+                <div>
+                    <button id="fm-save-btn" class="fm-btn success" onclick="salvarArquivo()" style="display:none;">💾 Salvar Alterações</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentPath = '';
+        let currentFile = '';
+
+        function voltarDesktop() {
+            window.location.href = '/desktop';
+        }
+
+        async function carregarDiretorio(path) {
+            currentPath = path;
+            document.getElementById('fm-save-btn').style.display = 'none';
+            document.getElementById('fm-editor').value = '';
+            document.getElementById('fm-status').innerText = 'Carregando...';
+            
+            // Atualizar breadcrumb
+            const breadcrumb = document.getElementById('fm-breadcrumb');
+            if (path === '') {
+                breadcrumb.innerHTML = '<a href="#" onclick="carregarDiretorio(\'\')">🏠 Raiz</a>';
+            } else {
+                const parts = path.split('/');
+                let bcHtml = '<a href="#" onclick="carregarDiretorio(\'\')">🏠 Raiz</a>';
+                let current = '';
+                parts.forEach((part, idx) => {
+                    current = current ? current + '/' + part : part;
+                    const isLast = idx === parts.length - 1;
+                    if (isLast) {
+                        bcHtml += ' / <strong>' + part + '</strong>';
+                    } else {
+                        bcHtml += ' / <a href="#" onclick="carregarDiretorio(\'' + current + '\')">' + part + '</a>';
+                    }
+                });
+                breadcrumb.innerHTML = bcHtml;
+            }
+
+            try {
+                const res = await fetch('/api/filemanager/list', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({path: path})
+                });
+                const data = await res.json();
+                
+                const lista = document.getElementById('fm-file-list');
+                
+                if (!data.items || data.items.length === 0) {
+                    lista.innerHTML = '<div class="fm-empty"><div class="icon">📭</div><div>Diretório vazio</div></div>';
+                } else {
+                    lista.innerHTML = '';
+                    data.items.forEach(item => {
+                        const div = document.createElement('div');
+                        div.className = 'fm-item';
+                        div.innerHTML = (item.is_dir ? '📁' : '') + ' ' + item.name;
+                        div.onclick = () => {
+                            if (item.is_dir) {
+                                carregarDiretorio(item.path);
+                            } else {
+                                abrirArquivo(item.path);
+                            }
+                        };
+                        lista.appendChild(div);
+                    });
+                }
+                document.getElementById('fm-status').innerText = 'Diretório: ' + (data.current_path || '/');
+            } catch (e) {
+                document.getElementById('fm-status').innerText = 'Erro: ' + e.message;
+            }
+        }
+
+        async function abrirArquivo(path) {
+            currentFile = path;
+            document.getElementById('fm-editor').value = 'Carregando...';
+            document.getElementById('fm-status').innerText = 'Lendo arquivo...';
+            
+            try {
+                const res = await fetch('/api/filemanager/read', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({path: path})
+                });
+                const data = await res.json();
+                document.getElementById('fm-editor').value = data.content !== undefined ? data.content : 'Erro: ' + (data.error || 'Desconhecido');
+                document.getElementById('fm-save-btn').style.display = data.content !== undefined ? 'inline-block' : 'none';
+                document.getElementById('fm-status').innerText = 'Arquivo: ' + path;
+            } catch (e) {
+                document.getElementById('fm-status').innerText = 'Erro ao ler: ' + e.message;
+            }
+        }
+
+        async function salvarArquivo() {
+            const content = document.getElementById('fm-editor').value;
+            document.getElementById('fm-status').innerText = 'Salvando...';
+            
+            try {
+                const res = await fetch('/api/filemanager/save', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({path: currentFile, content: content})
+                });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    document.getElementById('fm-status').innerText = '✅ Salvo com sucesso!';
+                    document.getElementById('fm-save-btn').style.display = 'none';
+                    setTimeout(() => {
+                        document.getElementById('fm-status').innerText = 'Arquivo: ' + currentFile;
+                    }, 2000);
+                } else {
+                    alert('Erro ao salvar: ' + (data.error || 'Desconhecido'));
+                }
+            } catch (e) {
+                alert('Erro de rede: ' + e.message);
+            }
+        }
+
+        // Carregar diretório raiz ao abrir a página
+        document.addEventListener('DOMContentLoaded', () => {
+            carregarDiretorio('');
+        });
+    </script>
+</body>
+</html>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}ThinkinOS Portal{% endblock %}</title>
+    <title>{% block title %}Quesil Core Portal{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('portal.static', filename='css/portal.css') }}">
     <link rel="icon" type="image/png" href="{{ url_for('portal.static', filename='images/logo.png') }}">
     {% block extra_head %}{% endblock %}
@@ -12,7 +12,7 @@
     <nav class="navbar">
         <div class="container">
             <div class="nav-brand">
-                <h1>ThinkinOS</h1>
+                <h1>Quesil Core</h1>
                 <span class="version">v2.0</span>
             </div>
             <ul class="nav-menu">
@@ -25,7 +25,7 @@
                 <li><a href="{{ url_for('portal.contribute') }}" class="{% if request.endpoint == 'portal.contribute' %}active{% endif %}">Contribuir</a></li>
             </ul>
             <div class="nav-actions">
-                <a href="/desktop" class="btn-primary">Acessar ThinkinOS</a>
+                <a href="/desktop" class="btn-primary">Acessar Quesil Core</a>
             </div>
         </div>
     </nav>
@@ -38,7 +38,7 @@
         <div class="container">
             <div class="footer-content">
                 <div class="footer-section">
-                    <h3>ThinkinOS</h3>
+                    <h3>Quesil Core</h3>
                     <p>Sistema Operacional Pessoal com IA</p>
                 </div>
                 <div class="footer-section">
@@ -66,7 +66,7 @@
                 </div>
             </div>
             <div class="footer-bottom">
-                <p>&copy; 2026 ThinkinOS. Desenvolvido com ❤️ por Luiz Pereira.</p>
+                <p>&copy; 2026 Quesil Core. Desenvolvido com ❤️ por Luiz Pereira.</p>
             </div>
         </div>
     </footer>

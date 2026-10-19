@@ -1,0 +1,208 @@
+"""
+Ghorak - Code Analyst: Análise Profunda
+Módulo isolado para análise de código com regras avançadas
+"""
+import os
+import re
+from datetime import datetime
+from flask import jsonify, request
+
+# Importar módulos de análise especializada
+try:
+    from code_review_security import analyze_security, analyze_performance
+    from code_review_fix import register_fix_routes
+except ImportError:
+    def analyze_security(f, c): return []
+    def analyze_performance(f, c): return []
+    def register_fix_routes(app): pass
+
+
+def register_deep_analysis_routes(app):
+    """Registra as rotas de análise profunda no app Flask"""
+    
+    # Registrar também as rotas de correção
+    register_fix_routes(app)
+    
+    @app.route('/api/code-review/deep-analysis', methods=['POST'])
+    def code_review_deep_analysis():
+        try:
+            data = request.json
+            hours = data.get('hours', 24)
+            base_dir = '/home/lps/thinkinos-platform'
+            extensions = ['.py', '.js', '.html']
+            cutoff_time = datetime.now().timestamp() - (hours * 3600)
+            
+            modified_files = []
+            for root, dirs, files in os.walk(base_dir):
+                dirs[:] = [d for d in dirs if d not in ['__pycache__', '.git', 'venv', 'node_modules']]
+                for file in files:
+                    if any(file.endswith(ext) for ext in extensions):
+                        filepath = os.path.join(root, file)
+                        try:
+                            mtime = os.path.getmtime(filepath)
+                            if mtime >= cutoff_time:
+                                rel_path = os.path.relpath(filepath, base_dir)
+                                with open(filepath, 'r', encoding='utf-8') as f:
+                                    content = f.read()
+                                modified_files.append({
+                                    'path': rel_path,
+                                    'name': file,
+                                    'modified': datetime.fromtimestamp(mtime).strftime('%d/%m/%Y %H:%M'),
+                                    'content': content,
+                                    'icon': '🐍' if file.endswith('.py') else '📜' if file.endswith('.js') else '🌐'
+                                })
+                        except Exception:
+                            continue
+            
+            report = {}
+            for file_info in modified_files:
+                try:
+                    issues = analyze_file_advanced(file_info['name'], file_info['content'])
+                    report[file_info['path']] = {
+                        'issues': issues,
+                        'ai_analyzed': True,
+                        'total_issues': len(issues)
+                    }
+                except Exception as e:
+                    report[file_info['path']] = {
+                        'issues': [{'severity': 'low', 'title': 'Erro ao analisar', 'description': str(e)}],
+                        'ai_analyzed': False,
+                        'total_issues': 0
+                    }
+            
+            return jsonify({
+                'status': 'success',
+                'files': [{'path': f['path'], 'name': f['name'], 'modified': f['modified'], 'icon': f['icon']} for f in modified_files],
+                'report': report,
+                'total_files': len(modified_files),
+                'analysis_type': 'deep_ai',
+                'total_issues': sum(r['total_issues'] for r in report.values())
+            })
+        except Exception as e:
+            return jsonify({'status': 'error', 'error': str(e)}), 500
+
+
+def analyze_file_advanced(filename, content):
+    """Análise avançada com regras por linguagem"""
+    issues = []
+    lines = content.split('\n')
+    
+    if filename.endswith('.py'):
+        func_start = None
+        for i, line in enumerate(lines):
+            if line.strip().startswith('def '):
+                func_start = i
+            elif func_start is not None and line.strip() and not line.startswith(' ') and not line.startswith('\t'):
+                func_length = i - func_start
+                if func_length > 50:
+                    func_name = lines[func_start].strip().split('def ')[1].split('(')[0]
+                    issues.append({
+                        'severity': 'medium',
+                        'title': f'Função muito longa: {func_name}',
+                        'description': f'A função {func_name} tem {func_length} linhas.',
+                        'suggestion': 'Divida em funções menores com responsabilidades únicas (SRP).'
+                    })
+                func_start = None
+        
+        for i, line in enumerate(lines):
+            if line.count('if ') > 2:
+                issues.append({
+                    'severity': 'high',
+                    'title': 'Alta complexidade condicional',
+                    'description': f'Linha {i+1} tem múltiplas condições aninhadas.',
+                    'suggestion': 'Use early returns ou extraia condições para variáveis booleanas.'
+                })
+        
+        for i, line in enumerate(lines):
+            if re.search(r'["\']https?://', line) and not line.strip().startswith('#'):
+                issues.append({
+                    'severity': 'medium',
+                    'title': 'URL hardcoded',
+                    'description': f'Linha {i+1} contém URL hardcoded.',
+                    'suggestion': 'Use variáveis de ambiente ou arquivo .env.'
+                })
+        
+        for i, line in enumerate(lines):
+            if 'except:' in line and 'Exception' not in line or 'except Exception:' in line:
+                if i + 1 < len(lines) and lines[i + 1].strip() in ['pass', '']:
+                    issues.append({
+                        'severity': 'critical',
+                        'title': 'Except vazio ou genérico',
+                        'description': f'Linha {i+1} captura exceções sem tratamento.',
+                        'suggestion': 'Especifique o tipo de exceção e adicione logging.'
+                    })
+    
+    elif filename.endswith('.js'):
+        callback_depth = 0
+        for i, line in enumerate(lines):
+            if 'function(' in line or '=>' in line:
+                callback_depth += 1
+                if callback_depth > 3:
+                    issues.append({
+                        'severity': 'high',
+                        'title': 'Callback hell detectado',
+                        'description': f'Linha {i+1} tem callbacks profundamente aninhados.',
+                        'suggestion': 'Use async/await ou Promises.'
+                    })
+            if line.strip() == '}':
+                callback_depth = max(0, callback_depth - 1)
+        
+        for i, line in enumerate(lines):
+            if 'eval(' in line:
+                issues.append({
+                    'severity': 'critical',
+                    'title': 'Uso de eval() detectado',
+                    'description': f'Linha {i+1} usa eval(), vulnerável a injeção.',
+                    'suggestion': 'Use JSON.parse() ou Function() com cautela.'
+                })
+            if 'innerHTML' in line and '+' in line:
+                issues.append({
+                    'severity': 'high',
+                    'title': 'innerHTML com concatenação',
+                    'description': f'Linha {i+1} pode ser vulnerável a XSS.',
+                    'suggestion': 'Use textContent ou sanitize com DOMPurify.'
+                })
+        
+        for i, line in enumerate(lines):
+            if line.strip().startswith('var ') and not line.strip().startswith('//'):
+                issues.append({
+                    'severity': 'low',
+                    'title': 'Uso de var',
+                    'description': f'Linha {i+1} usa var (escopo de função).',
+                    'suggestion': 'Use let (mutável) ou const (constante).'
+                })
+    
+    elif filename.endswith('.html'):
+        open_divs = content.lower().count('<div')
+        close_divs = content.lower().count('</div>')
+        if open_divs != close_divs:
+            issues.append({
+                'severity': 'high',
+                'title': 'Tags div desbalanceadas',
+                'description': f'{open_divs} <div> abertas e {close_divs} </div> fechadas.',
+                'suggestion': 'Verifique o fechamento correto das divs.'
+            })
+        
+        for i, line in enumerate(lines):
+            if re.search(r'<img\s', line, re.IGNORECASE) and 'alt=' not in line.lower():
+                issues.append({
+                    'severity': 'medium',
+                    'title': 'Imagem sem atributo alt',
+                    'description': f'Linha {i+1} tem imagem sem alt.',
+                    'suggestion': 'Adicione alt="descrição significativa".'
+                })
+        
+        for i, line in enumerate(lines):
+            if re.search(r'<a\s', line, re.IGNORECASE) and 'href=' not in line.lower():
+                issues.append({
+                    'severity': 'low',
+                    'title': 'Link sem href',
+                    'description': f'Linha {i+1} tem tag <a> sem href.',
+                    'suggestion': 'Adicione href="#" ou um link válido.'
+                })
+    
+    # Análises transversais (Segurança + Performance)
+    issues.extend(analyze_security(filename, content))
+    issues.extend(analyze_performance(filename, content))
+    
+    return issues

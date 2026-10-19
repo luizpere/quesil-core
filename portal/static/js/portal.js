@@ -1,7 +1,7 @@
-// Portal ThinkinOS - JavaScript
+// Portal Quesil Core - JavaScript
 
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('🚀 ThinkinOS Portal carregado');
+    console.log('🚀 Quesil Core Portal carregado');
     
     // Verificar status do sistema
     checkSystemStatus();

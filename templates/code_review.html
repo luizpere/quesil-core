@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ghorak - Code Analyst</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #0f0f1a;
+            color: #ecf0f1;
+            font-family: 'Segoe UI', sans-serif;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .cr-header {
+            background: #1e1e24;
+            padding: 15px 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #e74c3c;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+        .cr-header h1 {
+            font-size: 18px;
+            color: #e74c3c;
+        }
+        .cr-header h1 span { color: #ecf0f1; }
+        .cr-controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+        .cr-controls label {
+            font-size: 13px;
+            color: #95a5a6;
+        }
+        .cr-controls select, .cr-controls button {
+            background: #2c2c35;
+            color: #ecf0f1;
+            border: 1px solid #3498db;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        .cr-controls button {
+            background: #e74c3c;
+            font-weight: bold;
+        }
+        .cr-controls button:hover { background: #c0392b; }
+        .cr-controls button:disabled {
+            background: #7f8c8d;
+            cursor: not-allowed;
+        }
+        .cr-body {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+        .cr-sidebar {
+            width: 30%;
+            background: #1e1e24;
+            overflow-y: auto;
+            border-right: 1px solid #333;
+        }
+        .cr-file-item {
+            padding: 12px 20px;
+            cursor: pointer;
+            border-bottom: 1px solid #2c2c35;
+            transition: background 0.2s;
+        }
+        .cr-file-item:hover { background: #2c2c35; }
+        .cr-file-item.active { background: #3498db; color: white; }
+        .cr-file-item .file-name {
+            font-weight: bold;
+            font-size: 13px;
+            margin-bottom: 4px;
+        }
+        .cr-file-item .file-date {
+            font-size: 11px;
+            color: #95a5a6;
+        }
+        .cr-file-item.active .file-date { color: #ecf0f1; }
+        .cr-report-area {
+            width: 70%;
+            display: flex;
+            flex-direction: column;
+            background: #12121a;
+            overflow-y: auto;
+        }
+        .cr-report-header {
+            background: #1e1e24;
+            padding: 15px 20px;
+            border-bottom: 1px solid #333;
+        }
+        .cr-report-header h2 {
+            font-size: 16px;
+            color: #3498db;
+            margin-bottom: 8px;
+        }
+        .cr-report-header .stats {
+            display: flex;
+            gap: 15px;
+            font-size: 12px;
+        }
+        .stat { padding: 4px 10px; border-radius: 4px; }
+        .stat.critical { background: #e74c3c; color: white; }
+        .stat.high { background: #e67e22; color: white; }
+        .stat.medium { background: #f1c40f; color: #000; }
+        .stat.low { background: #3498db; color: white; }
+        .cr-report-content {
+            padding: 20px;
+            flex: 1;
+        }
+        .issue {
+            background: #1e1e24;
+            border-left: 4px solid #3498db;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 4px;
+        }
+        .issue.critical { border-left-color: #e74c3c; }
+        .issue.high { border-left-color: #e67e22; }
+        .issue.medium { border-left-color: #f1c40f; }
+        .issue.low { border-left-color: #3498db; }
+        .issue-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .issue-title {
+            font-weight: bold;
+            font-size: 14px;
+        }
+        .issue-severity {
+            font-size: 11px;
+            padding: 3px 8px;
+            border-radius: 4px;
+            color: white;
+        }
+        .issue-severity.critical { background: #e74c3c; }
+        .issue-severity.high { background: #e67e22; }
+        .issue-severity.medium { background: #f1c40f; color: #000; }
+        .issue-severity.low { background: #3498db; }
+        .issue-description {
+            font-size: 13px;
+            color: #bdc3c7;
+            line-height: 1.6;
+            margin-bottom: 8px;
+        }
+        .issue-suggestion {
+            font-size: 12px;
+            color: #27ae60;
+            background: rgba(39, 174, 96, 0.1);
+            padding: 8px;
+            border-radius: 4px;
+            border-left: 2px solid #27ae60;
+        }
+        .cr-empty {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #7f8c8d;
+            font-size: 16px;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .cr-empty .icon { font-size: 48px; }
+        .cr-loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #3498db;
+            font-size: 16px;
+        }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #1e1e24; }
+        ::-webkit-scrollbar-thumb { background: #e74c3c; border-radius: 4px; }
+    
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background: #1e1e24;
+            width: 90%; max-width: 1000px;
+            max-height: 90vh;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid #9b59b6;
+        }
+        .modal-header {
+            padding: 15px 20px;
+            border-bottom: 1px solid #333;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .modal-header h3 { color: #9b59b6; margin: 0; }
+        .close-btn { background: none; border: none; color: #ecf0f1; font-size: 24px; cursor: pointer; }
+        .modal-body {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+        .code-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid #333;
+        }
+        .code-panel:last-child { border-right: none; }
+        .panel-header {
+            background: #2c2c35;
+            padding: 8px 15px;
+            font-size: 13px;
+            font-weight: bold;
+            color: #95a5a6;
+        }
+        .code-block {
+            flex: 1;
+            overflow: auto;
+            padding: 15px;
+            background: #12121a;
+            color: #ecf0f1;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .modal-footer {
+            padding: 15px 20px;
+            border-top: 1px solid #333;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+        .btn-copy { background: #3498db; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; }
+        .btn-close { background: #e74c3c; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; }
+
+    </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsdiff/5.1.0/diff.min.js">
+async function aplicarCorrecao() {
+    if (!currentApplyData) {
+        alert('⚠️ Nenhum código sugerido disponível para aplicar.');
+        return;
+    }
+    
+    if (!confirm('⚠️ ATENÇÃO: Esta ação irá modificar o arquivo.\n\nUm backup automático será criado em: ' + currentApplyData.filepath + '.backup_YYYYMMDD_HHMMSS\n\nDeseja continuar?')) {
+        return;
+    }
+    
+    try {
+        const res = await fetch('/api/code-review/apply-fix', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(currentApplyData)
+        });
+        
+        const data = await res.json();
+        
+        if (data.status === 'success') {
+            alert('✅ Correção aplicada com sucesso!\n\nBackup criado: ' + data.backup);
+            fecharModal();
+            // Recarregar a análise após 2 segundos
+            setTimeout(() => {
+                if (typeof analisarCodigo === 'function') {
+                    analisarCodigo();
+                } else {
+                    location.reload();
+                }
+            }, 2000);
+        } else {
+            alert('❌ Erro ao aplicar correção:\n' + (data.error || 'Erro desconhecido'));
+        }
+    } catch (e) {
+        alert('❌ Erro de rede: ' + e.message);
+    }
+}
+
+</script>
+</head>
+<body>
+    <div class="cr-header">
+        <h1>🔍 <span>Ghorak</span> - Code Analyst</h1>
+        <div class="cr-controls">
+            <label for="time-range">Período:</label>
+            <select id="time-range">
+                <option value="24">Últimas 24 horas</option>
+                <option value="168">Últimos 7 dias</option>
+                <option value="720">Últimos 30 dias</option>
+            </select>
+            <button id="scan-btn" onclick="iniciarAnalise()">🔍 Analisar Código</button>
+            <button id="deep-scan-btn" onclick="iniciarAnaliseProfunda()" style="background: #9b59b6;">✨ Análise Profunda com IA</button>
+            <button onclick="voltarDesktop()">🏠 Voltar ao Desktop</button>
+        </div>
+    </div>
+    <div class="cr-body">
+        <div class="cr-sidebar" id="cr-file-list">
+            <div class="cr-empty">
+                <div class="icon">🔍</div>
+                <div>Clique em "Analisar Código" para começar</div>
+            </div>
+        </div>
+        <div class="cr-report-area" id="cr-report-area">
+            <div class="cr-empty">
+                <div class="icon">📊</div>
+                <div>O relatório aparecerá aqui após a análise</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentFiles = [];
+        let currentReport = null;
+
+        let currentApplyData = null;
+
+function voltarDesktop() {
+            window.location.href = '/desktop';
+        }
+
+        async function iniciarAnalise() {
+            const timeRange = document.getElementById('time-range').value;
+            const btn = document.getElementById('scan-btn');
+            const fileList = document.getElementById('cr-file-list');
+            const reportArea = document.getElementById('cr-report-area');
+            
+            btn.disabled = true;
+            btn.innerText = '⏳ Analisando...';
+            
+            fileList.innerHTML = '<div class="cr-loading">🔍 Varrendo arquivos...</div>';
+            reportArea.innerHTML = '<div class="cr-loading">⏳ Aguardando análise...</div>';
+
+            try {
+                const res = await fetch('/api/code-review/scan', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({hours: parseInt(timeRange)})
+                });
+                const data = await res.json();
+                
+                if (data.status === 'success') {
+                    currentFiles = data.files || [];
+                    currentReport = data.report || {};
+                    
+                    if (currentFiles.length === 0) {
+                        fileList.innerHTML = '<div class="cr-empty"><div class="icon">📭</div><div>Nenhum arquivo modificado no período</div></div>';
+                    } else {
+                        renderFileList();
+                    }
+                } else {
+                    reportArea.innerHTML = `<div class="cr-empty"><div class="icon">❌</div><div>Erro: ${data.error || 'Desconhecido'}</div></div>`;
+                }
+            } catch (e) {
+                reportArea.innerHTML = `<div class="cr-empty"><div class="icon">❌</div><div>Erro de rede: ${e.message}</div></div>`;
+            } finally {
+                btn.disabled = false;
+                btn.innerText = '🔍 Analisar Código';
+            }
+        }
+
+        function renderFileList() {
+            const fileList = document.getElementById('cr-file-list');
+            fileList.innerHTML = '';
+            
+            currentFiles.forEach((file, index) => {
+                const div = document.createElement('div');
+                div.className = 'cr-file-item';
+                div.innerHTML = `
+                    <div class="file-name">${file.icon || '📄'} ${file.name}</div>
+                    <div class="file-date">${file.modified || 'Desconhecido'}</div>
+                `;
+                div.onclick = () => mostrarRelatorio(index);
+                fileList.appendChild(div);
+            });
+        }
+
+        function mostrarRelatorio(fileIndex) {
+            const file = currentFiles[fileIndex];
+            const report = currentReport[file.path] || { issues: [] };
+            const reportArea = document.getElementById('cr-report-area');
+            
+            // Marcar arquivo ativo
+            document.querySelectorAll('.cr-file-item').forEach((el, idx) => {
+                el.classList.toggle('active', idx === fileIndex);
+            });
+            
+            const issues = report.issues || [];
+            const critical = issues.filter(i => i.severity === 'critical').length;
+            const high = issues.filter(i => i.severity === 'high').length;
+            const medium = issues.filter(i => i.severity === 'medium').length;
+            const low = issues.filter(i => i.severity === 'low').length;
+            
+            reportArea.innerHTML = `
+                <div class="cr-report-header">
+                    <h2>${file.icon || '📄'} ${file.name}</h2>
+                    <div class="stats">
+                        <span class="stat critical">Crítico: ${critical}</span>
+                        <span class="stat high">Alto: ${high}</span>
+                        <span class="stat medium">Médio: ${medium}</span>
+                        <span class="stat low">Baixo: ${low}</span>
+                    </div>
+                </div>
+                <div class="cr-report-content">
+                    ${issues.length === 0 ? '<div class="cr-empty"><div class="icon">✅</div><div>Nenhum problema encontrado!</div></div>' : ''}
+                    ${issues.map((issue, issueIndex) => `
+                        <div class="issue ${issue.severity}">
+                            <div class="issue-header">
+                                <div class="issue-title">${issue.title}</div>
+                                <div class="issue-severity ${issue.severity}">${issue.severity.toUpperCase()}</div>
+                            </div>
+                            <div class="issue-description">${issue.description}</div>
+                            ${issue.suggestion ? `<div class="issue-suggestion">💡 ${issue.suggestion}</div>` : ''}
+                            <button class="fix-btn" onclick="sugerirCorrecao(${fileIndex}, ${issueIndex})" style="margin-top:10px; background:#9b59b6; color:white; border:none; padding:8px 16px; border-radius:4px; cursor:pointer; font-weight:bold;">🤖 Sugerir Correção com IA</button>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+    
+async function iniciarAnaliseProfunda() {
+    const timeRange = document.getElementById('time-range').value;
+    const btn = document.getElementById('deep-scan-btn');
+    const fileList = document.getElementById('cr-file-list');
+    const reportArea = document.getElementById('cr-report-area');
+    
+    btn.disabled = true;
+    btn.innerText = ' Analisando com IA...';
+    
+    fileList.innerHTML = '<div class="cr-loading">🤖 Enviando para análise...</div>';
+    reportArea.innerHTML = '<div class="cr-loading">⏳ Aguardando análise profunda...</div>';
+
+    try {
+        const res = await fetch('/api/code-review/deep-analysis', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({hours: parseInt(timeRange)})
+        });
+        const data = await res.json();
+        
+        if (data.status === 'success') {
+            currentFiles = data.files || [];
+            currentReport = data.report || {};
+            
+            if (currentFiles.length === 0) {
+                fileList.innerHTML = '<div class="cr-empty"><div class="icon"></div><div>Nenhum arquivo modificado no período</div></div>';
+            } else {
+                renderFileList();
+            }
+        } else {
+            reportArea.innerHTML = '<div class="cr-empty"><div class="icon">❌</div><div>Erro: ' + (data.error || 'Desconhecido') + '</div></div>';
+        }
+    } catch (e) {
+        reportArea.innerHTML = '<div class="cr-empty"><div class="icon">❌</div><div>Erro de rede: ' + e.message + '</div></div>';
+    } finally {
+        btn.disabled = false;
+        btn.innerText = '✨ Análise Profunda com IA';
+    }
+}
+
+
+async function sugerirCorrecao(fileIndex, issueIndex) {
+    const file = currentFiles[fileIndex];
+    const issue = currentReport[file.path].issues[issueIndex];
+    
+    document.getElementById('modal-original').innerText = 'Carregando código original...';
+    document.getElementById('modal-suggested').innerText = 'Consultando ThinkinIA...';
+    document.getElementById('fix-modal').style.display = 'flex';
+
+    try {
+        const res = await fetch('/api/code-review/suggest-fix', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ filepath: file.path, issue: issue })
+        });
+        const data = await res.json();
+        
+        if (data.status === 'success') {
+            
+            // SALVAR DADOS ANTES DO DIFF
+            currentApplyData = {
+                filepath: file.path,
+                original_code: data.original_code,
+                suggested_code: data.suggested_code
+            };
+            console.log('[GHORAK] Dados salvos:', currentApplyData.filepath);
+            
+            const original = data.original_code;
+            const suggested = data.suggested_code;
+            
+            // Usar jsdiff para gerar comparação linha a linha
+            const diff = Diff.diffLines(original, suggested);
+            let diffHtml = '';
+            
+            diff.forEach((part) => {
+                const color = part.added ? '#2d4a3e' : part.removed ? '#4a2d2d' : 'transparent';
+                const prefix = part.added ? '+' : part.removed ? '-' : ' ';
+                const lines = part.value.split('\n');
+                // Remover última linha vazia do split
+                if (lines[lines.length - 1] === '') lines.pop();
+                
+                lines.forEach(line => {
+                    diffHtml += `<div style="background:${color}; padding: 2px 10px; font-family: monospace; white-space: pre;">${prefix} ${line}</div>`;
+                });
+            });
+            
+            // Se não houver diferença real
+            if (original === suggested) {
+                diffHtml = '<div style="padding:20px; text-align:center; color:#f39c12;">️ A IA sugeriu o mesmo código (nenhuma alteração necessária detectada).</div>';
+            }
+            
+            // Substituir os dois painéis por um único painel de Diff
+            document.querySelector('.modal-body').innerHTML = `
+                <div class="code-panel" style="width:100%; border:none;">
+                    <div class="panel-header"> Diferenças (Vermelho = Removido, Verde = Adicionado)</div>
+                    <div class="code-block" style="padding:0;">${diffHtml}</div>
+                </div>
+            `;
+
+        } else {
+            document.getElementById('modal-suggested').innerText = 'Erro: ' + (data.error || 'Desconhecido');
+        }
+    } catch (e) {
+        document.getElementById('modal-suggested').innerText = 'Erro de rede: ' + e.message;
+    }
+}
+
+function fecharModal() {
+    document.getElementById('fix-modal').style.display = 'none';
+}
+
+function copiarSugestao() {
+    const code = document.getElementById('modal-suggested').innerText;
+    navigator.clipboard.writeText(code).then(() => {
+        alert('✅ Código sugerido copiado para a área de transferência!');
+    }).catch(err => {
+        console.error('Erro ao copiar:', err);
+    });
+}
+
+// Fechar modal ao clicar fora dele
+window.onclick = function(event) {
+    const modal = document.getElementById('fix-modal');
+    if (event.target == modal) {
+        fecharModal();
+    }
+}
+
+
+async function aplicarCorrecao() {
+    if (!currentApplyData) {
+        alert('⚠️ Nenhum código sugerido disponível para aplicar.');
+        return;
+    }
+    
+    if (!confirm('⚠️ ATENÇÃO: Esta ação irá modificar o arquivo.\n\nUm backup automático será criado em: ' + currentApplyData.filepath + '.backup_YYYYMMDD_HHMMSS\n\nDeseja continuar?')) {
+        return;
+    }
+    
+    try {
+        const res = await fetch('/api/code-review/apply-fix', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(currentApplyData)
+        });
+        
+        const data = await res.json();
+        
+        if (data.status === 'success') {
+            alert('✅ Correção aplicada com sucesso!\n\nBackup criado: ' + data.backup);
+            fecharModal();
+            // Recarregar a análise após 2 segundos
+            setTimeout(() => {
+                if (typeof analisarCodigo === 'function') {
+                    analisarCodigo();
+                } else {
+                    location.reload();
+                }
+            }, 2000);
+        } else {
+            alert('❌ Erro ao aplicar correção:\n' + (data.error || 'Erro desconhecido'));
+        }
+    } catch (e) {
+        alert('❌ Erro de rede: ' + e.message);
+    }
+}
+
+</script>
+
+    <div id="fix-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>🤖 Sugestão de Correção (ThinkinIA)</h3>
+                <button class="close-btn" onclick="fecharModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="code-panel">
+                    <div class="panel-header">🔴 Código Original</div>
+                    <div id="modal-original" class="code-block">Carregando...</div>
+                </div>
+                <div class="code-panel">
+                    <div class="panel-header">🟢 Código Sugerido</div>
+                    <div id="modal-suggested" class="code-block">Aguardando análise...</div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-copy" onclick="copiarSugestao()">📋 Copiar Sugestão</button>
+                <button class="btn-apply" onclick="aplicarCorrecao()" style="background:#2ecc71; color:white; border:none; padding:8px 16px; border-radius:4px; cursor:pointer; font-weight:bold; margin-right:10px;">✅ Aplicar Correção</button>
+                <button class="btn-close" onclick="fecharModal()">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>

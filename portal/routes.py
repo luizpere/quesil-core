@@ -7,11 +7,11 @@ from datetime import datetime
 # Dados simulados (podem ser movidos para JSON/DB no futuro)
 BLOG_POSTS = {
     'thinkinos-v2': {
-        'title': '🎉 ThinkinOS v2.0: O Futuro da IA Pessoal',
+        'title': '🎉 Quesil Core v2.0: O Futuro da IA Pessoal',
         'date': '8 de Outubro, 2026',
         'category': 'Lançamento',
         'content': '''
-            <p>O ThinkinOS v2.0 representa um marco na evolução dos sistemas operacionais pessoais com Inteligência Artificial. Nesta versão, focamos em estabilidade, segurança e usabilidade.</p>
+            <p>O Quesil Core v2.0 representa um marco na evolução dos sistemas operacionais pessoais com Inteligência Artificial. Nesta versão, focamos em estabilidade, segurança e usabilidade.</p>
             <h3>Principais Novidades:</h3>
             <ul>
                 <li><strong>Deploy em Produção:</strong> Arquitetura profissional com Nginx, Gunicorn e Systemd.</li>
@@ -29,9 +29,9 @@ BLOG_POSTS = {
         'content': '''
             <p>O ano de 2026 consolidou uma tendência importante: a volta da privacidade e o poder dos modelos de IA rodando localmente ou em ambientes controlados.</p>
             <h3>A Ascensão da IA Pessoal</h3>
-            <p>Enquanto grandes modelos de linguagem dominam a nuvem, há uma demanda crescente por assistentes que entendam o contexto pessoal do usuário sem vazar dados. O ThinkinOS nasce exatamente para preencher essa lacuna, atuando como uma camada de orquestração entre o usuário e a IA.</p>
+            <p>Enquanto grandes modelos de linguagem dominam a nuvem, há uma demanda crescente por assistentes que entendam o contexto pessoal do usuário sem vazar dados. O Quesil Core nasce exatamente para preencher essa lacuna, atuando como uma camada de orquestração entre o usuário e a IA.</p>
             <h3>Por que isso importa?</h3>
-            <p>Ter seus dados, arquivos e histórico de conversas processados em seu próprio hardware (ou em um servidor de sua confiança) garante que você seja o único dono da sua informação. O futuro da IA é personalizado, e o ThinkinOS é a fundação para isso.</p>
+            <p>Ter seus dados, arquivos e histórico de conversas processados em seu próprio hardware (ou em um servidor de sua confiança) garante que você seja o único dono da sua informação. O futuro da IA é personalizado, e o Quesil Core é a fundação para isso.</p>
         '''
     }
 }
@@ -41,7 +41,7 @@ TUTORIALS = {
         'title': '💻 Dominando o IDE Integrado com IA',
         'level': 'Intermediário',
         'content': '''
-            <p>O ThinkinOS não é apenas um lugar para conversar com IAs, é um ambiente de desenvolvimento completo. O nosso Editor de Código (baseado no Monaco Editor) possui integração profunda com os assistentes.</p>
+            <p>O Quesil Core não é apenas um lugar para conversar com IAs, é um ambiente de desenvolvimento completo. O nosso Editor de Código (baseado no Monaco Editor) possui integração profunda com os assistentes.</p>
             
             <h3>1. Abrindo o Editor</h3>
             <p>Você pode acessar o editor de duas formas:</p>
@@ -60,7 +60,7 @@ TUTORIALS = {
             </ul>
 
             <h3>3. Dica Pro: Live Preview</h3>
-            <p>Se você estiver editando um arquivo HTML/CSS, o ThinkinOS possui um recurso de <strong>Live Preview</strong>. Salve o arquivo e veja as alterações refletidas instantaneamente no navegador, sem precisar recarregar a página manualmente!</p>
+            <p>Se você estiver editando um arquivo HTML/CSS, o Quesil Core possui um recurso de <strong>Live Preview</strong>. Salve o arquivo e veja as alterações refletidas instantaneamente no navegador, sem precisar recarregar a página manualmente!</p>
             
             <div style="background: var(--darker); padding: 1.5rem; border-radius: 8px; margin-top: 1.5rem; border-left: 4px solid var(--primary);">
                 <strong>💡 Exercício Prático:</strong><br>
@@ -75,7 +75,7 @@ TUTORIALS = {
         'title': '📁 Dominando o Gerenciador de Arquivos',
         'level': 'Iniciante',
         'content': '''
-            <p>O Gerenciador de Arquivos do ThinkinOS foi projetado para ser intuitivo, seguro e poderoso.</p>
+            <p>O Gerenciador de Arquivos do Quesil Core foi projetado para ser intuitivo, seguro e poderoso.</p>
             <h3>Funcionalidades Principais:</h3>
             <ul>
                 <li><strong>Upload Inteligente:</strong> Arraste e solte ou use o botão de upload. Arquivos de até 50MB são suportados.</li>
