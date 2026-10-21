@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
+  <defs>
+    <linearGradient id="ringGradD" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#667eea" stop-opacity="0.9"/>
+      <stop offset="50%" stop-color="#764ba2" stop-opacity="0.7"/>
+      <stop offset="100%" stop-color="#667eea" stop-opacity="0.9"/>
+    </linearGradient>
+    <radialGradient id="starGlowD" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="1"/>
+      <stop offset="30%" stop-color="#a8c0ff" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#667eea" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="glowD" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="softGlowD" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="6" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <ellipse cx="200" cy="180" rx="140" ry="50" fill="none" stroke="url(#ringGradD)" stroke-width="2" transform="rotate(-15 200 180)"/>
+  <ellipse cx="200" cy="180" rx="120" ry="40" fill="none" stroke="#764ba2" stroke-width="1" transform="rotate(-15 200 180)" opacity="0.5"/>
+  <circle cx="140" cy="180" r="18" fill="url(#starGlowD)" filter="url(#softGlowD)"/>
+  <circle cx="140" cy="180" r="5" fill="#ffffff" filter="url(#glowD)"/>
+  <circle cx="200" cy="180" r="22" fill="url(#starGlowD)" filter="url(#softGlowD)"/>
+  <circle cx="200" cy="180" r="6" fill="#ffffff" filter="url(#glowD)"/>
+  <circle cx="260" cy="180" r="18" fill="url(#starGlowD)" filter="url(#softGlowD)"/>
+  <circle cx="260" cy="180" r="5" fill="#ffffff" filter="url(#glowD)"/>
+  <text x="200" y="290" font-family="'Segoe UI', sans-serif" font-size="28" font-weight="700" fill="#ffffff" text-anchor="middle" letter-spacing="6">QUESIL CORE</text>
+  <text x="200" y="315" font-family="'Segoe UI', sans-serif" font-size="10" font-weight="300" fill="#a8c0ff" text-anchor="middle" letter-spacing="4">AI ORCHESTRATION PLATFORM</text>
+</svg>

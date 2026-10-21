@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
+  <defs>
+    <radialGradient id="bgGrad" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#1a1a2e"/>
+      <stop offset="100%" stop-color="#0a0a15"/>
+    </radialGradient>
+    <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#667eea" stop-opacity="0.8"/>
+      <stop offset="50%" stop-color="#764ba2" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#667eea" stop-opacity="0.8"/>
+    </linearGradient>
+    <radialGradient id="starGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="1"/>
+      <stop offset="30%" stop-color="#a8c0ff" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#667eea" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="softGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="6" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <circle cx="200" cy="180" r="170" fill="url(#bgGrad)" stroke="url(#ringGrad)" stroke-width="1"/>
+  <ellipse cx="200" cy="180" rx="140" ry="50" fill="none" stroke="url(#ringGrad)" stroke-width="1.5" transform="rotate(-15 200 180)" opacity="0.6"/>
+  <ellipse cx="200" cy="180" rx="120" ry="40" fill="none" stroke="#764ba2" stroke-width="1" transform="rotate(-15 200 180)" opacity="0.4"/>
+  <line x1="130" y1="180" x2="270" y2="180" stroke="#667eea" stroke-width="0.5" opacity="0.3"/>
+  <circle cx="140" cy="180" r="18" fill="url(#starGlow)" filter="url(#softGlow)"/>
+  <circle cx="140" cy="180" r="5" fill="#ffffff" filter="url(#glow)"/>
+  <circle cx="140" cy="180" r="2" fill="#ffffff"/>
+  <circle cx="200" cy="180" r="22" fill="url(#starGlow)" filter="url(#softGlow)"/>
+  <circle cx="200" cy="180" r="6" fill="#ffffff" filter="url(#glow)"/>
+  <circle cx="200" cy="180" r="2.5" fill="#ffffff"/>
+  <circle cx="260" cy="180" r="18" fill="url(#starGlow)" filter="url(#softGlow)"/>
+  <circle cx="260" cy="180" r="5" fill="#ffffff" filter="url(#glow)"/>
+  <circle cx="260" cy="180" r="2" fill="#ffffff"/>
+  <circle cx="100" cy="120" r="1" fill="#ffffff" opacity="0.6"/>
+  <circle cx="300" cy="140" r="1.5" fill="#ffffff" opacity="0.5"/>
+  <circle cx="150" cy="240" r="1" fill="#ffffff" opacity="0.4"/>
+  <circle cx="280" cy="250" r="1.2" fill="#ffffff" opacity="0.5"/>
+  <text x="200" y="290" font-family="'Segoe UI', sans-serif" font-size="28" font-weight="700" fill="#ffffff" text-anchor="middle" letter-spacing="6">QUESIL CORE</text>
+  <text x="200" y="315" font-family="'Segoe UI', sans-serif" font-size="10" font-weight="300" fill="#a8c0ff" text-anchor="middle" letter-spacing="4">AI ORCHESTRATION PLATFORM</text>
+  <line x1="150" y1="330" x2="250" y2="330" stroke="url(#ringGrad)" stroke-width="1" opacity="0.5"/>
+</svg>

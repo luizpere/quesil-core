@@ -173,3 +173,8 @@ def api_status():
         'uptime': 'running',
         'timestamp': datetime.now().isoformat()
     })
+
+@portal_bp.route('/logo-demo')
+def logo_demo():
+    """Página de demonstração dos logos do Quesil Core."""
+    return render_template('logo-demo.html')
