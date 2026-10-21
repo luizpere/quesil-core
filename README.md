@@ -1,47 +1,66 @@
-# 🐧 ThinkinOS v2.0
+# 🌌 Quesil Core
 
-> **O primeiro Sistema Operacional Pessoal com Inteligência Artificial integrada.**
+**Plataforma de Orquestração de Agentes de IA**
 
-ThinkinOS não é apenas mais um chatbot. É um ambiente de trabalho web completo que integra assistentes de IA especializados, gerenciamento de arquivos, editor de código profissional e virtualização de containers em uma interface unificada, elegante e responsiva.
+> *"Assim como Quesil (Órion) domina o céu noturno, o Quesil Core organiza o caos das tarefas digitais em um sistema coerente e inteligente."*
 
-### 🖥️ Desktop Principal
-![ThinkinOS Desktop](images/Screenshot_2026-10-09_21-18-22.png)
-
-### 📁 Gerenciador de Arquivos Moderno
-![Gerenciador de Arquivos](images/Screenshot_2026-10-09_21-19-00.png)
-
-### 🌐 Portal de Documentação
-![Portal ThinkinOS](images/Screenshot_2026-10-09_21-21-20.png)
+<div align="center">
+  <img src="logo/quesil-core-dark.svg" alt="Quesil Core Logo" width="300">
+  <p><em>AI Orchestration Platform</em></p>
+</div>
 
 ---
 
-## ✨ Funcionalidades Principais
-- 🤖 **Múltiplos Assistentes de IA**: Pedro, Ana, Lena, ThinkinIA, Mentor Python, Dev e mais.
-- 📁 **Gerenciador de Arquivos**: Interface em grid, upload/download e edição integrada.
-- 💻 **Editor de Código**: Suporte a múltiplas linguagens e Live Preview.
-- 📊 **Dashboard de Métricas**: Monitoramento em tempo real de CPU, RAM e Disco.
-- 🐳 **Virtualização Docker**: Gerenciamento de containers com acesso gráfico.
-- 🔒 **Deploy Profissional**: Nginx, Gunicorn, Systemd e HTTPS.
-- 📖 **Portal de Documentação**: Site integrado com tutoriais, blog e comunidade.
+##  Visão Geral
+
+O **Quesil Core** é uma plataforma web local de produtividade e orquestração de inteligência artificial. Inspirado na constelação de **Quesil** (Órion, o caçador da mitologia e astronomia antiga), o sistema atua como um **núcleo central** que coordena múltiplos assistentes especializados.
+
+## ✨ Características Principais
+
+### 🤖 Multi-Agentes Especializados
+- **Quesil IA (Núcleo)** — O cérebro central do sistema
+- **Pedro (Lógica)** — Raciocínio estruturado
+- **Ana (Pessoal)** — Tarefas do dia a dia
+- **Lena (Produtividade)** — Organização e planejamento
+- **Carlos (Analytics)** — Análise de dados
+- **Mentor Python (Código)** — Tutor de programação
+- **Sherlock** — Investigação e pesquisa
+- **Lex (Jurídico)** — Documentos legais
+- **Ghorak (Code Analyst)** — Revisão de código
+
+### 🛠️ Ferramentas Integradas
+- Terminal Web
+- Gerenciador de Arquivos
+- Code Review automatizado
+- Docker Manager
+- Memória persistente por usuário
+
+### 🔒 Segurança
+- 100% local (self-hosted)
+- Dados nunca saem da sua máquina
+- Autenticação segura por sessão
+
+## ️ Stack Técnico
+
+- **Backend**: Python 3.12, Flask, Gunicorn
+- **IA**: Groq API (Llama 3, Mixtral, Qwen)
+- **Banco de Dados**: SQLite 3
+- **Frontend**: HTML5, CSS3, JavaScript
+- **Infraestrutura**: Docker, nginx, systemd
+
+## 📊 Status do Projeto
+
+| Métrica | Valor |
+|---------|-------|
+| Alertas Críticos (Ghorak) | ✅ 0 |
+| Alertas Altos (Ghorak) | ✅ 0 |
+| Assistentes Ativos | 12 + custom |
+
+##  Sobre o Nome
+
+**Quesil** (כְּסִיל) é o nome hebraico antigo para a constelação de **Órion** — o caçador que domina o céu noturno com precisão e foco.
 
 ---
 
-## 🏗️ Arquitetura
-- **Backend**: Python 3 + Flask
-- **Servidor**: Gunicorn (4 workers) + Nginx (Proxy Reverso)
-- **Frontend**: HTML5, CSS3, JavaScript Vanilla + Socket.io
-- **Segurança**: HTTPS local via mkcert
-
----
-
-## 🚀 Instalação Rápida
-1. Clone o repositório: `git clone https://github.com/luizpere/thinkinos-platform.git`
-2. Entre na pasta: `cd thinkinos-platform`
-3. Ative o ambiente: `source venv/bin/activate`
-4. Instale dependências: `pip install -r requirements.txt`
-5. Configure o `.env` com suas chaves de API.
-6. Inicie: `python3 app.py`
-
----
-
-**Feito com ❤️ e muita IA por Luiz Pereira.**
+*Construído com foco, café e código limpo.*  
+**Quesil Core** — O Núcleo que comanda o caos.
